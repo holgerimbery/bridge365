@@ -222,7 +222,7 @@ Application access policy created: your-app-client-id restricted to AppAccess-Sh
 **Verify the policy took effect:**
 
 ```powershell
-Connect-ExchangeOnline
+if (-not (Get-ConnectionInformation)) { Connect-ExchangeOnline }
 
 Test-ApplicationAccessPolicy -Identity "shared-mailbox@company.com" -AppId "your-app-client-id"
 ```
