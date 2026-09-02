@@ -111,6 +111,7 @@ Store these securely in Azure Key Vault or a password manager.
 
 ### Step 3.4: Test App Registration
 
+**Script:** [`test-app-registration.ps1`](scripts/test-app-registration.ps1)
 ```powershell
 # (c) 2026 Holger Imbery (contact@holgerimbery.blog)
 # Licensed under the project LICENSE file.
@@ -201,6 +202,7 @@ Write-Host "Application access policy created: $ClientId restricted to $Security
 ```
 
 Save it as `docs/wiki/scripts/grant-mailbox-permissions.ps1`.
+**Script:** [`grant-mailbox-permissions.ps1`](scripts/grant-mailbox-permissions.ps1)
 
 Run it:
 
@@ -244,6 +246,7 @@ If `AccessCheckedResult` shows `Denied`, wait 30-60 minutes for policy propagati
 This is the central component that both harnesses call. You must deploy it to Azure.
 
 ### Step 4.1: Create Azure App Service
+**Script:** [`create-app-service.ps1`](../../backend-service/scripts/create-app-service.ps1)
 
 ```powershell
 # (c) 2026 Holger Imbery (contact@holgerimbery.blog)
@@ -318,6 +321,8 @@ Response: <!DOCTYPE html><html><body><h1>404 - Web app not found</h1>
 This is normal — the app is running but no code is deployed yet. We'll deploy code in the next step.
 
 ### Step 4.3: Configure Environment Variables
+**Script:** [`configure-app-service.ps1`](../../backend-service/scripts/configure-app-service.ps1)
+**Script:** [configure-app-service.ps1](../../backend-service/scripts/configure-app-service.ps1)
 
 ```powershell
 # (c) 2026 Holger Imbery (contact@holgerimbery.blog)
@@ -375,6 +380,8 @@ Write-Host "Backend deployed" -ForegroundColor Green
 ```
 
 ### Step 4.5: Test Backend Endpoints
+**Script:** [`test-backend.ps1`](../../backend-service/scripts/test-backend.ps1)
+**Script:** [	est-backend.ps1](../../backend-service/scripts/test-backend.ps1)
 
 ```powershell
 # (c) 2026 Holger Imbery (contact@holgerimbery.blog)
@@ -531,6 +538,8 @@ The backend service is the security boundary for this solution: anything that ca
 - Sensitive data leaking into logs
 
 ### Step 4.6.1: Enforce JWT Authentication on Backend Endpoints
+**Script:** [`enable-backend-auth.ps1`](../../backend-service/scripts/enable-backend-auth.ps1)
+**Script:** [nable-backend-auth.ps1](../../backend-service/scripts/enable-backend-auth.ps1)
 
 Require every request (except `/health`) to present a valid Microsoft Entra-issued bearer token.
 
@@ -586,6 +595,8 @@ Invoke-RestMethod -Uri "https://shared-mailbox-classifier.azurewebsites.net/api/
 **Expected result:** the call fails with `401 Unauthorized` (or a redirect to sign-in). If it still succeeds without a token, authentication is not correctly enabled — repeat this step before continuing.
 
 ### Step 4.6.2: Restrict Callers with an Allowlist
+**Script:** [`configure-allowlist.ps1`](../../backend-service/scripts/configure-allowlist.ps1)
+**Script:** [configure-allowlist.ps1](../../backend-service/scripts/configure-allowlist.ps1)
 
 Even with a valid token, only your known connector/client application(s) should be allowed to call the backend. Add an allowlist check in your application configuration (environment variables read by your backend code):
 
@@ -662,6 +673,8 @@ AccessCheckedResult : Granted
 If this policy is missing, the app can read/send mail for **every mailbox in the tenant**, not just the shared mailbox. Do not proceed to production without this control in place.
 
 ### Step 4.6.4: Move the Client Secret to Key Vault
+**Script:** [`secure-client-secret.ps1`](../../backend-service/scripts/secure-client-secret.ps1)
+**Script:** [secure-client-secret.ps1](../../backend-service/scripts/secure-client-secret.ps1)
 
 ```powershell
 # (c) 2026 Holger Imbery (contact@holgerimbery.blog)
@@ -725,6 +738,9 @@ az webapp config appsettings list --resource-group "rg-shared-mailbox" --name "s
 **Expected output:** a value starting with `@Microsoft.KeyVault(...)`, not the plaintext secret. Then confirm the backend can still authenticate by re-running [Step 3.4: Test App Registration](#step-34-test-app-registration) — it should still succeed.
 
 ### Step 4.6.5: Restrict Network Access (HTTPS-Only + Ingress Control)
+**Script:** [`restrict-network-access.ps1`](../../backend-service/scripts/restrict-network-access.ps1)
+**Script:** [
+estrict-network-access.ps1](../../backend-service/scripts/restrict-network-access.ps1)
 
 ```powershell
 # (c) 2026 Holger Imbery (contact@holgerimbery.blog)
@@ -781,6 +797,9 @@ Invoke-WebRequest -Uri "http://shared-mailbox-classifier.azurewebsites.net/healt
 **Expected result:** the request fails or redirects to HTTPS (`301`/`403`), confirming plain HTTP is blocked.
 
 ### Step 4.6.6: Remove Sensitive Data from Logs
+**Script:** [`review-backend-logs.ps1`](../../backend-service/scripts/review-backend-logs.ps1)
+**Script:** [
+eview-backend-logs.ps1](../../backend-service/scripts/review-backend-logs.ps1)
 
 Review your backend logging code and confirm:
 - Tokens, client secrets, and connection strings are never written to logs.
@@ -1182,3 +1201,5 @@ Create a Copilot Studio topic that demonstrates both harnesses:
 (c) 2026 Holger Imbery (contact@holgerimbery.blog)
 
 Licensed under the project LICENSE file.
+
+
