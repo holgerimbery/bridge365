@@ -14,7 +14,9 @@
 - Power Platform admin access
 - Shared mailbox address and permissions
 - Application registration in Microsoft Entra (for mailbox access via Graph API)
-- PowerShell 7+ with Azure/Exchange modules (for setup only)
+- Azure subscription with App Service or Container Apps available
+- PowerShell 7+ with Azure CLI modules
+- Python 3.10+ or .NET 8+ for local development
 
 ---
 
@@ -155,15 +157,151 @@ Run it:
 
 ---
 
-## 4. Custom Connector Setup (Standard Harness)
+## 4. Backend Service Deployment (How to Get the URL)
 
-### 4.1 Create the Connector in Power Platform
+This is the central component that both harnesses call. You must deploy it to Azure.
+
+### 4.1 What is the Backend Service?
+
+A Python or .NET web application that:
+- Authenticates to Microsoft Graph using the app registration
+- Reads messages from the shared mailbox
+- Classifies messages (Phase 2+)
+- Creates draft replies
+- Logs audit data to Dataverse
+
+### 4.2 Deploy to Azure App Service
+
+#### Option A: Deploy from GitHub (Recommended)
+
+1. **Create Azure App Service:**
+   ```powershell
+   # (c) 2026 Holger Imbery (contact@holgerimbery.blog)
+   # Licensed under the project LICENSE file.
+   
+   $ResourceGroup = "your-resource-group"
+   $AppServiceName = "shared-mailbox-classifier"
+   $Location = "eastus"
+   
+   az group create --name $ResourceGroup --location $Location
+   
+   az appservice plan create `
+       --resource-group $ResourceGroup `
+       --name "$AppServiceName-plan" `
+       --sku B1 `
+       --is-linux
+   
+   az webapp create `
+       --resource-group $ResourceGroup `
+       --plan "$AppServiceName-plan" `
+       --name $AppServiceName `
+       --runtime "PYTHON:3.11"
+   
+   Write-Host "✓ App Service created: https://$AppServiceName.azurewebsites.net" -ForegroundColor Green
+   ```
+
+2. **Configure environment variables in App Service:**
+   ```powershell
+   az webapp config appsettings set `
+       --resource-group $ResourceGroup `
+       --name $AppServiceName `
+       --settings `
+           AZURE_CLIENT_ID="your-client-id" `
+           AZURE_CLIENT_SECRET="your-client-secret" `
+           AZURE_TENANT_ID="your-tenant-id"
+   
+   Write-Host "✓ Environment variables configured" -ForegroundColor Green
+   ```
+
+3. **Deploy code to App Service:**
+   ```powershell
+   cd backend
+   
+   # Push to App Service Git repository
+   git remote add azure https://$AppServiceName.scm.azurewebsites.net/$AppServiceName.git
+   git push azure main
+   
+   Write-Host "✓ Backend deployed to: https://$AppServiceName.azurewebsites.net" -ForegroundColor Green
+   ```
+
+#### Option B: Deploy from Local Machine (for testing)
+
+```powershell
+# (c) 2026 Holger Imbery (contact@holgerimbery.blog)
+# Licensed under the project LICENSE file.
+
+param(
+    [Parameter(Mandatory)] [string]$ResourceGroup,
+    [Parameter(Mandatory)] [string]$AppServiceName,
+    [string]$CodePath = ".\backend"
+)
+
+# Create deployment package
+Write-Host "Creating deployment package..." -ForegroundColor Yellow
+$PublishPath = "$env:TEMP\publish"
+New-Item -ItemType Directory -Path $PublishPath -Force | Out-Null
+Copy-Item "$CodePath\*" $PublishPath -Recurse -Force
+
+# Publish to App Service
+Write-Host "Deploying to Azure App Service..." -ForegroundColor Yellow
+az webapp deployment source config-zip `
+    --resource-group $ResourceGroup `
+    --name $AppServiceName `
+    --src "$PublishPath.zip"
+
+$Url = "https://$AppServiceName.azurewebsites.net"
+Write-Host "✓ Backend deployed to: $Url" -ForegroundColor Green
+Write-Host "  Verify deployment: curl -I $Url/health" -ForegroundColor Cyan
+```
+
+### 4.3 Get Your Backend Service URL
+
+After deployment, the URL is:
+
+```
+https://<AppServiceName>.azurewebsites.net
+```
+
+**Example:**
+- Resource Group: `my-mailbox-rg`
+- App Service Name: `shared-mailbox-classifier`
+- **Backend URL: `https://shared-mailbox-classifier.azurewebsites.net`**
+
+**Find existing URL:**
+```powershell
+# List all app services
+az webapp list --query "[].{Name:name, Url:defaultHostName}"
+
+# Get specific URL
+az webapp show `
+    --resource-group "my-mailbox-rg" `
+    --name "shared-mailbox-classifier" `
+    --query "defaultHostName" -o tsv
+```
+
+### 4.4 Verify Backend is Running
+
+```powershell
+# Test health endpoint
+$BackendUrl = "https://shared-mailbox-classifier.azurewebsites.net"
+curl -I "$BackendUrl/health"
+
+# Expected response: HTTP 200 OK
+```
+
+---
+
+## 5. Custom Connector Setup (Standard Harness)
+
+Now that you have the backend URL, configure the custom connector.
+
+### 5.1 Create the Connector in Power Platform
 
 1. Open **Power Platform** → **Data** → **Connectors** → **New Connector** → **From OpenAPI**
 2. Name: `SharedMailboxConnector`
-3. Host: `your-api-host.azurewebsites.net` (your backend service URL)
+3. Host: `shared-mailbox-classifier.azurewebsites.net` (your actual backend URL from Step 4.3)
 
-### 4.2 API Endpoints
+### 5.2 API Endpoints
 
 The connector defines the interface between Copilot Studio and your backend:
 
@@ -186,7 +324,7 @@ The connector defines the interface between Copilot Studio and your backend:
 - Body: { messageId, subject, body, classifications }
 - Returns: { draftId, url }
 
-### 4.3 Configure Authentication
+### 5.3 Configure Authentication
 
 1. **Authentication type:** Azure AD (Entra)
 2. **Tenant ID:** Your Azure tenant ID
@@ -199,14 +337,14 @@ Use the PowerShell script:
 .\docs\wiki\scripts\setup-custom-connector.ps1 `
     -EnvironmentId "your-env-id" `
     -ConnectorName "SharedMailboxConnector" `
-    -ApiHost "your-api-host.azurewebsites.net"
+    -ApiHost "shared-mailbox-classifier.azurewebsites.net"
 ```
 
 ---
 
-## 5. GitHub Copilot Harness (Parallel - Executable Skills)
+## 6. GitHub Copilot Harness (Parallel - Executable Skills)
 
-### 5.1 Create Executable Skills in Copilot Studio
+### 6.1 Create Executable Skills in Copilot Studio
 
 Add executable skills that provide the same operations as the custom connector:
 
@@ -244,7 +382,7 @@ Output:
   - draftUrl (text)
 ```
 
-### 5.2 Implementation in Copilot Studio
+### 6.2 Implementation in Copilot Studio
 
 Each executable skill calls the backend service via HTTP:
 
@@ -261,7 +399,7 @@ Each executable skill calls the backend service via HTTP:
     {
       "type": "http",
       "method": "GET",
-      "url": "https://your-api-host.azurewebsites.net/api/mailbox/messages/{messageId}",
+      "url": "https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/messages/{messageId}",
       "headers": {
         "Authorization": "Bearer <token>",
         "Content-Type": "application/json"
@@ -274,7 +412,7 @@ Each executable skill calls the backend service via HTTP:
 }
 ```
 
-### 5.3 SKILL.md Documentation
+### 6.3 SKILL.md Documentation
 
 Create `SKILL.md` with usage examples:
 
@@ -352,9 +490,9 @@ CreateDraft(
 
 ---
 
-## 6. Backend Service Requirements
+## 7. Backend Service Reference Implementation
 
-Your backend service (hosted on Azure App Service, Functions, or Container Apps) must:
+Your backend service (hosted on Azure App Service) must:
 
 1. **Authenticate to Microsoft Graph** using the app registration credentials
 2. **Expose REST endpoints:**
@@ -362,6 +500,7 @@ Your backend service (hosted on Azure App Service, Functions, or Container Apps)
    - GET /api/mailbox/messages/{id} – Get single message
    - POST /api/mailbox/classify – Classify message
    - POST /api/mailbox/drafts – Create draft
+   - GET /health – Health check
 3. **Handle Dataverse calls** (Phase 2) for classification lookups
 4. **Log audit trails** to Dataverse
 
@@ -386,6 +525,11 @@ credential = ClientSecretCredential(
     tenant_id=os.getenv("AZURE_TENANT_ID")
 )
 graph_client = GraphClient(credential=credential)
+
+@app.route("/health", methods=["GET"])
+def health():
+    """Health check endpoint"""
+    return jsonify({"status": "healthy"}), 200
 
 @app.route("/api/mailbox/messages", methods=["GET"])
 def get_messages():
@@ -420,7 +564,15 @@ if __name__ == "__main__":
 
 ---
 
-## 7. Testing the Setup
+## 8. Testing the Setup
+
+### Test Backend Health
+
+```powershell
+$BackendUrl = "https://shared-mailbox-classifier.azurewebsites.net"
+curl -I "$BackendUrl/health"
+# Expected: HTTP 200 OK
+```
 
 ### Test Custom Connector (Standard Harness)
 
@@ -446,19 +598,19 @@ Create a simple Copilot Studio topic that:
 
 ---
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 | Issue | Resolution |
 |---|---|
-| **401 Unauthorized from backend** | Verify app registration credentials are set in backend environment variables |
-| **403 Forbidden** | Check mailbox permissions; run grant-mailbox-permissions.ps1 script |
-| **Connector authentication fails** | Reconfigure Entra credentials in custom connector settings |
-| **Skill action times out** | Check backend service is running and responding; verify network connectivity |
-| **Graph API permission denied** | Verify API permissions are added and admin consent granted in Entra ID |
+| **Backend URL not found** | Run `az webapp show --resource-group <rg> --name <app> --query defaultHostName` |
+| **401 Unauthorized from backend** | Verify app registration credentials are set in App Service environment variables |
+| **503 Service Unavailable** | Check App Service is running; view logs in Azure Portal |
+| **403 Forbidden on Graph API** | Verify API permissions and admin consent in Entra ID |
+| **Connector authentication fails** | Verify Entra credentials match app registration in custom connector |
 
 ---
 
-## 9. Next Steps
+## 10. Next Steps
 
 - Proceed to Phase 2: Classification via Dataverse table
 - Implement backend service endpoints
