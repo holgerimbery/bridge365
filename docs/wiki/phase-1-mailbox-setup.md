@@ -174,7 +174,7 @@ With **application permissions** (`Mail.Read`, `Mail.Send` + admin consent), Mic
 # access the specified shared mailbox, instead of every mailbox in the tenant.
 
 param(
-    [Parameter(Mandatory)] [string]$AppId,
+    [Parameter(Mandatory)] [string]$ClientId,
     [Parameter(Mandatory)] [string]$MailboxAddress,
     [Parameter(Mandatory)] [string]$SecurityGroupName
 )
@@ -193,11 +193,11 @@ Add-DistributionGroupMember -Identity $SecurityGroupName -Member $MailboxAddress
 
 # 3. Restrict the app so it can only access mailboxes in this group
 New-ApplicationAccessPolicy -AccessRight RestrictAccess `
-    -AppId $AppId `
+    -AppId $ClientId `
     -PolicyScopeGroupId $SecurityGroupName `
-    -Description "Restrict $AppId to shared mailbox $MailboxAddress"
+    -Description "Restrict $ClientId to shared mailbox $MailboxAddress"
 
-Write-Host "Application access policy created: $AppId restricted to $SecurityGroupName" -ForegroundColor Green
+Write-Host "Application access policy created: $ClientId restricted to $SecurityGroupName" -ForegroundColor Green
 ```
 
 Save it as `docs/wiki/scripts/grant-mailbox-permissions.ps1`.
@@ -206,7 +206,7 @@ Run it:
 
 ```powershell
 .\docs\wiki\scripts\grant-mailbox-permissions.ps1 `
-    -AppId "your-app-client-id" `
+    -ClientId "your-app-client-id" `
     -MailboxAddress "shared-mailbox@company.com" `
     -SecurityGroupName "AppAccess-SharedMailbox"
 ```

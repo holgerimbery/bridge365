@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.1] - 2026-09-02
+
+### What's Fixed
+- Five PowerShell scripts referenced inline in Phase 1 (`test-app-registration.ps1`, `grant-mailbox-permissions.ps1`, `create-app-service.ps1`, `configure-app-service.ps1`, `test-backend.ps1`) existed only as embedded code blocks in the wiki markdown and were missing from `docs/wiki/scripts/`. All five are now saved as standalone files, verified byte-identical to the wiki content.
+- `grant-mailbox-permissions.ps1` used `-AppId` while every other script used `-ClientId` for the same Entra app registration ID. Renamed to `-ClientId` in both the script and the wiki (Step 3.5) for consistency.
+
+### What's Modified
+- Confirmed all 12 documented scripts across Phase 1 and Phase 2 use a consistent parameter naming convention: `ResourceGroup`, `AppServiceName`, `ClientId`, `ClientSecret`, `TenantId`, `MailboxAddress`, `BackendUrl`.
+
+### Breaking Changes
+- None.
+
+---
+
 ## [0.3.0] - 2026-09-02
 
 ### What's New
