@@ -165,9 +165,7 @@ If you get **401 Unauthorized**, check that:
 
 ### Step 3.5: Restrict Shared Mailbox Access with an Application Access Policy
 
-Important correction: with **application permissions** (`Mail.Read`, `Mail.Send` + admin consent), Microsoft Graph already grants the app access to **every mailbox in the tenant** - no `FullAccess`/`SendAs` mailbox permission is needed, and `Add-MailboxPermission` / `Get-ServicePrincipal` are the wrong tools here (that's why `Get-ServicePrincipal` failed with "couldn't be found" - the app was never registered as an Exchange service principal, and does not need to be).
-
-The correct - and recommended - step is to **restrict** the app so it can only access the shared mailbox, instead of every mailbox in the org. This is done with `New-ApplicationAccessPolicy`, scoped to a mail-enabled security group.
+With **application permissions** (`Mail.Read`, `Mail.Send` + admin consent), Microsoft Graph grants the app access to every mailbox in the tenant. To limit the app to only the shared mailbox, use `New-ApplicationAccessPolicy` scoped to a mail-enabled security group.
 
 ```powershell
 # (c) 2026 Holger Imbery (contact@holgerimbery.blog)
@@ -236,7 +234,7 @@ AccessCheckedResult : Granted
 
 If `AccessCheckedResult` shows `Denied`, wait 30-60 minutes for policy propagation (Application Access Policies can take up to an hour to apply tenant-wide), then re-run the test.
 
-**Note on FullAccess/SendAs:** Those mailbox permissions apply to **delegated** (user sign-in) access via EWS/Outlook, not to app-only Graph API calls. Do not use `Add-MailboxPermission`/`Add-RecipientPermission` for this scenario - they are unnecessary and were removed from this guide because they caused the `Get-ServicePrincipal` error reported during validation.
+`FullAccess`/`SendAs` mailbox permissions apply to delegated (user sign-in) access via EWS/Outlook, not app-only Graph API calls, and are not needed here.
 
 
 ---
