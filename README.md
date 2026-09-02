@@ -301,6 +301,7 @@ All code samples include copyright headers. See individual files for details.
 Ideas captured for future consideration, not yet assigned to a version or phase.
 
 - 📋 **Promotional website** - a public-facing marketing/landing site to serve as a promotional entrypoint for the project (project overview, key capabilities, links to docs/wiki and the repo), separate from the technical documentation in this README and the wiki.
+- 📋 **ServiceHub webpage** - a web application for human service reps to work alongside the autonomous mailbox agent, with role-based authorization levels: **Work with Emails** (view/respond to messages), **Reclassify Email** (correct/override AI classifications), and **Administrative Functions** (tenant/mailbox configuration). This gives SMEs the option to add a human-in-the-loop layer to their email automation instead of running fully autonomous. The admin interface also provides tools to fine-tune the BART classifier and to add/replace knowledge sources used by the solution's autonomous mode.
 
 ---
 
