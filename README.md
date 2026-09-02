@@ -26,10 +26,11 @@ This project provides:
 | Phase 1: Extract Remaining Inline Test Scripts (.env Support) | ✅ Complete | v0.4.4 |
 | Phase 1: Move .env to Repo Root | ✅ Complete | v0.4.5 |
 | Phase 1: GitHub Wiki Sync Automation | ✅ Complete | v0.4.6 |
+| Phase 1: Fix Wiki Internal Page Links | ✅ Complete | v0.4.7 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
-## Quick Start (Phase 1: v0.4.6)
+## Quick Start (Phase 1: v0.4.7)
 
 ### Prerequisites
 
@@ -260,6 +261,9 @@ All code samples include copyright headers. See individual files for details.
 - ✅ New `.github/scripts/sync-wiki.py` renames `index.md` to `Home.md` and rewrites relative links to scripts/backend-service/custom-connector/SharedMailboxSkills into absolute GitHub blob URLs
 - ⚠️ Setup required: add a repository secret `WIKI_SYNC_TOKEN` (PAT with `repo` or `Contents: Read and write` scope) - the default `GITHUB_TOKEN` cannot push to the wiki repo
 
+### v0.4.7: Fix Wiki Internal Page Links
+- 🐛 Fixed `.github/scripts/sync-wiki.py`: internal links between wiki pages (e.g. `phase-1-mailbox-setup.md`) now have the `.md` extension stripped, since GitHub Wiki resolves pages by slug and a link keeping `.md` rendered raw/unrendered text or an empty page instead of navigating correctly
+
 ---
 
 ## 🔄 IN PROGRESS
@@ -329,4 +333,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.4.6 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.4.7 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
