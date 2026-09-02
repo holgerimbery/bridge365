@@ -23,10 +23,11 @@ This project provides:
 | Phase 1: Custom Connector Autonomous Agent Trigger | ✅ Complete | v0.4.1 |
 | Phase 1: Copilot Studio Workflow Trigger (GitHub Copilot Harness) | ✅ Complete | v0.4.2 |
 | Phase 1: Script Parameter Management (.env Support) | ✅ Complete | v0.4.3 |
+| Phase 1: Extract Remaining Inline Test Scripts (.env Support) | ✅ Complete | v0.4.4 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
-## Quick Start (Phase 1: v0.4.2)
+## Quick Start (Phase 1: v0.4.4)
 
 ### Prerequisites
 
@@ -237,6 +238,16 @@ All code samples include copyright headers. See individual files for details.
 - ✅ New Step 6.5 in `docs/wiki/phase-1-mailbox-setup.md` cross-referencing the Workflow setup guide
 - ✅ New **SendMessage** and **SendDraftMessage** actions across all layers (`backend-service/app.py`, `custom-connector/openapi.yaml`, `SharedMailboxSkills/skills.json`), letting an agent send a brand-new message directly or send an existing draft after optional human review
 
+### v0.4.3: Script Parameter Management (.env Support)
+- ✅ New `.env.example` template in `backend-service/` covering all configurable parameters (resource group, app service name, Entra ID credentials, allowlist settings, testing backend URL/mailbox, security group name)
+- ✅ All 8 `backend-service/scripts/*.ps1` scripts refactored to load parameters from `.env` when not supplied via CLI, with validation if a value is still missing
+- ✅ `.gitignore` added to keep a real `backend-service/.env` (with secrets) out of version control
+
+### v0.4.4: Extract Remaining Inline Test Scripts (.env Support)
+- ✅ New `test-app-service.ps1` (`backend-service/scripts/`) extracted from the inline Step 4.2 snippet, with `.env` support
+- ✅ New `confirm-mailbox-scope-restriction.ps1` (`docs/wiki/scripts/`) extracted from the inline Step 4.6.3 snippet, with `.env` support
+- ✅ All 12 scripts referenced in `docs/wiki/phase-1-mailbox-setup.md` now have matching script files, `.env` support, and a `**Script:**` link
+
 ---
 
 ## 🔄 IN PROGRESS
@@ -306,4 +317,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.4.2 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.4.4 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)

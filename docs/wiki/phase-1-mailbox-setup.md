@@ -386,14 +386,56 @@ Creating Azure App Service...
 
 ### Step 4.2: Test App Service is Running
 
+**Script:** [`test-app-service.ps1`](../../backend-service/scripts/test-app-service.ps1)
+
 ```powershell
-$BackendUrl = "https://shared-mailbox-classifier.azurewebsites.net"
+# (c) 2026 Holger Imbery (contact@holgerimbery.blog)
+# Licensed under the project LICENSE file.
+# Verifies the Azure App Service is reachable right after creation, before any
+# backend code is deployed. Expect a 404 from the platform (not a connection
+# error) - that confirms the App Service itself is up.
+
+param(
+    [string]$BackendUrl
+)
+
+# Load from .env if parameters not provided
+function Load-EnvFile {
+    param([string]$EnvPath)
+    $env_vars = @{}
+    if (Test-Path $EnvPath) {
+        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
+            $key, $value = $_ -split '=', 2
+            $env_vars[$key.Trim()] = $value.Trim()
+        }
+    }
+    return $env_vars
+}
+
+$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+if (Test-Path $env_file) {
+    $env_vars = Load-EnvFile $env_file
+    if (-not $BackendUrl) { $BackendUrl = $env_vars['BACKEND_URL'] }
+}
+
+# Validate
+if (-not $BackendUrl) {
+    Write-Error "Missing required parameter: BackendUrl"
+    Write-Host "Provide via CLI parameter or .env file" -ForegroundColor Yellow
+    exit 1
+}
 
 # Test connectivity
 $Response = Invoke-WebRequest -Uri "$BackendUrl/health" -SkipHttpErrorCheck
 
 Write-Host "Status Code: $($Response.StatusCode)" -ForegroundColor Green
 Write-Host "Response: $($Response.Content)" -ForegroundColor Gray
+```
+
+Run it:
+
+```powershell
+.\backend-service\scripts\test-app-service.ps1 -BackendUrl "https://shared-mailbox-classifier.azurewebsites.net"
 ```
 
 **Expected output (initially):**
@@ -854,12 +896,61 @@ az webapp config appsettings list --resource-group "rg-shared-mailbox" --name "s
 
 ### Step 4.6.3: Confirm Mailbox Scope Restriction
 
+**Script:** [`confirm-mailbox-scope-restriction.ps1`](scripts/confirm-mailbox-scope-restriction.ps1)
+
 This was already configured in [Step 3.5](#step-35-restrict-shared-mailbox-access-with-an-application-access-policy). Re-run the verification here as part of your security checklist:
 
 ```powershell
+# (c) 2026 Holger Imbery (contact@holgerimbery.blog)
+# Licensed under the project LICENSE file.
+# Re-verifies the Application Access Policy created in Step 3.5, confirming the
+# app registration can only reach the intended shared mailbox and not every
+# mailbox in the tenant. Run this periodically as part of your security checklist.
+
+param(
+    [string]$ClientId,
+    [string]$MailboxAddress
+)
+
+# Load from .env if parameters not provided
+function Load-EnvFile {
+    param([string]$EnvPath)
+    $env_vars = @{}
+    if (Test-Path $EnvPath) {
+        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
+            $key, $value = $_ -split '=', 2
+            $env_vars[$key.Trim()] = $value.Trim()
+        }
+    }
+    return $env_vars
+}
+
+$RepoRoot = Split-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) -Parent
+$env_file = Join-Path $RepoRoot "backend-service\.env"
+if (Test-Path $env_file) {
+    $env_vars = Load-EnvFile $env_file
+    if (-not $ClientId) { $ClientId = $env_vars['CLIENT_ID'] }
+    if (-not $MailboxAddress) { $MailboxAddress = $env_vars['MAILBOX_ADDRESS'] }
+}
+
+# Validate
+if (-not $ClientId -or -not $MailboxAddress) {
+    Write-Error "Missing required parameters: ClientId, MailboxAddress"
+    Write-Host "Provide via CLI parameters or backend-service/.env file" -ForegroundColor Yellow
+    exit 1
+}
+
 if (-not (Get-ConnectionInformation)) { Connect-ExchangeOnline }
 
-Test-ApplicationAccessPolicy -Identity "shared-mailbox@company.com" -AppId "your-app-client-id"
+Test-ApplicationAccessPolicy -Identity $MailboxAddress -AppId $ClientId
+```
+
+Run it:
+
+```powershell
+.\docs\wiki\scripts\confirm-mailbox-scope-restriction.ps1 `
+    -ClientId "your-app-client-id" `
+    -MailboxAddress "shared-mailbox@company.com"
 ```
 
 **Expected output:**
