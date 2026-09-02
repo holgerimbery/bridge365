@@ -11,6 +11,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.4] - 2026-09-02
+
+### What's New
+- New `test-app-service.ps1` script (`backend-service/scripts/`) extracted from the previously inline Step 4.2 verification snippet, with full `.env` support (`BACKEND_URL`).
+- New `confirm-mailbox-scope-restriction.ps1` script (`docs/wiki/scripts/`) extracted from the previously inline Step 4.6.3 verification snippet, with full `.env` support (`CLIENT_ID`, `MAILBOX_ADDRESS`).
+
+### What's Modified
+- `docs/wiki/phase-1-mailbox-setup.md`: Steps 4.2 and 4.6.3 now link to their own script files (matching all other steps) instead of embedding a one-off inline snippet with no `.env` support.
+
+### Breaking Changes
+- None. Both scripts are new, and the behavior of the verification snippets is unchanged - only the parameter source (`.env` support) and file extraction are new.
+
+---
+
+## [0.4.3] - 2026-09-02
+
+### What's New
+- New `.env.example` template in `backend-service/` with all configurable parameters (resource group, app service name, Entra ID credentials, allowlist settings, testing backend URL and mailbox).
+
+### What's Modified
+- All deployment and testing scripts in `backend-service/scripts/` refactored to support loading parameters from a `.env` file in addition to (or instead of) command-line parameters. Scripts now load from `.env` if a parameter is not explicitly provided via CLI, with fallback validation to ensure all required values are present before executing Azure/HTTP operations.
+
+### Breaking Changes
+- None. All scripts remain backward-compatible with direct CLI parameters (e.g., `.\create-app-service.ps1 -ResourceGroup "..." -AppServiceName "..."`); the `.env` file is optional and only used if the file exists and CLI parameters are not supplied.
+
+---
+
 ## [0.4.2] - 2026-09-02
 
 ### What's New

@@ -2,10 +2,38 @@
 # Licensed under the project LICENSE file.
 
 param(
-    [Parameter(Mandatory)] [string]$ResourceGroup,
-    [Parameter(Mandatory)] [string]$AppServiceName,
+    [string]$ResourceGroup,
+    [string]$AppServiceName,
     [string]$Location = "eastus"
 )
+
+# Load from .env if parameters not provided
+function Load-EnvFile {
+    param([string]$EnvPath)
+    $env_vars = @{}
+    if (Test-Path $EnvPath) {
+        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
+            $key, $value = $_ -split '=', 2
+            $env_vars[$key.Trim()] = $value.Trim()
+        }
+    }
+    return $env_vars
+}
+
+$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+if (Test-Path $env_file) {
+    $env_vars = Load-EnvFile $env_file
+    if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
+    if (-not $AppServiceName) { $AppServiceName = $env_vars['APP_SERVICE_NAME'] }
+    if ($Location -eq "eastus") { $Location = $env_vars['LOCATION'] -or "eastus" }
+}
+
+# Validate
+if (-not $ResourceGroup -or -not $AppServiceName) {
+    Write-Error "Missing required parameters: ResourceGroup, AppServiceName"
+    Write-Host "Provide via CLI parameters or .env file" -ForegroundColor Yellow
+    exit 1
+}
 
 Write-Host "Creating Azure App Service..." -ForegroundColor Yellow
 

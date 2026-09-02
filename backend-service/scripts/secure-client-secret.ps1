@@ -5,11 +5,40 @@
 # the plaintext secret directly in application settings.
 
 param(
-    [Parameter(Mandatory)] [string]$ResourceGroup,
-    [Parameter(Mandatory)] [string]$KeyVaultName,
-    [Parameter(Mandatory)] [string]$AppServiceName,
-    [Parameter(Mandatory)] [string]$ClientSecret
+    [string]$ResourceGroup,
+    [string]$KeyVaultName,
+    [string]$AppServiceName,
+    [string]$ClientSecret
 )
+
+# Load from .env if parameters not provided
+function Load-EnvFile {
+    param([string]$EnvPath)
+    $env_vars = @{}
+    if (Test-Path $EnvPath) {
+        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
+            $key, $value = $_ -split '=', 2
+            $env_vars[$key.Trim()] = $value.Trim()
+        }
+    }
+    return $env_vars
+}
+
+$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+if (Test-Path $env_file) {
+    $env_vars = Load-EnvFile $env_file
+    if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
+    if (-not $KeyVaultName) { $KeyVaultName = $env_vars['KEY_VAULT_NAME'] }
+    if (-not $AppServiceName) { $AppServiceName = $env_vars['APP_SERVICE_NAME'] }
+    if (-not $ClientSecret) { $ClientSecret = $env_vars['CLIENT_SECRET'] }
+}
+
+# Validate
+if (-not $ResourceGroup -or -not $KeyVaultName -or -not $AppServiceName -or -not $ClientSecret) {
+    Write-Error "Missing required parameters: ResourceGroup, KeyVaultName, AppServiceName, ClientSecret"
+    Write-Host "Provide via CLI parameters or .env file" -ForegroundColor Yellow
+    exit 1
+}
 
 # Create Key Vault if it doesn't already exist
 az keyvault create --resource-group $ResourceGroup --name $KeyVaultName --location "westeurope" 2>$null

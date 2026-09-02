@@ -2,9 +2,36 @@
 # Licensed under the project LICENSE file.
 
 param(
-    [Parameter(Mandatory)] [string]$BackendUrl,
+    [string]$BackendUrl,
     [string]$MailboxAddress = "test@company.com"
 )
+
+# Load from .env if parameters not provided
+function Load-EnvFile {
+    param([string]$EnvPath)
+    $env_vars = @{}
+    if (Test-Path $EnvPath) {
+        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
+            $key, $value = $_ -split '=', 2
+            $env_vars[$key.Trim()] = $value.Trim()
+        }
+    }
+    return $env_vars
+}
+
+$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+if (Test-Path $env_file) {
+    $env_vars = Load-EnvFile $env_file
+    if (-not $BackendUrl) { $BackendUrl = $env_vars['BACKEND_URL'] }
+    if ($MailboxAddress -eq "test@company.com") { $MailboxAddress = $env_vars['MAILBOX_ADDRESS'] -or "test@company.com" }
+}
+
+# Validate
+if (-not $BackendUrl) {
+    Write-Error "Missing required parameter: BackendUrl"
+    Write-Host "Provide via CLI parameter or .env file" -ForegroundColor Yellow
+    exit 1
+}
 
 Write-Host "Testing Backend Endpoints" -ForegroundColor Cyan
 Write-Host "Backend: $BackendUrl" -ForegroundColor Gray

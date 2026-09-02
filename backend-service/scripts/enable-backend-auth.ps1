@@ -5,11 +5,40 @@
 # requests are rejected before they reach your application code.
 
 param(
-    [Parameter(Mandatory)] [string]$ResourceGroup,
-    [Parameter(Mandatory)] [string]$AppServiceName,
-    [Parameter(Mandatory)] [string]$TenantId,
-    [Parameter(Mandatory)] [string]$ClientId
+    [string]$ResourceGroup,
+    [string]$AppServiceName,
+    [string]$TenantId,
+    [string]$ClientId
 )
+
+# Load from .env if parameters not provided
+function Load-EnvFile {
+    param([string]$EnvPath)
+    $env_vars = @{}
+    if (Test-Path $EnvPath) {
+        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
+            $key, $value = $_ -split '=', 2
+            $env_vars[$key.Trim()] = $value.Trim()
+        }
+    }
+    return $env_vars
+}
+
+$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+if (Test-Path $env_file) {
+    $env_vars = Load-EnvFile $env_file
+    if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
+    if (-not $AppServiceName) { $AppServiceName = $env_vars['APP_SERVICE_NAME'] }
+    if (-not $TenantId) { $TenantId = $env_vars['TENANT_ID'] }
+    if (-not $ClientId) { $ClientId = $env_vars['CLIENT_ID'] }
+}
+
+# Validate
+if (-not $ResourceGroup -or -not $AppServiceName -or -not $TenantId -or -not $ClientId) {
+    Write-Error "Missing required parameters: ResourceGroup, AppServiceName, TenantId, ClientId"
+    Write-Host "Provide via CLI parameters or .env file" -ForegroundColor Yellow
+    exit 1
+}
 
 az webapp auth update `
     --resource-group $ResourceGroup `
