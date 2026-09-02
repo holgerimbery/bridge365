@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.8] - 2026-09-02
+
+### What's Fixed
+- `Load-EnvFile` helper (present in all 12 setup/test scripts) now strips surrounding single or double quotes from `.env` values, in addition to trimming whitespace. Previously, a value written as `TENANT_ID= "xxxx"` was loaded as the literal string `"xxxx"` (quotes included), which silently broke Microsoft Entra ID token requests with a `400 Bad Request` - while the same value passed directly as a CLI parameter worked fine, since PowerShell strips the quotes for CLI arguments automatically.
+- `docs/wiki/phase-1-mailbox-setup.md`: all 12 embedded `Load-EnvFile` code blocks resynced to match the fix.
+
+### What's Modified
+- None.
+
+### Breaking Changes
+- None. Quoted values in an existing `.env` (`KEY= "value"`) now parse correctly; unquoted values (`KEY=value`) continue to work exactly as before.
+
+---
+
 ## [0.4.7] - 2026-09-02
 
 ### What's Fixed

@@ -128,7 +128,7 @@ function Load-EnvFile {
     if (Test-Path $EnvPath) {
         Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
             $key, $value = $_ -split '=', 2
-            $env_vars[$key.Trim()] = $value.Trim()
+            $env_vars[$key.Trim()] = $value.Trim().Trim('"').Trim("'")
         }
     }
     return $env_vars
@@ -216,7 +216,7 @@ function Load-EnvFile {
     if (Test-Path $EnvPath) {
         Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
             $key, $value = $_ -split '=', 2
-            $env_vars[$key.Trim()] = $value.Trim()
+            $env_vars[$key.Trim()] = $value.Trim().Trim('"').Trim("'")
         }
     }
     return $env_vars
@@ -321,7 +321,7 @@ function Load-EnvFile {
     if (Test-Path $EnvPath) {
         Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
             $key, $value = $_ -split '=', 2
-            $env_vars[$key.Trim()] = $value.Trim()
+            $env_vars[$key.Trim()] = $value.Trim().Trim('"').Trim("'")
         }
     }
     return $env_vars
@@ -406,7 +406,7 @@ function Load-EnvFile {
     if (Test-Path $EnvPath) {
         Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
             $key, $value = $_ -split '=', 2
-            $env_vars[$key.Trim()] = $value.Trim()
+            $env_vars[$key.Trim()] = $value.Trim().Trim('"').Trim("'")
         }
     }
     return $env_vars
@@ -469,7 +469,7 @@ function Load-EnvFile {
     if (Test-Path $EnvPath) {
         Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
             $key, $value = $_ -split '=', 2
-            $env_vars[$key.Trim()] = $value.Trim()
+            $env_vars[$key.Trim()] = $value.Trim().Trim('"').Trim("'")
         }
     }
     return $env_vars
@@ -555,7 +555,7 @@ function Load-EnvFile {
     if (Test-Path $EnvPath) {
         Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
             $key, $value = $_ -split '=', 2
-            $env_vars[$key.Trim()] = $value.Trim()
+            $env_vars[$key.Trim()] = $value.Trim().Trim('"').Trim("'")
         }
     }
     return $env_vars
@@ -747,7 +747,7 @@ function Load-EnvFile {
     if (Test-Path $EnvPath) {
         Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
             $key, $value = $_ -split '=', 2
-            $env_vars[$key.Trim()] = $value.Trim()
+            $env_vars[$key.Trim()] = $value.Trim().Trim('"').Trim("'")
         }
     }
     return $env_vars
@@ -832,7 +832,7 @@ function Load-EnvFile {
     if (Test-Path $EnvPath) {
         Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
             $key, $value = $_ -split '=', 2
-            $env_vars[$key.Trim()] = $value.Trim()
+            $env_vars[$key.Trim()] = $value.Trim().Trim('"').Trim("'")
         }
     }
     return $env_vars
@@ -919,7 +919,7 @@ function Load-EnvFile {
     if (Test-Path $EnvPath) {
         Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
             $key, $value = $_ -split '=', 2
-            $env_vars[$key.Trim()] = $value.Trim()
+            $env_vars[$key.Trim()] = $value.Trim().Trim('"').Trim("'")
         }
     }
     return $env_vars
@@ -987,7 +987,7 @@ function Load-EnvFile {
     if (Test-Path $EnvPath) {
         Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
             $key, $value = $_ -split '=', 2
-            $env_vars[$key.Trim()] = $value.Trim()
+            $env_vars[$key.Trim()] = $value.Trim().Trim('"').Trim("'")
         }
     }
     return $env_vars
@@ -1079,7 +1079,7 @@ function Load-EnvFile {
     if (Test-Path $EnvPath) {
         Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
             $key, $value = $_ -split '=', 2
-            $env_vars[$key.Trim()] = $value.Trim()
+            $env_vars[$key.Trim()] = $value.Trim().Trim('"').Trim("'")
         }
     }
     return $env_vars
@@ -1168,7 +1168,7 @@ function Load-EnvFile {
     if (Test-Path $EnvPath) {
         Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
             $key, $value = $_ -split '=', 2
-            $env_vars[$key.Trim()] = $value.Trim()
+            $env_vars[$key.Trim()] = $value.Trim().Trim('"').Trim("'")
         }
     }
     return $env_vars
