@@ -12,16 +12,130 @@ This project provides:
 - **Classification Engine:** Rule-based and AI-powered message routing
 - **Audit Trail:** Dataverse-based logging and compliance tracking
 
-## Status Overview
+## Status Summary
 
 | Component | Status | Version |
 |-----------|--------|---------|
-| **Foundation & Documentation** | ✅ IMPLEMENTED | v0.1.0 |
-| **Phase 1: App Registration & Backend** | ✅ IMPLEMENTED | v0.2.0 |
-| **Phase 2: Classification Table** | 🔄 IN PROGRESS | v0.3.0 |
-| **Phase 3-7: Advanced Features** | 📋 ROADMAP | v0.4.0+ |
+| Foundation & Documentation | ✅ Complete | v0.1.0 |
+| Phase 1: App Registration & Backend | ✅ Complete | v0.2.0 |
+| Phase 2: Classification Table | 🔄 In Progress | v0.3.0 |
+| Phase 3-7: Advanced Features | 📋 Planned | v0.4.0+ |
+
+## Quick Start (Phase 1: v0.2.0)
+
+### Prerequisites
+
+- Microsoft 365 tenant with Copilot Studio
+- Azure subscription
+- Shared mailbox with appropriate permissions
+- PowerShell 7+ with Azure CLI
+
+### Setup Steps
+
+1. **Read Phase 1 Documentation**
+   ```
+   docs/wiki/phase-1-mailbox-setup.md
+   ```
+
+2. **Follow Step-by-Step Setup**
+   - Create Application Registration (Step 3)
+   - Deploy Backend Service (Step 4)
+   - Configure Custom Connector (Step 5)
+   - Set Up Executable Skills (Step 6)
+   - Run Integration Tests (Step 7)
+
+3. **Test Each Component**
+   All phases include testing procedures with expected outputs.
+
+4. **Next Phase**
+   After Phase 1 is complete, proceed to Phase 2: Classification (currently in progress).
+
+## Architecture
+
+```mermaid
+graph TB
+    subgraph CopilotStudio["Copilot Studio Cloud"]
+        CONN["Custom Connector<br/>(Standard Harness)"]
+        EXSKILL["Executable Skills<br/>(GitHub Copilot Harness)"]
+    end
+    
+    CONN -->|HTTP REST| BACKEND
+    EXSKILL -->|HTTP REST| BACKEND
+    
+    subgraph Azure["Azure Backend"]
+        BACKEND["Service Endpoint<br/>Python Flask App"]
+        BACKEND -->|Graph API| GRAPH["Microsoft Graph<br/>Shared Mailbox"]
+        BACKEND -->|SDK| DV["Dataverse<br/>Classifications & Audit"]
+    end
+    
+    style CopilotStudio fill:#FF9800,color:#fff
+    style Azure fill:#4CAF50,color:#fff
+```
+
+## Documentation
+
+**Phase-by-Phase Guides:**
+- [Phase 1: Shared Mailbox Skill & Custom Connector](docs/wiki/phase-1-mailbox-setup.md) ✅ Complete
+- [Phase 2: Classification via Dataverse Table](docs/wiki/phase-2-classification-table.md) 🔄 In Progress
+
+**Reference Documentation:**
+- [Wiki Home](docs/wiki/index.md) – Overview and navigation
+- [Implementation Plan](docs/implementation-plan.md) – Full roadmap with all phases
+- [Changelog](CHANGELOG.md) – Version history and release notes
+- [Commit Conventions](COMMIT_CONVENTION.md) – Standardized commit message format
+
+**Helper Scripts:**
+All scripts include copyright headers and are located in `docs/wiki/scripts/`:
+- `test-app-registration.ps1` – Validate app registration credentials
+- `create-app-service.ps1` – Create Azure App Service
+- `configure-app-service.ps1` – Set environment variables
+- `test-backend.ps1` – Test backend endpoints
+- `grant-mailbox-permissions.ps1` – Configure mailbox access
+- `setup-shared-mailbox-skill.ps1` – Create Copilot Studio skill
+- `setup-custom-connector.ps1` – Create custom connector
+- `setup-classification-table.ps1` – Create Dataverse table
+- `create-sample-classifications.ps1` – Load sample data
+
+## Project Structure
+
+```
+bridge365/
+├── README.md                           # This file
+├── CHANGELOG.md                        # Version history
+├── COMMIT_CONVENTION.md                # Commit message format
+├── LICENSE                             # Project license
+├── docs/
+│   ├── implementation-plan.md          # Full roadmap and phases
+│   ├── shared-mailbox-classification-master-guide.md  # Reference guide
+│   └── wiki/                           # Phase-by-phase guides
+│       ├── index.md                    # Wiki home
+│       ├── phase-1-mailbox-setup.md    # ✅ Phase 1 (complete with testing)
+│       ├── phase-2-classification-table.md  # 🔄 Phase 2 (in progress)
+│       └── scripts/                    # Automation scripts
+└── backend/                            # 📋 Python Flask service (reference)
+```
+
+## Support & Contribution
+
+For questions or issues:
+1. Check the relevant phase documentation in `docs/wiki/`
+2. Review the troubleshooting section in the phase guide
+3. Check [Implementation Plan](docs/implementation-plan.md) for detailed phase definitions
+4. Verify all test procedures pass
+
+## License
+
+Licensed under the project LICENSE file.
+
+## Copyright
+
+(c) 2026 Holger Imbery (contact@holgerimbery.blog)
+
+All code samples include copyright headers. See individual files for details.
 
 ---
+
+# Detailed Status
 
 ## ✅ IMPLEMENTED
 
@@ -68,6 +182,14 @@ This project provides:
   - ✅ Troubleshooting tables
   - ✅ End-to-end integration testing
 
+### v0.2.1: Documentation Improvements
+- ✅ README restructured for clarity
+- ✅ Fixed wiki navigation links
+- ✅ Moved detailed status to end of README
+- ✅ Quick start placed after short status summary
+- ✅ Helper scripts documentation
+- ✅ Support and contribution guidelines
+
 ---
 
 ## 🔄 IN PROGRESS
@@ -95,199 +217,37 @@ This project provides:
 ## 📋 ROADMAP
 
 ### v0.4.0: Phase 3 - Draft Creation & Routing
-- 📋 Draft composition engine
-  - 📋 Routing block generation
-  - 📋 Smart template selection
-  - 📋 Knowledge base integration
-- 📋 Microsoft Graph draft creation
-  - 📋 Reply draft API calls
-  - 📋 Draft attachment handling
-  - 📋 Signature and disclaimer injection
+- 📋 Draft composition engine with routing block generation
+- 📋 Microsoft Graph draft creation API
 - 📋 Draft preview in Copilot Studio
-  - 📋 Pre-send review workflow
-  - 📋 User approval gate
-- 📋 Draft submission to Outlook
-  - 📋 Schedule or immediate send
-  - 📋 Send tracking and logging
+- 📋 Draft submission and tracking
 
 ### v0.5.0: Phase 4 - Override Workflow & Approvals
 - 📋 Manual classification override capability
-  - 📋 Copilot Studio UI for override
-  - 📋 Audit trail for all changes
-  - 📋 Approval routing for override
 - 📋 State machine implementation
-  - 📋 New → Classified → Approved → Sent
-  - 📋 Revert and retry states
-  - 📋 Escalation workflows
 - 📋 Approval matrix configuration
-  - 📋 User/group-based approval routes
-  - 📋 Time-based escalation
-  - 📋 SLA tracking
 
 ### v0.6.0: Phase 5 - MCP Server Integration
 - 📋 Model Context Protocol (MCP) server
-  - 📋 Tool definitions for classification
-  - 📋 Tool definitions for draft creation
-  - 📋 Tool definitions for override
 - 📋 GitHub Copilot CLI integration
-  - 📋 Local executable commands
-  - 📋 MCP tool invocation from CLI
-  - 📋 Response formatting and display
 - 📋 Tool documentation and schema validation
 
 ### v0.7.0: Phase 6 - BART Classifier Integration
 - 📋 BART model fine-tuning pipeline
-  - 📋 Training data preparation from audit logs
-  - 📋 Model training and validation
-  - 📋 Performance metrics (precision, recall, F1)
 - 📋 Azure Machine Learning deployment
-  - 📋 Foundry model registration
-  - 📋 Endpoint configuration and scaling
-  - 📋 A/B testing framework
 - 📋 Confidence-based fallback routing
-  - 📋 High confidence: Auto-route
-  - 📋 Medium confidence: Suggest to user
-  - 📋 Low confidence: Manual review queue
 
-### v0.8.0 - v0.9.x: Phase 7 - Production Hardening
+### v0.8.0+: Phase 7 - Production Hardening
 - 📋 Monitoring and observability
-  - 📋 Application Insights telemetry
-  - 📋 Custom metrics and dashboards
-  - 📋 Alert configuration
 - 📋 Logging and compliance
-  - 📋 Audit log retention (90+ days)
-  - 📋 Compliance report generation
-  - 📋 Data residency and encryption
-- 📋 Security hardening
-  - 📋 Input validation and sanitization
-  - 📋 Rate limiting and throttling
-  - 📋 CORS and authentication hardening
-- 📋 Performance optimization
-  - 📋 Caching strategy (Redis)
-  - 📋 Database query optimization
-  - 📋 Background job processing (async)
+- 📋 Security hardening and optimization
 - 📋 Disaster recovery and backup
-  - 📋 Backup strategy for Dataverse
-  - 📋 failover configuration
-  - 📋 RTO/RPO documentation
 
 ### v1.0.0: General Availability
 - 📋 Production-ready release
-- 📋 Full documentation and training materials
+- 📋 Full documentation and training
 - 📋 Support and maintenance model
-- 📋 SLA commitments
 
 ---
 
-## Quick Start
-
-### Prerequisites
-
-- Microsoft 365 tenant with Copilot Studio
-- Azure subscription
-- Shared mailbox with appropriate permissions
-- PowerShell 7+ with Azure CLI
-
-### Setup Steps (Phase 1: v0.2.0)
-
-1. **Read Phase 1 Documentation** – [docs/wiki/phase-1-mailbox-setup.md](docs/wiki/phase-1-mailbox-setup.md)
-2. **Create App Registration** – Follow Step 3 in Phase 1 guide
-3. **Deploy Backend Service** – Follow Step 4 in Phase 1 guide
-4. **Configure Custom Connector** – Follow Step 5 in Phase 1 guide
-5. **Set Up Executable Skills** – Follow Step 6 in Phase 1 guide
-6. **Run Integration Tests** – Follow Step 7 in Phase 1 guide
-
-**Next Phase:** After Phase 1 is complete, proceed to [Phase 2: Classification](docs/wiki/phase-2-classification-table.md) (currently in progress).
-
-## Architecture
-
-```mermaid
-graph TB
-    subgraph CopilotStudio["Copilot Studio Cloud"]
-        CONN["Custom Connector<br/>(Standard Harness)"]
-        EXSKILL["Executable Skills<br/>(GitHub Copilot Harness)"]
-    end
-    
-    CONN -->|HTTP REST| BACKEND
-    EXSKILL -->|HTTP REST| BACKEND
-    
-    subgraph Azure["Azure Backend"]
-        BACKEND["Service Endpoint<br/>Python Flask App"]
-        BACKEND -->|Graph API| GRAPH["Microsoft Graph<br/>Shared Mailbox"]
-        BACKEND -->|SDK| DV["Dataverse<br/>Classifications & Audit<br/>(Phase 2+)"]
-    end
-    
-    style CopilotStudio fill:#FF9800,color:#fff
-    style Azure fill:#4CAF50,color:#fff
-```
-
-## Documentation
-
-- **[Wiki Home](docs/wiki/index.md)** – Complete implementation guide and reference
-- **[Phase 1: Shared Mailbox Skill & Custom Connector](docs/wiki/phase-1-mailbox-setup.md)** ✅ COMPLETE
-  - Setup app registration, backend, custom connector, and executable skills
-  - Comprehensive testing procedures and troubleshooting
-- **[Phase 2: Classification via Table](docs/wiki/phase-2-classification-table.md)** 🔄 IN PROGRESS
-  - Classification table schema and rule-based classifier
-- **[Implementation Plan](docs/implementation-plan.md)** – Full roadmap with detailed phases
-- **[Changelog](CHANGELOG.md)** – Version history and release notes
-- **[Commit Conventions](COMMIT_CONVENTION.md)** – Standardized commit message format
-
-## Project Structure
-
-```
-bridge365/
-├── README.md                           # This file
-├── CHANGELOG.md                        # Version history
-├── COMMIT_CONVENTION.md                # Commit message format
-├── LICENSE                             # Project license
-├── docs/
-│   ├── implementation-plan.md          # Full roadmap and phases
-│   ├── shared-mailbox-classification-master-guide.md  # Reference guide
-│   └── wiki/                           # Phase-by-phase implementation guides
-│       ├── index.md                    # Wiki home
-│       ├── phase-1-mailbox-setup.md    # ✅ Phase 1 complete with testing
-│       ├── phase-2-classification-table.md  # 🔄 Phase 2 in progress
-│       ├── scripts/
-│       │   ├── test-app-registration.ps1
-│       │   ├── create-app-service.ps1
-│       │   ├── configure-app-service.ps1
-│       │   ├── test-backend.ps1
-│       │   ├── grant-mailbox-permissions.ps1
-│       │   ├── setup-shared-mailbox-skill.ps1
-│       │   ├── setup-custom-connector.ps1
-│       │   ├── setup-classification-table.ps1
-│       │   └── create-sample-classifications.ps1
-│       └── diagrams/                  # Architecture diagrams
-└── backend/                            # 📋 Python Flask service (Phase 1 reference implementation)
-    ├── app.py                          # Reference implementation
-    ├── requirements.txt                # Python dependencies
-    └── ...
-```
-
-## Support & Contribution
-
-For questions or issues:
-1. Check relevant phase documentation in [docs/wiki/](docs/wiki/)
-2. Review troubleshooting section in the phase guide
-3. Check [Implementation Plan](docs/implementation-plan.md) for detailed phase definitions
-4. Verify all test procedures in the phase documentation pass
-
-## License
-
-Licensed under the project LICENSE file.
-
-## Copyright
-
-(c) 2026 Holger Imbery (contact@holgerimbery.blog)
-
-All code samples include copyright headers. See individual files for details.
-
----
-
-**Current Status:** 
-- ✅ Phase 1 Complete (v0.2.0)
-- 🔄 Phase 2 In Progress (v0.3.0)
-- 📋 Phases 3-7 Roadmap
-
-**[Start Phase 1 Setup](docs/wiki/phase-1-mailbox-setup.md)** | **[View Roadmap](docs/implementation-plan.md)**
+**Current Version:** v0.2.1 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
