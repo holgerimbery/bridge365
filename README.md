@@ -296,4 +296,12 @@ All code samples include copyright headers. See individual files for details.
 
 ---
 
+## 💡 BACKLOG (Unscheduled)
+
+Ideas captured for future consideration, not yet assigned to a version or phase.
+
+- 📋 **Promotional website** - a public-facing marketing/landing site to serve as a promotional entrypoint for the project (project overview, key capabilities, links to docs/wiki and the repo), separate from the technical documentation in this README and the wiki.
+
+---
+
 **Current Version:** v0.4.2 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
