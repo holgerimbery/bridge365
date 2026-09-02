@@ -1,0 +1,58 @@
+name: Sync Wiki
+
+# Mirrors docs/wiki/*.md into the GitHub Wiki (a separate repo:
+# <repo>.wiki.git) so the content is browsable via the repo's "Wiki" tab.
+#
+# Requires a repo secret named WIKI_SYNC_TOKEN: a Personal Access Token
+# (classic, "repo" scope, or fine-grained with "Contents: Read and write"
+# on this repository) - the default GITHUB_TOKEN cannot push to the wiki
+# repo. Create the token, then add it under
+# Settings > Secrets and variables > Actions > New repository secret.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/wiki/**'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main repo
+        uses: actions/checkout@v4
+        with:
+          path: main-repo
+
+      - name: Checkout wiki repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki-repo
+          token: ${{ secrets.WIKI_SYNC_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Sync markdown pages
+        run: |
+          python3 main-repo/.github/scripts/sync-wiki.py main-repo wiki-repo "${{ github.repository }}"
+
+      - name: Commit and push wiki changes
+        working-directory: wiki-repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to sync."
+          else
+            git commit -m "docs: sync wiki from docs/wiki (automated)"
+            git push
+          fi

@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.6] - 2026-09-02
+
+### What's New
+- New `.github/workflows/sync-wiki.yml` GitHub Action that mirrors `docs/wiki/*.md` into the repository's native GitHub Wiki (the "Wiki" tab) on every push to `main` that touches `docs/wiki/**`, or on-demand via `workflow_dispatch`.
+- New `.github/scripts/sync-wiki.py` helper: copies each top-level `docs/wiki/*.md` page into the wiki repo, renames `index.md` to `Home.md` (the wiki landing page), and rewrites relative links to `docs/wiki/scripts/`, `backend-service/`, `custom-connector/`, and `SharedMailboxSkills/` into absolute GitHub blob URLs, since the wiki repo has no access to sibling files in the main repo.
+
+### What's Modified
+- None. `docs/wiki/` remains the source of truth; the Wiki tab is now an auto-generated mirror.
+
+### Breaking Changes
+- None. Requires a one-time setup step: add a repository secret `WIKI_SYNC_TOKEN` (a PAT with `repo` or `Contents: Read and write` scope) so the workflow can push to the wiki repo, since the default `GITHUB_TOKEN` cannot.
+
+---
+
 ## [0.4.5] - 2026-09-02
 
 ### What's New
