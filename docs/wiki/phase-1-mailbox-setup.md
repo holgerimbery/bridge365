@@ -87,12 +87,13 @@ You **MUST** create an app registration because your backend service needs authe
 3. Search for and select **Microsoft Graph**
 4. Choose **Application permissions** (not Delegated)
 5. Search and add these permissions:
-   - `Mail.Read` – Read messages
-   - `Mail.Read.Shared` – Read shared mailboxes
-   - `Mail.Send` – Send emails
-   - `Mail.Send.Shared` – Send as shared mailbox
+   - `Mail.Read` - Read messages (application permission)
+   - `Mail.Send` - Send emails (application permission)
 6. Click **Add permissions**
 7. Click **Grant admin consent for [Your Tenant]** (and confirm)
+
+> **Important:** `Mail.Read.Shared` and `Mail.Send.Shared` will **not** appear in this picker.
+> Those scopes only apply to delegated permissions (a signed-in user acting on a shared mailbox they have delegate access to). Since this backend uses application (client credentials) permissions, shared mailbox access is granted differently by giving the app’s service principal `FullAccess` and `SendAs` rights directly on the mailbox in Exchange Online (see Step 3.5 below).
 
 ### Step 3.3: Create Client Credentials
 
@@ -162,44 +163,79 @@ If you get **401 Unauthorized**, check that:
 - Secret hasn't expired
 - App registration is in the correct tenant
 
-### Step 3.5: Grant Mailbox Permissions
+### Step 3.5: Restrict Shared Mailbox Access with an Application Access Policy
 
-Give the app registration access to send emails from the shared mailbox:
+With **application permissions** (`Mail.Read`, `Mail.Send` + admin consent), Microsoft Graph grants the app access to every mailbox in the tenant. To limit the app to only the shared mailbox, use `New-ApplicationAccessPolicy` scoped to a mail-enabled security group.
 
 ```powershell
 # (c) 2026 Holger Imbery (contact@holgerimbery.blog)
 # Licensed under the project LICENSE file.
+# Restricts an app-only Graph application (Mail.Read/Mail.Send) to only
+# access the specified shared mailbox, instead of every mailbox in the tenant.
 
 param(
-    [Parameter(Mandatory)] [string]$ClientId,
-    [Parameter(Mandatory)] [string]$MailboxAddress
+    [Parameter(Mandatory)] [string]$AppId,
+    [Parameter(Mandatory)] [string]$MailboxAddress,
+    [Parameter(Mandatory)] [string]$SecurityGroupName
 )
 
-# Connect to Exchange Online
 Connect-ExchangeOnline
 
-# Grant Send As permission
-Add-MailboxPermission -Identity $MailboxAddress `
-    -User $ClientId `
-    -AccessRights SendAs `
-    -InheritanceType All `
-    -Confirm:$false
+# 1. Create a mail-enabled security group scoped to this app (if it doesn't exist yet)
+$Group = Get-DistributionGroup -Identity $SecurityGroupName -ErrorAction SilentlyContinue
+if (-not $Group) {
+    New-DistributionGroup -Name $SecurityGroupName -Type Security | Out-Null
+    Write-Host "Created mail-enabled security group: $SecurityGroupName" -ForegroundColor Cyan
+}
 
-Write-Host "✓ SendAs permission granted for $ClientId on $MailboxAddress" -ForegroundColor Green
+# 2. Add the shared mailbox as a member of the group
+Add-DistributionGroupMember -Identity $SecurityGroupName -Member $MailboxAddress -ErrorAction SilentlyContinue
+
+# 3. Restrict the app so it can only access mailboxes in this group
+New-ApplicationAccessPolicy -AccessRight RestrictAccess `
+    -AppId $AppId `
+    -PolicyScopeGroupId $SecurityGroupName `
+    -Description "Restrict $AppId to shared mailbox $MailboxAddress"
+
+Write-Host "Application access policy created: $AppId restricted to $SecurityGroupName" -ForegroundColor Green
 ```
+
+Save it as `docs/wiki/scripts/grant-mailbox-permissions.ps1`.
 
 Run it:
 
 ```powershell
 .\docs\wiki\scripts\grant-mailbox-permissions.ps1 `
-    -ClientId "your-client-id-here" `
-    -MailboxAddress "shared-mailbox@company.com"
+    -AppId "your-app-client-id" `
+    -MailboxAddress "shared-mailbox@company.com" `
+    -SecurityGroupName "AppAccess-SharedMailbox"
 ```
 
 **Expected output:**
 ```
-✓ SendAs permission granted for 12345678-1234-1234-1234-123456789012 on shared-mailbox@company.com
+Created mail-enabled security group: AppAccess-SharedMailbox
+Application access policy created: your-app-client-id restricted to AppAccess-SharedMailbox
 ```
+
+**Verify the policy took effect:**
+
+```powershell
+if (-not (Get-ConnectionInformation)) { Connect-ExchangeOnline }
+
+Test-ApplicationAccessPolicy -Identity "shared-mailbox@company.com" -AppId "your-app-client-id"
+```
+
+**Expected output (example):**
+```
+AppId               : your-app-client-id
+Mailbox             : shared-mailbox@company.com
+AccessCheckedResult : Granted
+```
+
+If `AccessCheckedResult` shows `Denied`, wait 30-60 minutes for policy propagation (Application Access Policies can take up to an hour to apply tenant-wide), then re-run the test.
+
+`FullAccess`/`SendAs` mailbox permissions apply to delegated (user sign-in) access via EWS/Outlook, not app-only Graph API calls, and are not needed here.
+
 
 ---
 

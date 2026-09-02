@@ -11,6 +11,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.2] - 2026-09-02
+
+### What's Fixed
+- Step 3.2 (App API Permissions): removed `Mail.Read.Shared` and `Mail.Send.Shared` - these are delegated-only Graph scopes and do not appear in the application permission picker for app-only (client credentials) authentication
+- Step 3.5 (Shared Mailbox Access): replaced incorrect `Add-MailboxPermission`/`Add-RecipientPermission` via `Get-ServicePrincipal` guidance - this always fails with "couldn't be found" because app-only Graph apps are never registered as Exchange service principals
+- Step 3.5 verification snippet: guarded `Connect-ExchangeOnline` with an existing-session check to avoid a parameter-binding error on the following `Test-ApplicationAccessPolicy` line
+
+### What's Modified
+- Step 3.5 rewritten to use `New-ApplicationAccessPolicy` scoped to a mail-enabled security group, restricting the app to the shared mailbox instead of the whole tenant (the Microsoft-documented approach for app-only Graph mailbox access)
+- Added `Test-ApplicationAccessPolicy` verification step with expected output
+- Simplified wording throughout Step 3.5 (removed redundant explanation and meta-commentary)
+
+### Breaking Changes
+- None (documentation only)
+
+---
+
 ## [0.2.1] - 2026-09-02
 
 ### What's New
