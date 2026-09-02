@@ -7,7 +7,7 @@ This wiki documents the setup, implementation, and operation of the email classi
 ## Phases
 
 - [Phase 0: Foundation](foundation.md)
-- [Phase 1: Shared Mailbox Skill & Connector](phase-1-mailbox-setup.md)
+- [Phase 1: Shared Mailbox Skill & Connector](phase-1-mailbox-setup.md) - includes [Security Hardening](phase-1-mailbox-setup.md#46-security-hardening-required-before-production-use) checklist
 - [Phase 2: Classification via Table](phase-2-classification-table.md)
 - [Phase 3: Draft Creation](phase-3-draft-creation.md)
 - [Phase 4: Override/Change Classification](phase-4-override-workflow.md)

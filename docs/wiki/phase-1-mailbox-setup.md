@@ -587,6 +587,314 @@ Testing complete!
 
 ---
 
+## 4.6 Security Hardening (Required Before Production Use)
+
+The backend service is the security boundary for this solution: anything that can call it successfully can act on the shared mailbox using app-only Graph permissions (`Mail.Read`, `Mail.Send`). Complete every step below before connecting real users or production data.
+
+**What this closes:**
+- Unauthorized callers hitting your API
+- The app reading/sending mail outside the intended shared mailbox
+- Client secret exposure
+- Public, unauthenticated network exposure
+- Sensitive data leaking into logs
+
+### Step 4.6.1: Enforce JWT Authentication on Backend Endpoints
+
+Require every request (except `/health`) to present a valid Microsoft Entra-issued bearer token.
+
+```powershell
+# (c) 2026 Holger Imbery (contact@holgerimbery.blog)
+# Licensed under the project LICENSE file.
+# Enables Azure App Service built-in authentication (Easy Auth) with
+# Microsoft Entra ID as the identity provider, so unauthenticated
+# requests are rejected before they reach your application code.
+
+param(
+    [Parameter(Mandatory)] [string]$ResourceGroup,
+    [Parameter(Mandatory)] [string]$AppServiceName,
+    [Parameter(Mandatory)] [string]$TenantId,
+    [Parameter(Mandatory)] [string]$ClientId
+)
+
+az webapp auth update `
+    --resource-group $ResourceGroup `
+    --name $AppServiceName `
+    --enabled true `
+    --action LoginWithAzureActiveDirectory `
+    --aad-client-id $ClientId `
+    --aad-token-issuer-url "https://sts.windows.net/$TenantId/"
+
+Write-Host "Entra authentication enabled for $AppServiceName" -ForegroundColor Green
+```
+
+Save it as `docs/wiki/scripts/enable-backend-auth.ps1`.
+
+Run it:
+
+```powershell
+.\docs\wiki\scripts\enable-backend-auth.ps1 `
+    -ResourceGroup "rg-shared-mailbox" `
+    -AppServiceName "shared-mailbox-classifier" `
+    -TenantId "your-tenant-id" `
+    -ClientId "your-app-client-id"
+```
+
+**Expected output:**
+```
+Entra authentication enabled for shared-mailbox-classifier
+```
+
+**Test it:**
+
+```powershell
+# Request without a token should now be rejected
+Invoke-RestMethod -Uri "https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/messages" -Method Get
+```
+
+**Expected result:** the call fails with `401 Unauthorized` (or a redirect to sign-in). If it still succeeds without a token, authentication is not correctly enabled — repeat this step before continuing.
+
+### Step 4.6.2: Restrict Callers with an Allowlist
+
+Even with a valid token, only your known connector/client application(s) should be allowed to call the backend. Add an allowlist check in your application configuration (environment variables read by your backend code):
+
+```powershell
+# (c) 2026 Holger Imbery (contact@holgerimbery.blog)
+# Licensed under the project LICENSE file.
+# Sets the tenant and client-id allowlist your backend code checks against
+# on every incoming token, in addition to Easy Auth's signature validation.
+
+param(
+    [Parameter(Mandatory)] [string]$ResourceGroup,
+    [Parameter(Mandatory)] [string]$AppServiceName,
+    [Parameter(Mandatory)] [string]$AllowedTenantId,
+    [Parameter(Mandatory)] [string]$AllowedClientIds
+)
+
+az webapp config appsettings set `
+    --resource-group $ResourceGroup `
+    --name $AppServiceName `
+    --settings `
+        ALLOWED_TENANT_ID="$AllowedTenantId" `
+        ALLOWED_CLIENT_IDS="$AllowedClientIds"
+
+Write-Host "Allowlist configured on $AppServiceName" -ForegroundColor Green
+```
+
+Save it as `docs/wiki/scripts/configure-allowlist.ps1`.
+
+Run it:
+
+```powershell
+.\docs\wiki\scripts\configure-allowlist.ps1 `
+    -ResourceGroup "rg-shared-mailbox" `
+    -AppServiceName "shared-mailbox-classifier" `
+    -AllowedTenantId "your-tenant-id" `
+    -AllowedClientIds "your-connector-client-id,your-copilot-skill-client-id"
+```
+
+**Expected output:**
+```
+Allowlist configured on shared-mailbox-classifier
+```
+
+Your backend code must read `ALLOWED_TENANT_ID` and `ALLOWED_CLIENT_IDS` and reject any token whose `tid` (tenant) or `appid`/`azp` (client) claim is not in the list, returning `403 Forbidden`.
+
+**Test it:**
+
+```powershell
+# Restart so the app picks up new settings, then confirm they are applied
+az webapp restart --resource-group "rg-shared-mailbox" --name "shared-mailbox-classifier"
+az webapp config appsettings list --resource-group "rg-shared-mailbox" --name "shared-mailbox-classifier" `
+    --query "[?name=='ALLOWED_CLIENT_IDS']"
+```
+
+**Expected output:** the allowlist value you set is returned, confirming it's active.
+
+### Step 4.6.3: Confirm Mailbox Scope Restriction
+
+This was already configured in [Step 3.5](#step-35-restrict-shared-mailbox-access-with-an-application-access-policy). Re-run the verification here as part of your security checklist:
+
+```powershell
+if (-not (Get-ConnectionInformation)) { Connect-ExchangeOnline }
+
+Test-ApplicationAccessPolicy -Identity "shared-mailbox@company.com" -AppId "your-app-client-id"
+```
+
+**Expected output:**
+```
+AppId               : your-app-client-id
+Mailbox             : shared-mailbox@company.com
+AccessCheckedResult : Granted
+```
+
+If this policy is missing, the app can read/send mail for **every mailbox in the tenant**, not just the shared mailbox. Do not proceed to production without this control in place.
+
+### Step 4.6.4: Move the Client Secret to Key Vault
+
+```powershell
+# (c) 2026 Holger Imbery (contact@holgerimbery.blog)
+# Licensed under the project LICENSE file.
+# Stores the app registration client secret in Key Vault and wires the
+# App Service to read it via a Key Vault reference, instead of storing
+# the plaintext secret directly in application settings.
+
+param(
+    [Parameter(Mandatory)] [string]$ResourceGroup,
+    [Parameter(Mandatory)] [string]$KeyVaultName,
+    [Parameter(Mandatory)] [string]$AppServiceName,
+    [Parameter(Mandatory)] [string]$ClientSecret
+)
+
+# Create Key Vault if it doesn't already exist
+az keyvault create --resource-group $ResourceGroup --name $KeyVaultName --location "westeurope" 2>$null
+
+# Store the secret
+az keyvault secret set --vault-name $KeyVaultName --name "AzureClientSecret" --value $ClientSecret | Out-Null
+
+# Grant the App Service managed identity access to read secrets
+az webapp identity assign --resource-group $ResourceGroup --name $AppServiceName | Out-Null
+$PrincipalId = az webapp identity show --resource-group $ResourceGroup --name $AppServiceName --query principalId -o tsv
+
+az keyvault set-policy --name $KeyVaultName --object-id $PrincipalId --secret-permissions get list | Out-Null
+
+# Point the app setting to the Key Vault reference instead of the raw value
+az webapp config appsettings set `
+    --resource-group $ResourceGroup `
+    --name $AppServiceName `
+    --settings AZURE_CLIENT_SECRET="@Microsoft.KeyVault(VaultName=$KeyVaultName;SecretName=AzureClientSecret)"
+
+Write-Host "Client secret moved to Key Vault: $KeyVaultName" -ForegroundColor Green
+```
+
+Save it as `docs/wiki/scripts/secure-client-secret.ps1`.
+
+Run it:
+
+```powershell
+.\docs\wiki\scripts\secure-client-secret.ps1 `
+    -ResourceGroup "rg-shared-mailbox" `
+    -KeyVaultName "kv-shared-mailbox" `
+    -AppServiceName "shared-mailbox-classifier" `
+    -ClientSecret "your-current-client-secret"
+```
+
+**Expected output:**
+```
+Client secret moved to Key Vault: kv-shared-mailbox
+```
+
+**Test it:**
+
+```powershell
+az webapp config appsettings list --resource-group "rg-shared-mailbox" --name "shared-mailbox-classifier" `
+    --query "[?name=='AZURE_CLIENT_SECRET'].value" -o tsv
+```
+
+**Expected output:** a value starting with `@Microsoft.KeyVault(...)`, not the plaintext secret. Then confirm the backend can still authenticate by re-running [Step 3.4: Test App Registration](#step-34-test-app-registration) — it should still succeed.
+
+### Step 4.6.5: Restrict Network Access (HTTPS-Only + Ingress Control)
+
+```powershell
+# (c) 2026 Holger Imbery (contact@holgerimbery.blog)
+# Licensed under the project LICENSE file.
+# Enforces HTTPS-only traffic and restricts inbound access to an
+# allowlisted set of IP ranges (e.g. Power Platform / your office egress).
+
+param(
+    [Parameter(Mandatory)] [string]$ResourceGroup,
+    [Parameter(Mandatory)] [string]$AppServiceName,
+    [Parameter(Mandatory)] [string[]]$AllowedIpRanges
+)
+
+az webapp update --resource-group $ResourceGroup --name $AppServiceName --https-only true
+
+$Priority = 100
+foreach ($Range in $AllowedIpRanges) {
+    az webapp config access-restriction add `
+        --resource-group $ResourceGroup `
+        --name $AppServiceName `
+        --rule-name "Allow-$Range" `
+        --action Allow `
+        --ip-address $Range `
+        --priority $Priority
+    $Priority += 10
+}
+
+Write-Host "HTTPS-only enforced and ingress restricted on $AppServiceName" -ForegroundColor Green
+```
+
+Save it as `docs/wiki/scripts/restrict-network-access.ps1`.
+
+Run it:
+
+```powershell
+.\docs\wiki\scripts\restrict-network-access.ps1 `
+    -ResourceGroup "rg-shared-mailbox" `
+    -AppServiceName "shared-mailbox-classifier" `
+    -AllowedIpRanges @("203.0.113.0/24", "198.51.100.10/32")
+```
+
+**Expected output:**
+```
+HTTPS-only enforced and ingress restricted on shared-mailbox-classifier
+```
+
+**Test it:**
+
+```powershell
+# HTTP (not HTTPS) should now be rejected
+Invoke-WebRequest -Uri "http://shared-mailbox-classifier.azurewebsites.net/health" -Method Get
+```
+
+**Expected result:** the request fails or redirects to HTTPS (`301`/`403`), confirming plain HTTP is blocked.
+
+### Step 4.6.6: Remove Sensitive Data from Logs
+
+Review your backend logging code and confirm:
+- Tokens, client secrets, and connection strings are never written to logs.
+- Full email body/subject content is not logged by default — log only metadata (message ID, classification label, timestamp, correlation ID).
+
+```powershell
+# (c) 2026 Holger Imbery (contact@holgerimbery.blog)
+# Licensed under the project LICENSE file.
+# Pulls recent App Service log lines so you can manually verify no
+# secrets or raw email content are present before going live.
+
+param(
+    [Parameter(Mandatory)] [string]$ResourceGroup,
+    [Parameter(Mandatory)] [string]$AppServiceName
+)
+
+az webapp log tail --resource-group $ResourceGroup --name $AppServiceName
+```
+
+Save it as `docs/wiki/scripts/review-backend-logs.ps1`.
+
+Run it (then trigger a few test requests in another window):
+
+```powershell
+.\docs\wiki\scripts\review-backend-logs.ps1 `
+    -ResourceGroup "rg-shared-mailbox" `
+    -AppServiceName "shared-mailbox-classifier"
+```
+
+**Expected output:** log lines showing request metadata (method, path, status code, correlation ID) with **no** visible tokens, secrets, or full email bodies. Press `Ctrl+C` to stop tailing.
+
+### Security Hardening Checklist Summary
+
+| # | Control | Verified By |
+|---|---------|-------------|
+| 4.6.1 | JWT authentication enforced | Unauthenticated call returns `401` |
+| 4.6.2 | Caller allowlist configured | Allowlist values present in app settings |
+| 4.6.3 | Mailbox scope restricted | `Test-ApplicationAccessPolicy` returns `Granted` for shared mailbox only |
+| 4.6.4 | Client secret in Key Vault | App setting shows `@Microsoft.KeyVault(...)` reference |
+| 4.6.5 | HTTPS-only + ingress restricted | Plain HTTP call blocked |
+| 4.6.6 | Logs free of sensitive data | Manual log review shows no secrets/PII |
+
+Do not proceed to Phase 2+ production rollout until every row in this table is verified.
+
+---
+
 ## 5. Custom Connector Setup (Standard Harness)
 
 ### Step 5.1: Navigate to Power Platform Connectors

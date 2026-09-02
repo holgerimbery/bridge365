@@ -11,6 +11,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.0] - 2026-09-02
+
+### What's New
+- New Phase 1 section "4.6 Security Hardening (Required Before Production Use)" with 6 step-by-step controls:
+  - Step 4.6.1: Enforce JWT authentication on backend endpoints (Easy Auth + Entra ID)
+  - Step 4.6.2: Restrict callers with a tenant/client-id allowlist
+  - Step 4.6.3: Confirm mailbox scope restriction (re-verification of Step 3.5)
+  - Step 4.6.4: Move the client secret to Azure Key Vault
+  - Step 4.6.5: Restrict network access (HTTPS-only + IP allowlist)
+  - Step 4.6.6: Remove sensitive data from logs
+- Security Hardening Checklist Summary table for quick verification
+- Five new PowerShell scripts (all with copyright headers), each with a test/verification command and expected output:
+  - `enable-backend-auth.ps1`
+  - `configure-allowlist.ps1`
+  - `secure-client-secret.ps1`
+  - `restrict-network-access.ps1`
+  - `review-backend-logs.ps1`
+- Wiki index updated with a direct link to the Security Hardening checklist
+
+### Breaking Changes
+- None (additive documentation and scripts only)
+
+---
+
 ## [0.2.2] - 2026-09-02
 
 ### What's Fixed
