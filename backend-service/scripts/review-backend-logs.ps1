@@ -21,7 +21,7 @@ function Load-EnvFile {
     return $env_vars
 }
 
-$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+$env_file = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) ".env"
 if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
     if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
@@ -31,7 +31,7 @@ if (Test-Path $env_file) {
 # Validate
 if (-not $ResourceGroup -or -not $AppServiceName) {
     Write-Error "Missing required parameters: ResourceGroup, AppServiceName"
-    Write-Host "Provide via CLI parameters or .env file" -ForegroundColor Yellow
+    Write-Host "Provide via CLI parameters or .env file in the repo root" -ForegroundColor Yellow
     exit 1
 }
 

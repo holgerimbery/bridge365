@@ -11,6 +11,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.5] - 2026-09-02
+
+### What's New
+- `.env.example` moved from `backend-service/.env.example` to the repo root (`.env.example`), so it is immediately visible when browsing the repository instead of being buried inside `backend-service/`.
+
+### What's Modified
+- All 12 setup scripts (`backend-service/scripts/*.ps1` and `docs/wiki/scripts/*.ps1`) updated to look for the real `.env` file at the repo root instead of `backend-service/.env`.
+- `docs/wiki/phase-1-mailbox-setup.md`: all 12 embedded code blocks resynced to match the updated `.env` path resolution logic.
+- `.gitignore` simplified to ignore `.env`/`*.env` anywhere in the repo (previously scoped to `backend-service/.env`), while still tracking `*.env.example` templates.
+
+### Breaking Changes
+- If you already created a `backend-service/.env` file locally, move it to the repo root (`.env`) - scripts will no longer read from the old location.
+
+---
+
 ## [0.4.4] - 2026-09-02
 
 ### What's New
