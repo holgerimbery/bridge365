@@ -12,6 +12,11 @@ repo. This script:
      (scripts, backend-service, custom-connector, SharedMailboxSkills)
      into absolute GitHub "blob" URLs on the main branch, since those
      files are not mirrored into the wiki repo.
+  4. Strips the ".md" extension from links that point at other wiki
+     pages (e.g. "phase-1-mailbox-setup.md" -> "phase-1-mailbox-setup"),
+     since the GitHub Wiki resolves pages by slug, not filename - a link
+     that keeps the ".md" extension renders as raw/unrendered text or an
+     empty "page doesn't exist" page instead of navigating to the page.
 
 Usage: sync-wiki.py <main_repo_path> <wiki_repo_path> <owner/repo>
 """
@@ -58,6 +63,18 @@ def main():
         content = re.sub(
             r"\]\(\.\./\.\./",
             f"]({base_blob_url}",
+            content,
+        )
+        # Links to other wiki pages (e.g. "phase-1-mailbox-setup.md" or
+        # "phase-1-mailbox-setup.md#anchor") must not keep the ".md"
+        # extension - GitHub Wiki resolves pages by slug, so a link that
+        # keeps ".md" fails to navigate (raw/unrendered content or an
+        # empty page). This runs after the blob-URL rewrites above, so it
+        # only touches same-repo wiki-page references, not the absolute
+        # https://... URLs already produced for scripts/backend-service/etc.
+        content = re.sub(
+            r"\]\(([A-Za-z0-9_-]+)\.md(#[^)]*)?\)",
+            r"](\1\2)",
             content,
         )
 

@@ -11,6 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.7] - 2026-09-02
+
+### What's Fixed
+- `.github/scripts/sync-wiki.py`: internal links between wiki pages (e.g. `[Phase 1 setup guide](phase-1-mailbox-setup.md)`) now have their `.md` extension stripped when synced to the Wiki repo. GitHub Wiki resolves pages by slug, not filename - a link that kept the `.md` extension rendered as raw/unrendered markdown text (or an empty page) instead of navigating to the target page, which was the root cause of the wiki appearing "not the same" as the `docs/wiki/` source.
+
+### What's Modified
+- None.
+
+### Breaking Changes
+- None. Existing wiki pages will be corrected automatically on the next sync (push to `main` touching `docs/wiki/**`, or a manual `workflow_dispatch` run).
+
+---
+
 ## [0.4.6] - 2026-09-02
 
 ### What's New
