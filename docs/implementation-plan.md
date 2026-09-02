@@ -89,8 +89,8 @@ graph TD
 
 **Wiki & Documentation:**
 - `docs/wiki/phase-1-mailbox-setup.md` — human-readable Copilot Studio setup guide
-- `docs/wiki/scripts/setup-shared-mailbox-skill.ps1` — PowerShell provisioning script
-- `docs/wiki/scripts/setup-custom-connector.ps1` — Custom connector setup script
+- `custom-connector/openapi.yaml`, `SharedMailboxSkills/skills.json` - Connector and skill definitions
+- `backend-service/`, `custom-connector/`, `SharedMailboxSkills/` - Deployable artifacts and setup guides
 - Mermaid diagrams for message fetching flow
 
 **Success Criteria:**

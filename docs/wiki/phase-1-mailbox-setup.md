@@ -284,7 +284,7 @@ Write-Host "✓ App Service created: $Url" -ForegroundColor Green
 Run it:
 
 ```powershell
-.\docs\wiki\scripts\create-app-service.ps1 `
+.\backend-service\scripts\create-app-service.ps1 `
     -ResourceGroup "shared-mailbox-rg" `
     -AppServiceName "shared-mailbox-classifier"
 ```
@@ -345,7 +345,7 @@ Write-Host "✓ Environment variables configured" -ForegroundColor Green
 Run it:
 
 ```powershell
-.\docs\wiki\scripts\configure-app-service.ps1 `
+.\backend-service\scripts\configure-app-service.ps1 `
     -ResourceGroup "shared-mailbox-rg" `
     -AppServiceName "shared-mailbox-classifier" `
     -ClientId "your-client-id" `
@@ -360,139 +360,18 @@ Run it:
 
 ### Step 4.4: Deploy Backend Code
 
-Create the Python backend application:
-
-```python
-# (c) 2026 Holger Imbery (contact@holgerimbery.blog)
-# Licensed under the project LICENSE file.
-# backend/app.py - Shared Mailbox Service
-
-from flask import Flask, request, jsonify
-from azure.identity import ClientSecretCredential
-from msgraph.core import GraphClient
-import os
-import logging
-
-app = Flask(__name__)
-logging.basicConfig(level=logging.INFO)
-
-# Initialize Graph client
-try:
-    credential = ClientSecretCredential(
-        client_id=os.getenv("AZURE_CLIENT_ID"),
-        client_secret=os.getenv("AZURE_CLIENT_SECRET"),
-        tenant_id=os.getenv("AZURE_TENANT_ID")
-    )
-    graph_client = GraphClient(credential=credential)
-    logging.info("Graph client initialized successfully")
-except Exception as e:
-    logging.error(f"Failed to initialize Graph client: {e}")
-
-@app.route("/health", methods=["GET"])
-def health():
-    """Health check endpoint"""
-    return jsonify({"status": "healthy", "service": "shared-mailbox-classifier"}), 200
-
-@app.route("/api/mailbox/messages", methods=["GET"])
-def get_messages():
-    """Fetch messages from shared mailbox"""
-    try:
-        mailbox = request.args.get("mailboxAddress")
-        top = request.args.get("top", 10, type=int)
-        
-        if not mailbox:
-            return jsonify({"error": "mailboxAddress parameter required"}), 400
-        
-        # Call Microsoft Graph API
-        response = graph_client.get(
-            f"/users/{mailbox}/messages?$top={top}&$select=id,subject,from,receivedDateTime,bodyPreview"
-        )
-        return jsonify(response.json()), 200
-    except Exception as e:
-        logging.error(f"Error fetching messages: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/api/mailbox/messages/<message_id>", methods=["GET"])
-def get_message(message_id):
-    """Fetch single message"""
-    try:
-        mailbox = request.args.get("mailboxAddress")
-        if not mailbox:
-            return jsonify({"error": "mailboxAddress parameter required"}), 400
-        
-        response = graph_client.get(
-            f"/users/{mailbox}/messages/{message_id}"
-        )
-        return jsonify(response.json()), 200
-    except Exception as e:
-        logging.error(f"Error fetching message: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/api/mailbox/classify", methods=["POST"])
-def classify_message():
-    """Classify message based on rules"""
-    try:
-        data = request.json
-        message_id = data.get("messageId")
-        
-        if not message_id:
-            return jsonify({"error": "messageId required"}), 400
-        
-        # Placeholder: Query Dataverse for classification rules (Phase 2)
-        # Apply rule-based classifier
-        
-        return jsonify({
-            "classifications": [
-                {"className": "Invoice Question", "confidence": 0.92, "targetEmail": "finance@company.com"}
-            ]
-        }), 200
-    except Exception as e:
-        logging.error(f"Error classifying message: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/api/mailbox/drafts", methods=["POST"])
-def create_draft():
-    """Create reply draft"""
-    try:
-        data = request.json
-        message_id = data.get("messageId")
-        subject = data.get("subject")
-        body = data.get("body")
-        
-        if not all([message_id, subject, body]):
-            return jsonify({"error": "messageId, subject, body required"}), 400
-        
-        # Placeholder: Create draft via Graph API (Phase 3)
-        
-        return jsonify({
-            "draftId": "draft-placeholder",
-            "draftUrl": "https://outlook.office.com/mail/..."
-        }), 200
-    except Exception as e:
-        logging.error(f"Error creating draft: {e}")
-        return jsonify({"error": str(e)}), 500
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
-```
-
-Create `backend/requirements.txt`:
-
-```
-Flask==2.3.0
-azure-identity==1.13.0
-msgraph-core==0.2.2
-```
+The Python backend application source lives in [`backend-service/app.py`](../../backend-service/app.py),
+with dependencies in [`backend-service/requirements.txt`](../../backend-service/requirements.txt).
 
 Deploy to App Service:
 
 ```powershell
-cd backend
+cd backend-service
 git remote add azure https://shared-mailbox-classifier.scm.azurewebsites.net/shared-mailbox-classifier.git
 git push azure main
 cd ..
 
-Write-Host "✓ Backend deployed" -ForegroundColor Green
+Write-Host "Backend deployed" -ForegroundColor Green
 ```
 
 ### Step 4.5: Test Backend Endpoints
@@ -555,7 +434,7 @@ Write-Host "Testing complete!" -ForegroundColor Cyan
 Run it:
 
 ```powershell
-.\docs\wiki\scripts\test-backend.ps1 `
+.\backend-service\scripts\test-backend.ps1 `
     -BackendUrl "https://shared-mailbox-classifier.azurewebsites.net" `
     -MailboxAddress "shared@company.com"
 ```
@@ -627,12 +506,12 @@ az webapp auth update `
 Write-Host "Entra authentication enabled for $AppServiceName" -ForegroundColor Green
 ```
 
-Save it as `docs/wiki/scripts/enable-backend-auth.ps1`.
+Save it as `backend-service/scripts/enable-backend-auth.ps1`.
 
 Run it:
 
 ```powershell
-.\docs\wiki\scripts\enable-backend-auth.ps1 `
+.\backend-service\scripts\enable-backend-auth.ps1 `
     -ResourceGroup "rg-shared-mailbox" `
     -AppServiceName "shared-mailbox-classifier" `
     -TenantId "your-tenant-id" `
@@ -680,12 +559,12 @@ az webapp config appsettings set `
 Write-Host "Allowlist configured on $AppServiceName" -ForegroundColor Green
 ```
 
-Save it as `docs/wiki/scripts/configure-allowlist.ps1`.
+Save it as `backend-service/scripts/configure-allowlist.ps1`.
 
 Run it:
 
 ```powershell
-.\docs\wiki\scripts\configure-allowlist.ps1 `
+.\backend-service\scripts\configure-allowlist.ps1 `
     -ResourceGroup "rg-shared-mailbox" `
     -AppServiceName "shared-mailbox-classifier" `
     -AllowedTenantId "your-tenant-id" `
@@ -766,12 +645,12 @@ az webapp config appsettings set `
 Write-Host "Client secret moved to Key Vault: $KeyVaultName" -ForegroundColor Green
 ```
 
-Save it as `docs/wiki/scripts/secure-client-secret.ps1`.
+Save it as `backend-service/scripts/secure-client-secret.ps1`.
 
 Run it:
 
 ```powershell
-.\docs\wiki\scripts\secure-client-secret.ps1 `
+.\backend-service\scripts\secure-client-secret.ps1 `
     -ResourceGroup "rg-shared-mailbox" `
     -KeyVaultName "kv-shared-mailbox" `
     -AppServiceName "shared-mailbox-classifier" `
@@ -823,12 +702,12 @@ foreach ($Range in $AllowedIpRanges) {
 Write-Host "HTTPS-only enforced and ingress restricted on $AppServiceName" -ForegroundColor Green
 ```
 
-Save it as `docs/wiki/scripts/restrict-network-access.ps1`.
+Save it as `backend-service/scripts/restrict-network-access.ps1`.
 
 Run it:
 
 ```powershell
-.\docs\wiki\scripts\restrict-network-access.ps1 `
+.\backend-service\scripts\restrict-network-access.ps1 `
     -ResourceGroup "rg-shared-mailbox" `
     -AppServiceName "shared-mailbox-classifier" `
     -AllowedIpRanges @("203.0.113.0/24", "198.51.100.10/32")
@@ -868,12 +747,12 @@ param(
 az webapp log tail --resource-group $ResourceGroup --name $AppServiceName
 ```
 
-Save it as `docs/wiki/scripts/review-backend-logs.ps1`.
+Save it as `backend-service/scripts/review-backend-logs.ps1`.
 
 Run it (then trigger a few test requests in another window):
 
 ```powershell
-.\docs\wiki\scripts\review-backend-logs.ps1 `
+.\backend-service\scripts\review-backend-logs.ps1 `
     -ResourceGroup "rg-shared-mailbox" `
     -AppServiceName "shared-mailbox-classifier"
 ```
@@ -896,6 +775,11 @@ Do not proceed to Phase 2+ production rollout until every row in this table is v
 ---
 
 ## 5. Custom Connector Setup (Standard Harness)
+
+All artifacts for this section (the OpenAPI definition and a standalone setup guide)
+live in [`custom-connector/`](../../custom-connector) - see
+[`custom-connector/README.md`](../../custom-connector/README.md) and
+[`custom-connector/openapi.yaml`](../../custom-connector/openapi.yaml).
 
 ### Step 5.1: Navigate to Power Platform Connectors
 
@@ -1016,6 +900,11 @@ If you get **401 Unauthorized**, verify:
 ---
 
 ## 6. GitHub Copilot Harness (Parallel - Executable Skills)
+
+All artifacts for this section (the skill/action definition and a standalone setup
+guide) live in [`SharedMailboxSkills/`](../../SharedMailboxSkills) - see
+[`SharedMailboxSkills/README.md`](../../SharedMailboxSkills/README.md) and
+[`SharedMailboxSkills/skills.json`](../../SharedMailboxSkills/skills.json).
 
 ### Step 6.1: Create Executable Skills in Copilot Studio
 

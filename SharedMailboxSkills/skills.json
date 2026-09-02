@@ -1,0 +1,56 @@
+{
+  "_comment": "(c) 2026 Holger Imbery (contact@holgerimbery.blog). Licensed under the project LICENSE file.",
+  "name": "SharedMailboxSkills",
+  "description": "Shared mailbox classification and draft management",
+  "backendBaseUrl": "https://shared-mailbox-classifier.azurewebsites.net",
+  "actions": [
+    {
+      "name": "FetchMessage",
+      "input": {
+        "mailboxAddress": "text",
+        "messageId": "text"
+      },
+      "output": {
+        "message": "object"
+      },
+      "http": {
+        "method": "GET",
+        "path": "/api/mailbox/messages/{messageId}?mailboxAddress={mailboxAddress}",
+        "headers": { "Authorization": "Bearer <token>" }
+      }
+    },
+    {
+      "name": "ClassifyMessage",
+      "input": {
+        "mailboxAddress": "text",
+        "messageId": "text"
+      },
+      "output": {
+        "classifications": "array"
+      },
+      "http": {
+        "method": "POST",
+        "path": "/api/mailbox/classify",
+        "body": { "messageId": "{messageId}" }
+      }
+    },
+    {
+      "name": "CreateDraft",
+      "input": {
+        "mailboxAddress": "text",
+        "messageId": "text",
+        "subject": "text",
+        "body": "text"
+      },
+      "output": {
+        "draftId": "text",
+        "draftUrl": "text"
+      },
+      "http": {
+        "method": "POST",
+        "path": "/api/mailbox/drafts",
+        "body": { "messageId": "{messageId}", "subject": "{subject}", "body": "{body}", "classifications": "{classifications}" }
+      }
+    }
+  ]
+}

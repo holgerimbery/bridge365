@@ -11,6 +11,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] - 2026-09-02
+
+### What's New
+- New top-level `backend-service/` folder: extracted `app.py` and `requirements.txt` from the Phase 1 wiki into real, standalone source files, plus a `scripts/` subfolder with the 8 backend deployment and security-hardening PowerShell scripts.
+- New top-level `custom-connector/` folder: added `openapi.yaml`, a proper OpenAPI (Swagger 2.0) definition of the four backend operations (`GetMessages`, `GetMessage`, `ClassifyMessage`, `CreateDraft`), plus a standalone `README.md` setup guide.
+- New top-level `SharedMailboxSkills/` folder: added `skills.json`, a declarative definition of the three Copilot Studio executable skill actions (`FetchMessage`, `ClassifyMessage`, `CreateDraft`), plus a standalone `README.md` setup guide.
+
+### What's Modified
+- `docs/wiki/phase-1-mailbox-setup.md` updated to reference the new folder locations for all backend scripts, the backend source code, the connector OpenAPI spec, and the skill definition.
+- `docs/wiki/index.md` and `README.md` updated with a Project Structure overview reflecting the new folders.
+- `docs/implementation-plan.md` updated to remove references to the removed placeholder scripts.
+
+### Breaking Changes
+- The 8 backend scripts (`create-app-service.ps1`, `configure-app-service.ps1`, `test-backend.ps1`, `enable-backend-auth.ps1`, `configure-allowlist.ps1`, `secure-client-secret.ps1`, `restrict-network-access.ps1`, `review-backend-logs.ps1`) moved from `docs/wiki/scripts/` to `backend-service/scripts/`. Update any local references to the old paths.
+
+---
+
+## [0.3.2] - 2026-09-02
+
+### What's Fixed
+- Removed two stale scripts (`setup-shared-mailbox-skill.ps1`, `setup-custom-connector.ps1`) that were not referenced by any current wiki step and used a different, inconsistent parameter naming convention (`EnvironmentId`, `SkillName`, `ApiHost`, `ConnectorName`). Steps 5/6 now use manual Power Platform UI instructions, not scripts.
+- Updated the `docs/wiki/index.md` script list to reflect the actual, current set of scripts in `docs/wiki/scripts/`.
+
+### Breaking Changes
+- None.
+
+---
+
 ## [0.3.1] - 2026-09-02
 
 ### What's Fixed

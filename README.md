@@ -85,16 +85,15 @@ graph TB
 - [Commit Conventions](COMMIT_CONVENTION.md) – Standardized commit message format
 
 **Helper Scripts:**
-All scripts include copyright headers and are located in `docs/wiki/scripts/`:
-- `test-app-registration.ps1` – Validate app registration credentials
-- `create-app-service.ps1` – Create Azure App Service
-- `configure-app-service.ps1` – Set environment variables
-- `test-backend.ps1` – Test backend endpoints
-- `grant-mailbox-permissions.ps1` – Configure mailbox access
-- `setup-shared-mailbox-skill.ps1` – Create Copilot Studio skill
-- `setup-custom-connector.ps1` – Create custom connector
-- `setup-classification-table.ps1` – Create Dataverse table
-- `create-sample-classifications.ps1` – Load sample data
+All scripts include copyright headers.
+- `docs/wiki/scripts/test-app-registration.ps1` - Validate app registration credentials
+- `docs/wiki/scripts/grant-mailbox-permissions.ps1` - Configure mailbox access
+- `backend-service/scripts/create-app-service.ps1` - Create Azure App Service
+- `backend-service/scripts/configure-app-service.ps1` - Set environment variables
+- `backend-service/scripts/test-backend.ps1` - Test backend endpoints
+- `backend-service/scripts/enable-backend-auth.ps1`, `configure-allowlist.ps1`, `secure-client-secret.ps1`, `restrict-network-access.ps1`, `review-backend-logs.ps1` - Security hardening
+- `docs/wiki/scripts/setup-classification-table.ps1` - Create Dataverse table
+- `docs/wiki/scripts/create-sample-classifications.ps1` - Load sample data
 
 ## Project Structure
 
@@ -104,15 +103,24 @@ bridge365/
 ├── CHANGELOG.md                        # Version history
 ├── COMMIT_CONVENTION.md                # Commit message format
 ├── LICENSE                             # Project license
-├── docs/
-│   ├── implementation-plan.md          # Full roadmap and phases
-│   ├── shared-mailbox-classification-master-guide.md  # Reference guide
-│   └── wiki/                           # Phase-by-phase guides
-│       ├── index.md                    # Wiki home
-│       ├── phase-1-mailbox-setup.md    # ✅ Phase 1 (complete with testing)
-│       ├── phase-2-classification-table.md  # 🔄 Phase 2 (in progress)
-│       └── scripts/                    # Automation scripts
-└── backend/                            # 📋 Python Flask service (reference)
+├── backend-service/                    # Flask backend service
+│   ├── app.py                          # Backend application
+│   ├── requirements.txt                # Python dependencies
+│   └── scripts/                        # Deployment & security-hardening scripts
+├── custom-connector/                   # Standard harness (Power Platform connector)
+│   ├── README.md                       # Setup guide
+│   └── openapi.yaml                    # Connector OpenAPI definition
+├── SharedMailboxSkills/                # GitHub Copilot harness (executable skills)
+│   ├── README.md                       # Setup guide
+│   └── skills.json                     # Skill/action definitions
+└── docs/
+    ├── implementation-plan.md          # Full roadmap and phases
+    ├── shared-mailbox-classification-master-guide.md  # Reference guide
+    └── wiki/                           # Phase-by-phase guides
+        ├── index.md                    # Wiki home
+        ├── phase-1-mailbox-setup.md    # Phase 1 (complete with testing)
+        ├── phase-2-classification-table.md  # Phase 2 (in progress)
+        └── scripts/                    # Shared app-registration & Phase 2 scripts
 ```
 
 ## Support & Contribution

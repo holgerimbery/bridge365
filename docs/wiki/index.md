@@ -17,16 +17,29 @@ This wiki documents the setup, implementation, and operation of the email classi
 ## Quick Start
 
 1. Review the [Phase 1 setup guide](phase-1-mailbox-setup.md)
-2. Run the PowerShell scripts in `docs/wiki/scripts/`
+2. Deploy the [backend service](../../backend-service), then set up the
+   [custom connector](../../custom-connector) and/or [SharedMailboxSkills](../../SharedMailboxSkills)
 3. Test with the provided sample workflows
+
+## Project Structure
+
+- [`backend-service/`](../../backend-service) - Flask backend (`app.py`, `requirements.txt`) plus
+  its deployment and security-hardening PowerShell scripts (`backend-service/scripts/`)
+- [`custom-connector/`](../../custom-connector) - OpenAPI definition and setup guide for the
+  standard Copilot Studio harness
+- [`SharedMailboxSkills/`](../../SharedMailboxSkills) - Skill/action definition and setup guide for
+  the GitHub Copilot harness (parallel executable skills)
+- `docs/wiki/scripts/` - Shared app-registration scripts (`test-app-registration.ps1`,
+  `grant-mailbox-permissions.ps1`) and Phase 2 Dataverse scripts
 
 ## Scripts
 
-All PowerShell scripts include copyright headers and are located in `scripts/`:
+All PowerShell scripts include copyright headers.
 
-- `setup-shared-mailbox-skill.ps1` — Copilot Studio skill registration
-- `setup-custom-connector.ps1` — Custom connector provisioning
-- (More scripts added in subsequent phases)
+- `docs/wiki/scripts/test-app-registration.ps1`, `docs/wiki/scripts/grant-mailbox-permissions.ps1` - Phase 1 app registration and mailbox access policy (shared by all harnesses)
+- `backend-service/scripts/create-app-service.ps1`, `configure-app-service.ps1`, `test-backend.ps1` - Phase 1 backend service deployment
+- `backend-service/scripts/enable-backend-auth.ps1`, `configure-allowlist.ps1`, `secure-client-secret.ps1`, `restrict-network-access.ps1`, `review-backend-logs.ps1` - Phase 1 security hardening
+- `docs/wiki/scripts/setup-classification-table.ps1`, `create-sample-classifications.ps1` - Phase 2 classification table setup
 
 ## License & Copyright
 
