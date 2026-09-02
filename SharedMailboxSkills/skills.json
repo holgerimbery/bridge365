@@ -51,6 +51,39 @@
         "path": "/api/mailbox/drafts",
         "body": { "messageId": "{messageId}", "subject": "{subject}", "body": "{body}", "classifications": "{classifications}" }
       }
+    },
+    {
+      "name": "SendMessage",
+      "input": {
+        "mailboxAddress": "text",
+        "to": "text",
+        "subject": "text",
+        "body": "text"
+      },
+      "output": {
+        "status": "text"
+      },
+      "http": {
+        "method": "POST",
+        "path": "/api/mailbox/messages/send",
+        "body": { "mailboxAddress": "{mailboxAddress}", "to": "{to}", "subject": "{subject}", "body": "{body}" }
+      }
+    },
+    {
+      "name": "SendDraftMessage",
+      "input": {
+        "mailboxAddress": "text",
+        "draftId": "text"
+      },
+      "output": {
+        "status": "text",
+        "draftId": "text"
+      },
+      "http": {
+        "method": "POST",
+        "path": "/api/mailbox/drafts/{draftId}/send",
+        "body": { "mailboxAddress": "{mailboxAddress}" }
+      }
     }
   ]
 }

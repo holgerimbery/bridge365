@@ -62,5 +62,32 @@ try {
     Write-Host "     (This is normal if app registration doesn't have mailbox access yet)" -ForegroundColor Gray
 }
 
+# Test 5: Send message endpoint
+Write-Host "5. Testing /api/mailbox/messages/send endpoint..." -ForegroundColor Yellow
+try {
+    $Body = @{ mailboxAddress = $MailboxAddress; to = "recipient@company.com"; subject = "Test"; body = "Test body" } | ConvertTo-Json
+    $Response = Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/messages/send" `
+        -Method Post -Body $Body -ContentType "application/json" -ErrorAction Stop
+    Write-Host "   ✓ Send message endpoint works" -ForegroundColor Green
+    Write-Host "   Response: $($Response | ConvertTo-Json)" -ForegroundColor Gray
+} catch {
+    Write-Host "   ⚠ Warning: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "     (This is normal if app registration doesn't have mailbox access yet)" -ForegroundColor Gray
+}
+
+Write-Host ""
+
+# Test 6: Send draft message endpoint
+Write-Host "6. Testing /api/mailbox/drafts/{draftId}/send endpoint..." -ForegroundColor Yellow
+try {
+    $Body = @{ mailboxAddress = $MailboxAddress } | ConvertTo-Json
+    $Response = Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/drafts/test-draft-id/send" `
+        -Method Post -Body $Body -ContentType "application/json" -ErrorAction Stop
+    Write-Host "   ✓ Send draft message endpoint works" -ForegroundColor Green
+    Write-Host "   Response: $($Response | ConvertTo-Json)" -ForegroundColor Gray
+} catch {
+    Write-Host "   ⚠ Warning: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "     (This is normal if app registration doesn't have mailbox access yet)" -ForegroundColor Gray
+}
 Write-Host ""
 Write-Host "Testing complete!" -ForegroundColor Cyan

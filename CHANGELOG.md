@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.2] - 2026-09-02
+
+### What's New
+- New "Trigger the Agent Autonomously with a Copilot Studio Workflow" section (Step 5) in `SharedMailboxSkills/README.md`, documenting how to run the GitHub Copilot harness (executable skills) autonomously using Copilot Studio's native **Workflows** feature - a connector-based trigger ("When a new email arrives" or the custom connector's `NewMessageReceived` trigger) feeding an Agent node equipped with the `FetchMessage`/`ClassifyMessage`/`CreateDraft` skills as tools, with no external orchestration required.
+- New Step 6.5 in `docs/wiki/phase-1-mailbox-setup.md` cross-referencing the Workflow setup guide.
+- Added **SendMessage** and **SendDraftMessage** actions across all layers: `backend-service/app.py` gained `POST /api/mailbox/messages/send` (Graph `sendMail`) and `POST /api/mailbox/drafts/<draftId>/send` (Graph `.../messages/{id}/send`); `custom-connector/openapi.yaml` gained matching `SendMessage`/`SendDraftMessage` operations; `SharedMailboxSkills/skills.json` gained matching skill actions. This lets an agent send a brand-new message directly, or send an existing (optionally human-edited) draft created by `CreateDraft`.
+
+### What's Modified
+- `backend-service/scripts/test-backend.ps1` extended with Test 5 (send message) and Test 6 (send draft message), keeping the script in sync with `app.py`.
+- `custom-connector/README.md` updated to list six actions and mention the new send actions in the autonomous-trigger sample instructions.
+- `SharedMailboxSkills/README.md` updated to list five actions, with new HTTP mapping entries for `SendMessage`/`SendDraftMessage` and updated Workflow-trigger sample instructions.
+- `docs/wiki/phase-1-mailbox-setup.md` updated with a byte-identical refresh of the embedded `test-backend.ps1` copy (previously missing Test 4), new Operation/Action blocks for `SendMessage`/`SendDraftMessage` in Steps 5.3 and 6.2/6.3, and updated Step 5.6/6.5 trigger instructions.
+
+### Breaking Changes
+- None.
+
+---
+
 ## [0.4.1] - 2026-09-02
 
 ### What's New

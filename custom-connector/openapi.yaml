@@ -135,3 +135,45 @@ paths:
       responses:
         "200":
           description: "{ draftId, draftUrl }"
+  /api/mailbox/messages/send:
+    post:
+      summary: SendMessage
+      operationId: SendMessage
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              mailboxAddress:
+                type: string
+              to:
+                type: string
+              subject:
+                type: string
+              body:
+                type: string
+      responses:
+        "200":
+          description: "{ status }"
+  /api/mailbox/drafts/{draftId}/send:
+    post:
+      summary: SendDraftMessage
+      operationId: SendDraftMessage
+      parameters:
+        - name: draftId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              mailboxAddress:
+                type: string
+      responses:
+        "200":
+          description: "{ status, draftId }"

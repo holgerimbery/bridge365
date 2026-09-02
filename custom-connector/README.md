@@ -1,4 +1,6 @@
-# Custom Connector Setup (Standard Harness)
+   > then call CreateDraft with a reply based on the returned classification. Call
+   > SendDraftMessage only after a human has approved the draft (or call
+   > SendMessage directly for a fully autonomous reply with no draft step)."
 
 (c) 2026 Holger Imbery (contact@holgerimbery.blog). Licensed under the project LICENSE file.
 
@@ -9,9 +11,9 @@ Platform custom connector, used by the standard Copilot Studio harness to call t
 ## Contents
 
 - `openapi.yaml` - OpenAPI (Swagger 2.0) definition of the backend operations:
-  four actions (`GetMessages`, `GetMessage`, `ClassifyMessage`, `CreateDraft`) and
-  one polling trigger (`NewMessageReceived`, see Step 5). Import this file
-  directly when creating the connector.
+  six actions (`GetMessages`, `GetMessage`, `ClassifyMessage`, `CreateDraft`, `SendMessage`,
+  `SendDraftMessage`) and one polling trigger (`NewMessageReceived`, see Step 5). Import
+  this file directly when creating the connector.
 
 ## Step 1: Navigate to Power Platform Connectors
 
@@ -104,7 +106,9 @@ user conversation - separate from the action-based Topics described above.
 5. Under **When this trigger fires**, write agent instructions describing what
    to do with the incoming message payload, for example:
    > "A new email arrived in the shared mailbox. Call ClassifyMessage on it,
-   > then call CreateDraft with a reply based on the returned classification."
+   > then call CreateDraft with a reply based on the returned classification. Call
+   > SendDraftMessage only after a human has approved the draft (or call
+   > SendMessage directly for a fully autonomous reply with no draft step)."
 6. Save and test by sending an email to the shared mailbox (see the
    `x-ms-trigger-hint` in `openapi.yaml`)
 

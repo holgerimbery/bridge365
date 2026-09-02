@@ -134,5 +134,54 @@ def create_draft():
         logging.error(f"Error creating draft: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/api/mailbox/messages/send", methods=["POST"])
+def send_message():
+    """Send a new (non-reply) message from the shared mailbox"""
+    try:
+        data = request.json
+        mailbox = data.get("mailboxAddress")
+        to = data.get("to")
+        subject = data.get("subject")
+        body = data.get("body")
+
+        if not all([mailbox, to, subject, body]):
+            return jsonify({"error": "mailboxAddress, to, subject, body required"}), 400
+
+        # Call Microsoft Graph API sendMail action
+        graph_client.post(
+            f"/users/{mailbox}/sendMail",
+            json={
+                "message": {
+                    "subject": subject,
+                    "body": {"contentType": "Text", "content": body},
+                    "toRecipients": [{"emailAddress": {"address": to}}]
+                },
+                "saveToSentItems": "true"
+            }
+        )
+
+        return jsonify({"status": "sent"}), 200
+    except Exception as e:
+        logging.error(f"Error sending message: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/mailbox/drafts/<draft_id>/send", methods=["POST"])
+def send_draft_message(draft_id):
+    """Send an existing draft (e.g. one created via CreateDraft)"""
+    try:
+        data = request.json or {}
+        mailbox = data.get("mailboxAddress")
+
+        if not mailbox:
+            return jsonify({"error": "mailboxAddress parameter required"}), 400
+
+        # Call Microsoft Graph API to send the draft message as-is
+        graph_client.post(f"/users/{mailbox}/messages/{draft_id}/send")
+
+        return jsonify({"status": "sent", "draftId": draft_id}), 200
+    except Exception as e:
+        logging.error(f"Error sending draft message: {e}")
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

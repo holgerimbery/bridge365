@@ -21,10 +21,11 @@ This project provides:
 | Phase 1: Security Hardening | ✅ Complete | v0.3.0 |
 | Phase 1: Repo Reorganization (backend-service / custom-connector / SharedMailboxSkills) | ✅ Complete | v0.4.0 |
 | Phase 1: Custom Connector Autonomous Agent Trigger | ✅ Complete | v0.4.1 |
+| Phase 1: Copilot Studio Workflow Trigger (GitHub Copilot Harness) | ✅ Complete | v0.4.2 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
-## Quick Start (Phase 1: v0.4.1)
+## Quick Start (Phase 1: v0.4.2)
 
 ### Prerequisites
 
@@ -230,6 +231,11 @@ All code samples include copyright headers. See individual files for details.
 - ✅ `backend-service/scripts/test-backend.ps1` extended with a poll-endpoint test
 - ✅ Setup guide for wiring the trigger to an autonomous agent (Generative Orchestration, solution-aware cloud flow sharing, author-credential caveat)
 
+### v0.4.2: Copilot Studio Workflow Trigger (GitHub Copilot Harness)
+- ✅ New Step 5 "Trigger the Agent Autonomously with a Copilot Studio Workflow" in `SharedMailboxSkills/README.md`, using Copilot Studio's native Workflows feature (connector trigger + Agent node with the `FetchMessage`/`ClassifyMessage`/`CreateDraft` skills as tools)
+- ✅ New Step 6.5 in `docs/wiki/phase-1-mailbox-setup.md` cross-referencing the Workflow setup guide
+- ✅ New **SendMessage** and **SendDraftMessage** actions across all layers (`backend-service/app.py`, `custom-connector/openapi.yaml`, `SharedMailboxSkills/skills.json`), letting an agent send a brand-new message directly or send an existing draft after optional human review
+
 ---
 
 ## 🔄 IN PROGRESS
@@ -290,4 +296,4 @@ All code samples include copyright headers. See individual files for details.
 
 ---
 
-**Current Version:** v0.4.1 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.4.2 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)

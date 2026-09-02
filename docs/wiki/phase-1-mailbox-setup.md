@@ -428,6 +428,47 @@ try {
 }
 
 Write-Host ""
+
+# Test 4: Poll (trigger) endpoint
+Write-Host "4. Testing /api/mailbox/messages/poll endpoint..." -ForegroundColor Yellow
+try {
+    $Response = Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/messages/poll?mailboxAddress=$MailboxAddress" `
+        -Method Get -ErrorAction Stop
+    Write-Host "   ✓ Poll endpoint works" -ForegroundColor Green
+    Write-Host "   Found $($Response.value.Count) new messages" -ForegroundColor Gray
+} catch {
+    Write-Host "   ⚠ Warning: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "     (This is normal if app registration doesn't have mailbox access yet)" -ForegroundColor Gray
+}
+
+# Test 5: Send message endpoint
+Write-Host "5. Testing /api/mailbox/messages/send endpoint..." -ForegroundColor Yellow
+try {
+    $Body = @{ mailboxAddress = $MailboxAddress; to = "recipient@company.com"; subject = "Test"; body = "Test body" } | ConvertTo-Json
+    $Response = Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/messages/send" `
+        -Method Post -Body $Body -ContentType "application/json" -ErrorAction Stop
+    Write-Host "   ✓ Send message endpoint works" -ForegroundColor Green
+    Write-Host "   Response: $($Response | ConvertTo-Json)" -ForegroundColor Gray
+} catch {
+    Write-Host "   ⚠ Warning: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "     (This is normal if app registration doesn't have mailbox access yet)" -ForegroundColor Gray
+}
+
+Write-Host ""
+
+# Test 6: Send draft message endpoint
+Write-Host "6. Testing /api/mailbox/drafts/{draftId}/send endpoint..." -ForegroundColor Yellow
+try {
+    $Body = @{ mailboxAddress = $MailboxAddress } | ConvertTo-Json
+    $Response = Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/drafts/test-draft-id/send" `
+        -Method Post -Body $Body -ContentType "application/json" -ErrorAction Stop
+    Write-Host "   ✓ Send draft message endpoint works" -ForegroundColor Green
+    Write-Host "   Response: $($Response | ConvertTo-Json)" -ForegroundColor Gray
+} catch {
+    Write-Host "   ⚠ Warning: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "     (This is normal if app registration doesn't have mailbox access yet)" -ForegroundColor Gray
+}
+Write-Host ""
 Write-Host "Testing complete!" -ForegroundColor Cyan
 ```
 
@@ -460,6 +501,18 @@ Backend: https://shared-mailbox-classifier.azurewebsites.net
    Response: {
      "classifications": [{"className": "Invoice Question", ...}]
    }
+
+4. Testing /api/mailbox/messages/poll endpoint...
+   ⚠ Warning: 401 Unauthorized
+     (This is normal if app registration doesn't have mailbox access yet)
+
+5. Testing /api/mailbox/messages/send endpoint...
+   ⚠ Warning: 401 Unauthorized
+     (This is normal if app registration doesn't have mailbox access yet)
+
+6. Testing /api/mailbox/drafts/{draftId}/send endpoint...
+   ⚠ Warning: 401 Unauthorized
+     (This is normal if app registration doesn't have mailbox access yet)
 
 Testing complete!
 ```
@@ -856,6 +909,33 @@ Body (JSON):
 Response: { draftId, draftUrl }
 ```
 
+**Operation 5: SendMessage**
+```
+Method: POST
+Path: /api/mailbox/messages/send
+Body (JSON):
+  {
+    "mailboxAddress": "string",
+    "to": "string",
+    "subject": "string",
+    "body": "string"
+  }
+Response: { status }
+```
+
+**Operation 6: SendDraftMessage**
+```
+Method: POST
+Path: /api/mailbox/drafts/{draftId}/send
+URL Parameters:
+  - draftId (string, required)
+Body (JSON):
+  {
+    "mailboxAddress": "string"
+  }
+Response: { status, draftId }
+```
+
 ### Step 5.4: Configure Authentication
 
 1. Click **Security** tab
@@ -909,8 +989,10 @@ environment needs **solution-aware cloud flow sharing** turned on. Add the
 trigger from the agent's **Overview** page (not Topics) under **Triggers**,
 select **NewMessageReceived**, set `mailboxAddress`, and write instructions
 for what the agent should do with each new message (for example, call
-`ClassifyMessage` then `CreateDraft`). Note that event triggers authenticate
-with the **agent maker's credentials**, not per-end-user credentials.
+`ClassifyMessage` then `CreateDraft`, then `SendDraftMessage` after human
+approval, or `SendMessage` directly for a fully autonomous reply). Note that
+event triggers authenticate with the **agent maker's credentials**, not
+per-end-user credentials.
 
 ---
 
@@ -932,7 +1014,7 @@ guide) live in [`SharedMailboxSkills/`](../../SharedMailboxSkills) - see
 
 ### Step 6.2: Add Skill Actions
 
-Add three actions:
+Add five actions:
 
 **Action 1: FetchMessage**
 ```
@@ -967,6 +1049,29 @@ Output:
   - draftUrl (text)
 ```
 
+**Action 4: SendMessage**
+```
+Input:
+  - mailboxAddress (text)
+  - to (text)
+  - subject (text)
+  - body (text)
+
+Output:
+  - status (text)
+```
+
+**Action 5: SendDraftMessage**
+```
+Input:
+  - mailboxAddress (text)
+  - draftId (text)
+
+Output:
+  - status (text)
+  - draftId (text)
+```
+
 ### Step 6.3: Implement Actions (Call Backend)
 
 For each action, add an HTTP call to your backend:
@@ -983,6 +1088,14 @@ ClassifyMessage:
 CreateDraft:
   HTTP POST → https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/drafts
   Body: { "messageId", "subject", "body", "classifications" }
+
+SendMessage:
+  HTTP POST → https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/messages/send
+  Body: { "mailboxAddress", "to", "subject", "body" }
+
+SendDraftMessage:
+  HTTP POST → https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/drafts/{draftId}/send
+  Body: { "mailboxAddress" }
 ```
 
 ### Step 6.4: Test Executable Skills
@@ -1001,6 +1114,20 @@ Message retrieved:
   From: sender@external.com
   Received: 2026-09-02 10:30 AM
 ```
+
+### Step 6.5: Trigger the Agent Autonomously with a Copilot Studio Workflow
+
+To run the GitHub Copilot harness without a chat user - the moment a new email
+lands in the shared mailbox - use Copilot Studio's native **Workflows** feature
+instead of any external automation. A Workflow starts from a **trigger**
+(a connector event, such as "When a new email arrives" or the custom connector's
+`NewMessageReceived` trigger) and hands the work to an **Agent node** equipped
+with the `SharedMailboxSkills` actions (`FetchMessage`, `ClassifyMessage`,
+`CreateDraft`, and optionally `SendMessage`/`SendDraftMessage`) as tools.
+Full setup steps, including the trigger options and
+sample agent instructions, are documented in
+`SharedMailboxSkills/README.md` (Step 5: Trigger the Agent Autonomously with a
+Copilot Studio Workflow).
 
 ---
 
