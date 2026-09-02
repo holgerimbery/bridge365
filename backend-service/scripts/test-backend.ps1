@@ -49,4 +49,18 @@ try {
 }
 
 Write-Host ""
+
+# Test 4: Poll (trigger) endpoint
+Write-Host "4. Testing /api/mailbox/messages/poll endpoint..." -ForegroundColor Yellow
+try {
+    $Response = Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/messages/poll?mailboxAddress=$MailboxAddress" `
+        -Method Get -ErrorAction Stop
+    Write-Host "   ✓ Poll endpoint works" -ForegroundColor Green
+    Write-Host "   Found $($Response.value.Count) new messages" -ForegroundColor Gray
+} catch {
+    Write-Host "   ⚠ Warning: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "     (This is normal if app registration doesn't have mailbox access yet)" -ForegroundColor Gray
+}
+
+Write-Host ""
 Write-Host "Testing complete!" -ForegroundColor Cyan

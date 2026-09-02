@@ -42,6 +42,43 @@ paths:
       responses:
         "200":
           description: Array of Message objects
+  /api/mailbox/messages/poll:
+    get:
+      summary: NewMessageReceived
+      description: Triggers when a new message arrives in the shared mailbox. Used as an autonomous agent trigger in Copilot Studio (agent Overview > Triggers), not called manually from a topic.
+      operationId: NewMessageReceived
+      x-ms-trigger: batch
+      x-ms-trigger-hint: "Send an email to the shared mailbox to see it work."
+      parameters:
+        - name: mailboxAddress
+          in: query
+          required: true
+          type: string
+          x-ms-summary: Mailbox Address
+          x-ms-visibility: important
+        - name: since
+          in: query
+          required: false
+          type: string
+          format: date-time
+          x-ms-summary: Checkpoint (internal)
+          x-ms-visibility: internal
+          description: "Internal polling checkpoint managed by the flow engine. Do not set manually."
+      responses:
+        "200":
+          description: Array of new Message objects, newest first
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                id:
+                  type: string
+                subject:
+                  type: string
+                receivedDateTime:
+                  type: string
+                  format: date-time
   /api/mailbox/messages/{messageId}:
     get:
       summary: GetMessage

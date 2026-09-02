@@ -47,6 +47,33 @@ def get_messages():
         logging.error(f"Error fetching messages: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/api/mailbox/messages/poll", methods=["GET"])
+def poll_new_messages():
+    """Polling trigger endpoint: returns messages newer than 'since', newest first.
+
+    Used by the SharedMailboxConnector NewMessageReceived polling trigger so a
+    Copilot Studio autonomous agent can react to new mail without a conversation.
+    """
+    try:
+        mailbox = request.args.get("mailboxAddress")
+        since = request.args.get("since")
+
+        if not mailbox:
+            return jsonify({"error": "mailboxAddress parameter required"}), 400
+
+        filter_clause = f"receivedDateTime gt {since}" if since else "receivedDateTime gt 1970-01-01T00:00:00Z"
+
+        # Call Microsoft Graph API - newest first, as required by the polling trigger contract
+        response = graph_client.get(
+            f"/users/{mailbox}/messages?$filter={filter_clause}&$orderby=receivedDateTime desc"
+            f"&$select=id,subject,from,receivedDateTime,bodyPreview"
+        )
+        return jsonify(response.json()), 200
+    except Exception as e:
+        logging.error(f"Error polling for new messages: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/mailbox/messages/<message_id>", methods=["GET"])
 def get_message(message_id):
     """Fetch single message"""

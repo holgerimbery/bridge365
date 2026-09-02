@@ -8,8 +8,9 @@ Platform custom connector, used by the standard Copilot Studio harness to call t
 
 ## Contents
 
-- `openapi.yaml` - OpenAPI (Swagger 2.0) definition of the four backend operations
-  (`GetMessages`, `GetMessage`, `ClassifyMessage`, `CreateDraft`). Import this file
+- `openapi.yaml` - OpenAPI (Swagger 2.0) definition of the backend operations:
+  four actions (`GetMessages`, `GetMessage`, `ClassifyMessage`, `CreateDraft`) and
+  one polling trigger (`NewMessageReceived`, see Step 5). Import this file
   directly when creating the connector.
 
 ## Step 1: Navigate to Power Platform Connectors
@@ -77,3 +78,37 @@ If you get **401 Unauthorized**, verify:
 - App registration credentials are correct
 - Client ID and secret match
 - API permissions are granted and admin consent is given
+
+## Step 5: Use as an Autonomous Agent Trigger
+
+The connector's `NewMessageReceived` operation is a polling trigger, so it can
+power a Copilot Studio **autonomous agent** that reacts to new mail without any
+user conversation - separate from the action-based Topics described above.
+
+**Prerequisites:**
+- The agent has **Generative Orchestration** enabled
+- The environment has **solution-aware cloud flow sharing** turned on
+- Note: event triggers authenticate with the **agent maker's credentials**, not
+  per-end-user credentials. Published agents with an authenticated trigger show
+  a data-protection warning; admins can block event triggers entirely via DLP
+  policy.
+
+**Steps:**
+
+1. Open your agent in [Copilot Studio](https://copilotstudio.microsoft.com)
+2. Go to **Overview** (not Topics) -> **Triggers** section
+3. Click **Add trigger** -> **SharedMailboxConnector** -> **NewMessageReceived**
+4. Set **mailboxAddress**: `shared@company.com`
+   - Leave the internal `since` checkpoint parameter untouched; it's managed
+     automatically between polls
+5. Under **When this trigger fires**, write agent instructions describing what
+   to do with the incoming message payload, for example:
+   > "A new email arrived in the shared mailbox. Call ClassifyMessage on it,
+   > then call CreateDraft with a reply based on the returned classification."
+6. Save and test by sending an email to the shared mailbox (see the
+   `x-ms-trigger-hint` in `openapi.yaml`)
+
+Because polling triggers must return results **newest first**, the connector
+calls the backend's `/api/mailbox/messages/poll` endpoint, which applies
+`$orderby=receivedDateTime desc` and a `since` checkpoint filter - see
+`backend-service/app.py`.

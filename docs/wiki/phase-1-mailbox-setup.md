@@ -897,6 +897,21 @@ If you get **401 Unauthorized**, verify:
 - Client ID and secret match
 - API permissions are granted and admin consent is given
 
+### Step 5.6: Use as an Autonomous Agent Trigger (Optional)
+
+The connector also exposes a `NewMessageReceived` polling trigger, so it can
+drive a Copilot Studio **autonomous agent** that reacts to new mail without a
+user conversation. Full setup steps are documented in
+[`custom-connector/README.md`](../../custom-connector/README.md#step-5-use-as-an-autonomous-agent-trigger).
+
+In short: the agent needs **Generative Orchestration** enabled and the
+environment needs **solution-aware cloud flow sharing** turned on. Add the
+trigger from the agent's **Overview** page (not Topics) under **Triggers**,
+select **NewMessageReceived**, set `mailboxAddress`, and write instructions
+for what the agent should do with each new message (for example, call
+`ClassifyMessage` then `CreateDraft`). Note that event triggers authenticate
+with the **agent maker's credentials**, not per-end-user credentials.
+
 ---
 
 ## 6. GitHub Copilot Harness (Parallel - Executable Skills)

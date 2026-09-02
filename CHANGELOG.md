@@ -11,6 +11,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.1] - 2026-09-02
+
+### What's New
+- Added a `NewMessageReceived` polling trigger operation to `custom-connector/openapi.yaml` (`x-ms-trigger: batch`), so the `SharedMailboxConnector` can now power a Copilot Studio agent-level **Trigger**, enabling autonomous agents that react to new shared-mailbox mail without a user conversation.
+- Added a matching `/api/mailbox/messages/poll` endpoint to `backend-service/app.py`, returning new messages in reverse-chronological order using a `since` checkpoint, per the connector polling-trigger contract.
+- New "Use as an Autonomous Agent Trigger" section in `custom-connector/README.md` (Step 5) documenting the Generative Orchestration and solution-aware cloud flow sharing prerequisites, the author-credential authentication caveat, and how to wire the trigger to agent instructions.
+- New Step 5.6 in `docs/wiki/phase-1-mailbox-setup.md` cross-referencing the connector READMEs trigger setup guide.
+
+### What's Modified
+- `backend-service/scripts/test-backend.ps1` extended with a Test 4 for the new `/poll` endpoint, keeping the script in sync with `app.py`.
+- `README.md` rewritten to reflect the real release history (v0.3.0 security hardening, v0.3.1/v0.3.2 script fixes, v0.4.0 folder reorg, v0.4.1 trigger support) with an updated Status Summary, Architecture diagram, and Current Version.
+
+### Breaking Changes
+- None.
+
+---
+
 ## [0.4.0] - 2026-09-02
 
 ### What's New
