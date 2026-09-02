@@ -163,49 +163,43 @@ If you get **401 Unauthorized**, check that:
 - Secret hasn't expired
 - App registration is in the correct tenant
 
-### Step 3.5: Grant Shared Mailbox Access in Exchange Online
+### Step 3.5: Restrict Shared Mailbox Access with an Application Access Policy
 
-App-only (client credentials) Graph permissions do not grant shared mailbox access by themselves. You must also grant the app's service principal two rights directly on the mailbox in Exchange Online:
+Important correction: with **application permissions** (`Mail.Read`, `Mail.Send` + admin consent), Microsoft Graph already grants the app access to **every mailbox in the tenant** - no `FullAccess`/`SendAs` mailbox permission is needed, and `Add-MailboxPermission` / `Get-ServicePrincipal` are the wrong tools here (that's why `Get-ServicePrincipal` failed with "couldn't be found" - the app was never registered as an Exchange service principal, and does not need to be).
 
-- FullAccess - lets the app read mailbox content (messages, folders)
-- SendAs - lets the app send email that appears to come from the shared mailbox
+The correct - and recommended - step is to **restrict** the app so it can only access the shared mailbox, instead of every mailbox in the org. This is done with `New-ApplicationAccessPolicy`, scoped to a mail-enabled security group.
 
 ```powershell
 # (c) 2026 Holger Imbery (contact@holgerimbery.blog)
 # Licensed under the project LICENSE file.
-# Grants Exchange Online mailbox rights (FullAccess + SendAs) to an Entra
-# app registration's service principal, for app-only Graph API access.
+# Restricts an app-only Graph application (Mail.Read/Mail.Send) to only
+# access the specified shared mailbox, instead of every mailbox in the tenant.
 
 param(
     [Parameter(Mandatory)] [string]$AppId,
-    [Parameter(Mandatory)] [string]$MailboxAddress
+    [Parameter(Mandatory)] [string]$MailboxAddress,
+    [Parameter(Mandatory)] [string]$SecurityGroupName
 )
 
-# Connect to Exchange Online
 Connect-ExchangeOnline
 
-# Resolve the app registration's service principal in Exchange Online
-$ServicePrincipal = Get-ServicePrincipal -Identity $AppId
-
-if (-not $ServicePrincipal) {
-    throw "Service principal for AppId '$AppId' was not found in Exchange Online."
+# 1. Create a mail-enabled security group scoped to this app (if it doesn't exist yet)
+$Group = Get-DistributionGroup -Identity $SecurityGroupName -ErrorAction SilentlyContinue
+if (-not $Group) {
+    New-DistributionGroup -Name $SecurityGroupName -Type Security | Out-Null
+    Write-Host "Created mail-enabled security group: $SecurityGroupName" -ForegroundColor Cyan
 }
 
-# Grant FullAccess (read mailbox content)
-Add-MailboxPermission -Identity $MailboxAddress `
-    -User $ServicePrincipal.Identity `
-    -AccessRights FullAccess `
-    -InheritanceType All `
-    -AutoMapping:$false `
-    -Confirm:$false
+# 2. Add the shared mailbox as a member of the group
+Add-DistributionGroupMember -Identity $SecurityGroupName -Member $MailboxAddress -ErrorAction SilentlyContinue
 
-# Grant SendAs (send email as the shared mailbox)
-Add-RecipientPermission -Identity $MailboxAddress `
-    -Trustee $ServicePrincipal.Identity `
-    -AccessRights SendAs `
-    -Confirm:$false
+# 3. Restrict the app so it can only access mailboxes in this group
+New-ApplicationAccessPolicy -AccessRight RestrictAccess `
+    -AppId $AppId `
+    -PolicyScopeGroupId $SecurityGroupName `
+    -Description "Restrict $AppId to shared mailbox $MailboxAddress"
 
-Write-Host "FullAccess and SendAs granted for AppId $AppId on $MailboxAddress" -ForegroundColor Green
+Write-Host "Application access policy created: $AppId restricted to $SecurityGroupName" -ForegroundColor Green
 ```
 
 Save it as `docs/wiki/scripts/grant-mailbox-permissions.ps1`.
@@ -215,41 +209,35 @@ Run it:
 ```powershell
 .\docs\wiki\scripts\grant-mailbox-permissions.ps1 `
     -AppId "your-app-client-id" `
-    -MailboxAddress "shared-mailbox@company.com"
+    -MailboxAddress "shared-mailbox@company.com" `
+    -SecurityGroupName "AppAccess-SharedMailbox"
 ```
 
 **Expected output:**
 ```
-FullAccess and SendAs granted for AppId 12345678-1234-1234-1234-123456789012 on shared-mailbox@company.com
+Created mail-enabled security group: AppAccess-SharedMailbox
+Application access policy created: your-app-client-id restricted to AppAccess-SharedMailbox
 ```
 
-**Verify the grant took effect:**
+**Verify the policy took effect:**
 
 ```powershell
 Connect-ExchangeOnline
-$Sp = Get-ServicePrincipal -Identity "your-app-client-id"
 
-Get-MailboxPermission -Identity "shared-mailbox@company.com" |
-    Where-Object { $_.User -like "*$($Sp.Identity)*" } |
-    Format-Table User, AccessRights, IsInherited
-
-Get-RecipientPermission -Identity "shared-mailbox@company.com" |
-    Where-Object { $_.Trustee -like "*$($Sp.Identity)*" } |
-    Format-Table Trustee, AccessRights, IsInherited
+Test-ApplicationAccessPolicy -Identity "shared-mailbox@company.com" -AppId "your-app-client-id"
 ```
 
 **Expected output (example):**
 ```
-User                            AccessRights   IsInherited
-----                            ------------   -----------
-your-app-service-principal      {FullAccess}   False
-
-Trustee                         AccessRights   IsInherited
--------                         ------------   -----------
-your-app-service-principal      {SendAs}       False
+AppId               : your-app-client-id
+Mailbox             : shared-mailbox@company.com
+AccessCheckedResult : Granted
 ```
 
-If permissions don't show up immediately, wait 5-10 minutes for Exchange Online replication and re-run the verification command.
+If `AccessCheckedResult` shows `Denied`, wait 30-60 minutes for policy propagation (Application Access Policies can take up to an hour to apply tenant-wide), then re-run the test.
+
+**Note on FullAccess/SendAs:** Those mailbox permissions apply to **delegated** (user sign-in) access via EWS/Outlook, not to app-only Graph API calls. Do not use `Add-MailboxPermission`/`Add-RecipientPermission` for this scenario - they are unnecessary and were removed from this guide because they caused the `Get-ServicePrincipal` error reported during validation.
+
 
 ---
 
