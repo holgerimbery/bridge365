@@ -1,10 +1,10 @@
 # Phase 1: Shared Mailbox Skill & Custom Connector Setup
 
-**Objective:** Build the core shared mailbox service, Copilot Studio skill, and custom connector running entirely within Copilot Studio.
+**Objective:** Build the core shared mailbox service with custom connector (standard harness) and executable skills (GitHub Copilot harness).
 
 **Harnesses:** 
-- Copilot Studio standard harness (primary) - Skills + Custom Connector
-- GitHub Copilot harness (parallel) - Executable skills in Copilot Studio
+- **Standard Harness:** Custom Connector only (calls backend service)
+- **GitHub Copilot Harness:** Executable Skills in Copilot Studio (also calls backend service)
 
 ---
 
@@ -20,13 +20,13 @@
 
 ## 2. Architecture (Copilot Studio Cloud Execution)
 
-### Everything Runs in Copilot Studio
+### Two Parallel Harnesses in Copilot Studio
 
-Both harnesses execute entirely within Copilot Studio cloud environment:
+Both harnesses execute within Copilot Studio cloud environment, calling the same backend:
 
-- **Standard Harness:** Copilot Studio skills invoke custom connector → Custom connector calls backend service
+- **Standard Harness:** Custom connector (no skills needed) → Backend service
 - **GitHub Copilot Harness:** Executable skills in Copilot Studio → Same backend service
-- **Backend Service:** Handles mailbox access (Microsoft Graph API) and classification logic
+- **Backend Service:** Azure-hosted, handles mailbox access via Microsoft Graph API
 
 No local execution. Everything is cloud-based in Copilot Studio.
 
@@ -38,19 +38,16 @@ graph TB
         direction TB
         
         subgraph StandardHarness["Standard Harness"]
-            SKILL1["Skill: GetMessage<br/>GetClassifications<br/>CreateDraft"]
             CONN["Custom Connector<br/>SharedMailboxConnector"]
         end
         
         subgraph GitHubHarness["GitHub Copilot Harness"]
-            EXSKILL["Executable Skill<br/>classify-message<br/>fetch-message"]
+            EXSKILL["Executable Skills<br/>FetchMessage<br/>ClassifyMessage<br/>CreateDraft"]
         end
         
-        SKILL1 -->|Invokes| CONN
-        EXSKILL -->|Calls| BACKEND
+        CONN -->|HTTP REST| BACKEND
+        EXSKILL -->|HTTP REST| BACKEND
     end
-    
-    CONN -->|HTTP REST| BACKEND
     
     subgraph Backend["Backend Service<br/>(Azure-hosted)"]
         BACKEND["Service Endpoint<br/>https://your-api.azurewebsites.net"]
@@ -65,10 +62,10 @@ graph TB
 
 **Key Architecture Points:**
 
-1. **Copilot Studio is the execution environment** - All code (skills, connectors) runs in Microsoft cloud
-2. **Both harnesses call the same backend** - Consistent behavior, single source of truth
-3. **Backend handles business logic** - Mailbox access, classification, draft creation
-4. **Custom connector is the bridge** - Translates Copilot Studio actions to HTTP calls
+1. **Standard Harness = Custom Connector only** – Direct HTTP bridge to backend service
+2. **GitHub Copilot Harness = Executable Skills** – Reusable skill components in Copilot Studio
+3. **Both call the same backend** – Consistent behavior, single source of truth
+4. **Backend handles all business logic** – Mailbox access, classification, draft creation
 
 ---
 
@@ -158,51 +155,15 @@ Run it:
 
 ---
 
-## 4. Copilot Studio Skill Setup (Standard Harness)
+## 4. Custom Connector Setup (Standard Harness)
 
-### 4.1 Create the Skill
-
-1. Open **Copilot Studio** → **Skills** → **Create new skill**
-2. Name: `SharedMailboxDraft`
-3. Description: `Manages shared mailbox messages and draft creation`
-
-### 4.2 Add Skill Actions
-
-Define these actions (implement in later phases):
-
-```yaml
-Action 1: GetMessage
-  Input: messageId (text)
-  Output: message (object)
-
-Action 2: GetClassifications
-  Input: messageId (text)
-  Output: classifications (array of objects)
-
-Action 3: CreateDraft
-  Input: messageId, classifications, answer (mixed)
-  Output: draftId (text)
-```
-
-Use the PowerShell script to automate:
-
-```powershell
-.\docs\wiki\scripts\setup-shared-mailbox-skill.ps1 `
-    -EnvironmentId "your-env-id" `
-    -SkillName "SharedMailboxDraft"
-```
-
----
-
-## 5. Custom Connector Setup (Standard Harness)
-
-### 5.1 Create the Connector in Power Platform
+### 4.1 Create the Connector in Power Platform
 
 1. Open **Power Platform** → **Data** → **Connectors** → **New Connector** → **From OpenAPI**
 2. Name: `SharedMailboxConnector`
 3. Host: `your-api-host.azurewebsites.net` (your backend service URL)
 
-### 5.2 API Endpoints
+### 4.2 API Endpoints
 
 The connector defines the interface between Copilot Studio and your backend:
 
@@ -225,7 +186,7 @@ The connector defines the interface between Copilot Studio and your backend:
 - Body: { messageId, subject, body, classifications }
 - Returns: { draftId, url }
 
-### 5.3 Configure Authentication
+### 4.3 Configure Authentication
 
 1. **Authentication type:** Azure AD (Entra)
 2. **Tenant ID:** Your Azure tenant ID
@@ -243,11 +204,11 @@ Use the PowerShell script:
 
 ---
 
-## 6. GitHub Copilot Harness (Parallel - Executable Skills)
+## 5. GitHub Copilot Harness (Parallel - Executable Skills)
 
-### 6.1 Create Executable Skills in Copilot Studio
+### 5.1 Create Executable Skills in Copilot Studio
 
-Add executable skills that provide the same operations:
+Add executable skills that provide the same operations as the custom connector:
 
 **Skill 1: FetchMessage**
 ```
@@ -256,7 +217,7 @@ Input:
   - messageId (text)
 
 Output:
-  - message (object with id, subject, from, body, receivedDateTime)
+  - message (object: {id, subject, from, body, receivedDateTime})
 ```
 
 **Skill 2: ClassifyMessage**
@@ -266,18 +227,32 @@ Input:
   - messageId (text)
 
 Output:
-  - classifications (array of {className, confidence, targetEmail})
+  - classifications (array: [{className, confidence, targetEmail}])
 ```
 
-### 6.2 Implementation in Copilot Studio
+**Skill 3: CreateDraft**
+```
+Input:
+  - mailboxAddress (text)
+  - messageId (text)
+  - subject (text)
+  - body (text)
+  - classifications (array)
 
-Each executable skill calls the backend service via REST API:
+Output:
+  - draftId (text)
+  - draftUrl (text)
+```
+
+### 5.2 Implementation in Copilot Studio
+
+Each executable skill calls the backend service via HTTP:
 
 ```json
 {
   "name": "FetchMessage",
   "type": "executable",
-  "trigger": "http",
+  "trigger": "invocation",
   "inputs": {
     "mailboxAddress": "string",
     "messageId": "string"
@@ -288,19 +263,96 @@ Each executable skill calls the backend service via REST API:
       "method": "GET",
       "url": "https://your-api-host.azurewebsites.net/api/mailbox/messages/{messageId}",
       "headers": {
-        "Authorization": "Bearer <token>"
+        "Authorization": "Bearer <token>",
+        "Content-Type": "application/json"
       }
     }
   ],
   "outputs": {
-    "message": "<response-body>"
+    "message": "<http-response-body>"
   }
 }
 ```
 
+### 5.3 SKILL.md Documentation
+
+Create `SKILL.md` with usage examples:
+
+```markdown
+# Shared Mailbox Classifier Skills
+
+## Available Skills
+
+### FetchMessage
+Retrieve a single message from the shared mailbox.
+
+**Usage:**
+```
+FetchMessage(
+  mailboxAddress: "shared@company.com",
+  messageId: "AAMkADhhZGFmND..."
+)
+```
+
+**Returns:**
+```json
+{
+  "id": "AAMkADhhZGFmND...",
+  "subject": "Invoice for August",
+  "from": "sender@external.com",
+  "body": "Please review attached invoice...",
+  "receivedDateTime": "2026-09-02T10:30:00Z"
+}
+```
+
+### ClassifyMessage
+Classify a message based on Dataverse rules.
+
+**Usage:**
+```
+ClassifyMessage(
+  mailboxAddress: "shared@company.com",
+  messageId: "AAMkADhhZGFmND..."
+)
+```
+
+**Returns:**
+```json
+[
+  {
+    "className": "Invoice Question",
+    "confidence": 0.92,
+    "targetEmail": "finance@company.com"
+  }
+]
+```
+
+### CreateDraft
+Create a reply draft with classification and routing.
+
+**Usage:**
+```
+CreateDraft(
+  mailboxAddress: "shared@company.com",
+  messageId: "AAMkADhhZGFmND...",
+  subject: "Re: Invoice for August",
+  body: "Thank you for your inquiry. Your invoice has been routed to Finance.",
+  classifications: [{"className": "Invoice Question"}]
+)
+```
+
+**Returns:**
+```json
+{
+  "draftId": "AAMkADhhZGFmND...",
+  "draftUrl": "https://outlook.office.com/mail/..."
+}
+```
+```
+
 ---
 
-## 7. Backend Service Requirements
+## 6. Backend Service Requirements
 
 Your backend service (hosted on Azure App Service, Functions, or Container Apps) must:
 
@@ -368,32 +420,33 @@ if __name__ == "__main__":
 
 ---
 
-## 8. Testing the Setup
+## 7. Testing the Setup
 
-### Test Copilot Studio Skill (Standard Harness)
+### Test Custom Connector (Standard Harness)
 
-1. Open your Copilot Studio agent
-2. Add the **SharedMailboxDraft** skill to a topic
-3. Invoke with test inputs (e.g., a known message ID)
-4. Verify output is returned
-
-### Test Custom Connector
-
-1. Open **Power Platform** → **Connectors** → **SharedMailboxConnector**
+1. Open **Power Platform** → **Data** → **Connectors** → **SharedMailboxConnector**
 2. Click **Test**
 3. Invoke GetMessages with your shared mailbox address
 4. Verify HTTP 200 and message array in response
 
-### Test GitHub Copilot Harness
+### Test Executable Skills (GitHub Copilot Harness)
 
 1. Open your Copilot Studio agent
 2. Add the **FetchMessage** executable skill to a topic
 3. Invoke with test mailbox address and message ID
-4. Verify output matches standard harness
+4. Verify output matches custom connector response
+
+### Integration Test
+
+Create a simple Copilot Studio topic that:
+1. Calls FetchMessage to get a message
+2. Calls ClassifyMessage to classify it
+3. Calls CreateDraft to generate a response
+4. Verify the complete flow works
 
 ---
 
-## 9. Troubleshooting
+## 8. Troubleshooting
 
 | Issue | Resolution |
 |---|---|
@@ -405,7 +458,7 @@ if __name__ == "__main__":
 
 ---
 
-## 10. Next Steps
+## 9. Next Steps
 
 - Proceed to Phase 2: Classification via Dataverse table
 - Implement backend service endpoints
