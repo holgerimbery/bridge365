@@ -1,4 +1,4 @@
-# Shared Mailbox Email Classification for Copilot Studio
+# Bridge365: Transforming Shared Mailboxes into AI-Powered Service Hubs
 
 A comprehensive solution for automatically classifying and routing emails in shared mailboxes using Microsoft Copilot Studio, Azure backend services, and machine learning classifiers.
 
