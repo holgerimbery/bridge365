@@ -22,6 +22,7 @@ This project provides:
 | Phase 1: Repo Reorganization (backend-service / custom-connector / SharedMailboxSkills) | ✅ Complete | v0.4.0 |
 | Phase 1: Custom Connector Autonomous Agent Trigger | ✅ Complete | v0.4.1 |
 | Phase 1: Copilot Studio Workflow Trigger (GitHub Copilot Harness) | ✅ Complete | v0.4.2 |
+| Phase 1: Script Parameter Management (.env Support) | ✅ Complete | v0.4.3 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 

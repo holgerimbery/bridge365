@@ -116,10 +116,39 @@ Store these securely in Azure Key Vault or a password manager.
 # Test app registration credentials
 
 param(
-    [Parameter(Mandatory)] [string]$ClientId,
-    [Parameter(Mandatory)] [string]$ClientSecret,
-    [Parameter(Mandatory)] [string]$TenantId
+    [string]$ClientId,
+    [string]$ClientSecret,
+    [string]$TenantId
 )
+
+# Load from .env if parameters not provided
+function Load-EnvFile {
+    param([string]$EnvPath)
+    $env_vars = @{}
+    if (Test-Path $EnvPath) {
+        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
+            $key, $value = $_ -split '=', 2
+            $env_vars[$key.Trim()] = $value.Trim()
+        }
+    }
+    return $env_vars
+}
+
+$RepoRoot = Split-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) -Parent
+$env_file = Join-Path $RepoRoot "backend-service\.env"
+if (Test-Path $env_file) {
+    $env_vars = Load-EnvFile $env_file
+    if (-not $ClientId) { $ClientId = $env_vars['CLIENT_ID'] }
+    if (-not $ClientSecret) { $ClientSecret = $env_vars['CLIENT_SECRET'] }
+    if (-not $TenantId) { $TenantId = $env_vars['TENANT_ID'] }
+}
+
+# Validate
+if (-not $ClientId -or -not $ClientSecret -or -not $TenantId) {
+    Write-Error "Missing required parameters: ClientId, ClientSecret, TenantId"
+    Write-Host "Provide via CLI parameters or backend-service/.env file" -ForegroundColor Yellow
+    exit 1
+}
 
 $TokenUrl = "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
 
@@ -164,6 +193,8 @@ If you get **401 Unauthorized**, check that:
 
 ### Step 3.5: Restrict Shared Mailbox Access with an Application Access Policy
 
+**Script:** [`grant-mailbox-permissions.ps1`](scripts/grant-mailbox-permissions.ps1)
+
 With **application permissions** (`Mail.Read`, `Mail.Send` + admin consent), Microsoft Graph grants the app access to every mailbox in the tenant. To limit the app to only the shared mailbox, use `New-ApplicationAccessPolicy` scoped to a mail-enabled security group.
 
 ```powershell
@@ -173,10 +204,39 @@ With **application permissions** (`Mail.Read`, `Mail.Send` + admin consent), Mic
 # access the specified shared mailbox, instead of every mailbox in the tenant.
 
 param(
-    [Parameter(Mandatory)] [string]$ClientId,
-    [Parameter(Mandatory)] [string]$MailboxAddress,
-    [Parameter(Mandatory)] [string]$SecurityGroupName
+    [string]$ClientId,
+    [string]$MailboxAddress,
+    [string]$SecurityGroupName
 )
+
+# Load from .env if parameters not provided
+function Load-EnvFile {
+    param([string]$EnvPath)
+    $env_vars = @{}
+    if (Test-Path $EnvPath) {
+        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
+            $key, $value = $_ -split '=', 2
+            $env_vars[$key.Trim()] = $value.Trim()
+        }
+    }
+    return $env_vars
+}
+
+$RepoRoot = Split-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) -Parent
+$env_file = Join-Path $RepoRoot "backend-service\.env"
+if (Test-Path $env_file) {
+    $env_vars = Load-EnvFile $env_file
+    if (-not $ClientId) { $ClientId = $env_vars['CLIENT_ID'] }
+    if (-not $MailboxAddress) { $MailboxAddress = $env_vars['MAILBOX_ADDRESS'] }
+    if (-not $SecurityGroupName) { $SecurityGroupName = $env_vars['SECURITY_GROUP_NAME'] }
+}
+
+# Validate
+if (-not $ClientId -or -not $MailboxAddress -or -not $SecurityGroupName) {
+    Write-Error "Missing required parameters: ClientId, MailboxAddress, SecurityGroupName"
+    Write-Host "Provide via CLI parameters or backend-service/.env file" -ForegroundColor Yellow
+    exit 1
+}
 
 Connect-ExchangeOnline
 
@@ -198,10 +258,6 @@ New-ApplicationAccessPolicy -AccessRight RestrictAccess `
 
 Write-Host "Application access policy created: $ClientId restricted to $SecurityGroupName" -ForegroundColor Green
 ```
-
-Save it as `docs/wiki/scripts/grant-mailbox-permissions.ps1`.
-
-**Script:** [`grant-mailbox-permissions.ps1`](scripts/grant-mailbox-permissions.ps1)
 
 Run it:
 
@@ -253,10 +309,38 @@ This is the central component that both harnesses call. You must deploy it to Az
 # Licensed under the project LICENSE file.
 
 param(
-    [Parameter(Mandatory)] [string]$ResourceGroup,
-    [Parameter(Mandatory)] [string]$AppServiceName,
+    [string]$ResourceGroup,
+    [string]$AppServiceName,
     [string]$Location = "eastus"
 )
+
+# Load from .env if parameters not provided
+function Load-EnvFile {
+    param([string]$EnvPath)
+    $env_vars = @{}
+    if (Test-Path $EnvPath) {
+        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
+            $key, $value = $_ -split '=', 2
+            $env_vars[$key.Trim()] = $value.Trim()
+        }
+    }
+    return $env_vars
+}
+
+$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+if (Test-Path $env_file) {
+    $env_vars = Load-EnvFile $env_file
+    if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
+    if (-not $AppServiceName) { $AppServiceName = $env_vars['APP_SERVICE_NAME'] }
+    if ($Location -eq "eastus") { $Location = $env_vars['LOCATION'] -or "eastus" }
+}
+
+# Validate
+if (-not $ResourceGroup -or -not $AppServiceName) {
+    Write-Error "Missing required parameters: ResourceGroup, AppServiceName"
+    Write-Host "Provide via CLI parameters or .env file" -ForegroundColor Yellow
+    exit 1
+}
 
 Write-Host "Creating Azure App Service..." -ForegroundColor Yellow
 
@@ -329,12 +413,42 @@ This is normal — the app is running but no code is deployed yet. We'll deploy 
 # Licensed under the project LICENSE file.
 
 param(
-    [Parameter(Mandatory)] [string]$ResourceGroup,
-    [Parameter(Mandatory)] [string]$AppServiceName,
-    [Parameter(Mandatory)] [string]$ClientId,
-    [Parameter(Mandatory)] [string]$ClientSecret,
-    [Parameter(Mandatory)] [string]$TenantId
+    [string]$ResourceGroup,
+    [string]$AppServiceName,
+    [string]$ClientId,
+    [string]$ClientSecret,
+    [string]$TenantId
 )
+
+# Load from .env if parameters not provided
+function Load-EnvFile {
+    param([string]$EnvPath)
+    $env_vars = @{}
+    if (Test-Path $EnvPath) {
+        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
+            $key, $value = $_ -split '=', 2
+            $env_vars[$key.Trim()] = $value.Trim()
+        }
+    }
+    return $env_vars
+}
+
+$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+if (Test-Path $env_file) {
+    $env_vars = Load-EnvFile $env_file
+    if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
+    if (-not $AppServiceName) { $AppServiceName = $env_vars['APP_SERVICE_NAME'] }
+    if (-not $ClientId) { $ClientId = $env_vars['CLIENT_ID'] }
+    if (-not $ClientSecret) { $ClientSecret = $env_vars['CLIENT_SECRET'] }
+    if (-not $TenantId) { $TenantId = $env_vars['TENANT_ID'] }
+}
+
+# Validate
+if (-not $ResourceGroup -or -not $AppServiceName -or -not $ClientId -or -not $ClientSecret -or -not $TenantId) {
+    Write-Error "Missing required parameters: ResourceGroup, AppServiceName, ClientId, ClientSecret, TenantId"
+    Write-Host "Provide via CLI parameters or .env file" -ForegroundColor Yellow
+    exit 1
+}
 
 az webapp config appsettings set `
     --resource-group $ResourceGroup `
@@ -388,9 +502,36 @@ Write-Host "Backend deployed" -ForegroundColor Green
 # Licensed under the project LICENSE file.
 
 param(
-    [Parameter(Mandatory)] [string]$BackendUrl,
+    [string]$BackendUrl,
     [string]$MailboxAddress = "test@company.com"
 )
+
+# Load from .env if parameters not provided
+function Load-EnvFile {
+    param([string]$EnvPath)
+    $env_vars = @{}
+    if (Test-Path $EnvPath) {
+        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
+            $key, $value = $_ -split '=', 2
+            $env_vars[$key.Trim()] = $value.Trim()
+        }
+    }
+    return $env_vars
+}
+
+$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+if (Test-Path $env_file) {
+    $env_vars = Load-EnvFile $env_file
+    if (-not $BackendUrl) { $BackendUrl = $env_vars['BACKEND_URL'] }
+    if ($MailboxAddress -eq "test@company.com") { $MailboxAddress = $env_vars['MAILBOX_ADDRESS'] -or "test@company.com" }
+}
+
+# Validate
+if (-not $BackendUrl) {
+    Write-Error "Missing required parameter: BackendUrl"
+    Write-Host "Provide via CLI parameter or .env file" -ForegroundColor Yellow
+    exit 1
+}
 
 Write-Host "Testing Backend Endpoints" -ForegroundColor Cyan
 Write-Host "Backend: $BackendUrl" -ForegroundColor Gray
@@ -551,11 +692,40 @@ Require every request (except `/health`) to present a valid Microsoft Entra-issu
 # requests are rejected before they reach your application code.
 
 param(
-    [Parameter(Mandatory)] [string]$ResourceGroup,
-    [Parameter(Mandatory)] [string]$AppServiceName,
-    [Parameter(Mandatory)] [string]$TenantId,
-    [Parameter(Mandatory)] [string]$ClientId
+    [string]$ResourceGroup,
+    [string]$AppServiceName,
+    [string]$TenantId,
+    [string]$ClientId
 )
+
+# Load from .env if parameters not provided
+function Load-EnvFile {
+    param([string]$EnvPath)
+    $env_vars = @{}
+    if (Test-Path $EnvPath) {
+        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
+            $key, $value = $_ -split '=', 2
+            $env_vars[$key.Trim()] = $value.Trim()
+        }
+    }
+    return $env_vars
+}
+
+$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+if (Test-Path $env_file) {
+    $env_vars = Load-EnvFile $env_file
+    if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
+    if (-not $AppServiceName) { $AppServiceName = $env_vars['APP_SERVICE_NAME'] }
+    if (-not $TenantId) { $TenantId = $env_vars['TENANT_ID'] }
+    if (-not $ClientId) { $ClientId = $env_vars['CLIENT_ID'] }
+}
+
+# Validate
+if (-not $ResourceGroup -or -not $AppServiceName -or -not $TenantId -or -not $ClientId) {
+    Write-Error "Missing required parameters: ResourceGroup, AppServiceName, TenantId, ClientId"
+    Write-Host "Provide via CLI parameters or .env file" -ForegroundColor Yellow
+    exit 1
+}
 
 az webapp auth update `
     --resource-group $ResourceGroup `
@@ -607,11 +777,40 @@ Even with a valid token, only your known connector/client application(s) should 
 # on every incoming token, in addition to Easy Auth's signature validation.
 
 param(
-    [Parameter(Mandatory)] [string]$ResourceGroup,
-    [Parameter(Mandatory)] [string]$AppServiceName,
-    [Parameter(Mandatory)] [string]$AllowedTenantId,
-    [Parameter(Mandatory)] [string]$AllowedClientIds
+    [string]$ResourceGroup,
+    [string]$AppServiceName,
+    [string]$AllowedTenantId,
+    [string]$AllowedClientIds
 )
+
+# Load from .env if parameters not provided
+function Load-EnvFile {
+    param([string]$EnvPath)
+    $env_vars = @{}
+    if (Test-Path $EnvPath) {
+        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
+            $key, $value = $_ -split '=', 2
+            $env_vars[$key.Trim()] = $value.Trim()
+        }
+    }
+    return $env_vars
+}
+
+$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+if (Test-Path $env_file) {
+    $env_vars = Load-EnvFile $env_file
+    if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
+    if (-not $AppServiceName) { $AppServiceName = $env_vars['APP_SERVICE_NAME'] }
+    if (-not $AllowedTenantId) { $AllowedTenantId = $env_vars['ALLOWED_TENANT_ID'] }
+    if (-not $AllowedClientIds) { $AllowedClientIds = $env_vars['ALLOWED_CLIENT_IDS'] }
+}
+
+# Validate
+if (-not $ResourceGroup -or -not $AppServiceName -or -not $AllowedTenantId -or -not $AllowedClientIds) {
+    Write-Error "Missing required parameters: ResourceGroup, AppServiceName, AllowedTenantId, AllowedClientIds"
+    Write-Host "Provide via CLI parameters or .env file" -ForegroundColor Yellow
+    exit 1
+}
 
 az webapp config appsettings set `
     --resource-group $ResourceGroup `
@@ -684,11 +883,40 @@ If this policy is missing, the app can read/send mail for **every mailbox in the
 # the plaintext secret directly in application settings.
 
 param(
-    [Parameter(Mandatory)] [string]$ResourceGroup,
-    [Parameter(Mandatory)] [string]$KeyVaultName,
-    [Parameter(Mandatory)] [string]$AppServiceName,
-    [Parameter(Mandatory)] [string]$ClientSecret
+    [string]$ResourceGroup,
+    [string]$KeyVaultName,
+    [string]$AppServiceName,
+    [string]$ClientSecret
 )
+
+# Load from .env if parameters not provided
+function Load-EnvFile {
+    param([string]$EnvPath)
+    $env_vars = @{}
+    if (Test-Path $EnvPath) {
+        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
+            $key, $value = $_ -split '=', 2
+            $env_vars[$key.Trim()] = $value.Trim()
+        }
+    }
+    return $env_vars
+}
+
+$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+if (Test-Path $env_file) {
+    $env_vars = Load-EnvFile $env_file
+    if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
+    if (-not $KeyVaultName) { $KeyVaultName = $env_vars['KEY_VAULT_NAME'] }
+    if (-not $AppServiceName) { $AppServiceName = $env_vars['APP_SERVICE_NAME'] }
+    if (-not $ClientSecret) { $ClientSecret = $env_vars['CLIENT_SECRET'] }
+}
+
+# Validate
+if (-not $ResourceGroup -or -not $KeyVaultName -or -not $AppServiceName -or -not $ClientSecret) {
+    Write-Error "Missing required parameters: ResourceGroup, KeyVaultName, AppServiceName, ClientSecret"
+    Write-Host "Provide via CLI parameters or .env file" -ForegroundColor Yellow
+    exit 1
+}
 
 # Create Key Vault if it doesn't already exist
 az keyvault create --resource-group $ResourceGroup --name $KeyVaultName --location "westeurope" 2>$null
@@ -748,10 +976,38 @@ az webapp config appsettings list --resource-group "rg-shared-mailbox" --name "s
 # allowlisted set of IP ranges (e.g. Power Platform / your office egress).
 
 param(
-    [Parameter(Mandatory)] [string]$ResourceGroup,
-    [Parameter(Mandatory)] [string]$AppServiceName,
-    [Parameter(Mandatory)] [string[]]$AllowedIpRanges
+    [string]$ResourceGroup,
+    [string]$AppServiceName,
+    [string[]]$AllowedIpRanges
 )
+
+# Load from .env if parameters not provided
+function Load-EnvFile {
+    param([string]$EnvPath)
+    $env_vars = @{}
+    if (Test-Path $EnvPath) {
+        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
+            $key, $value = $_ -split '=', 2
+            $env_vars[$key.Trim()] = $value.Trim()
+        }
+    }
+    return $env_vars
+}
+
+$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+if (Test-Path $env_file) {
+    $env_vars = Load-EnvFile $env_file
+    if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
+    if (-not $AppServiceName) { $AppServiceName = $env_vars['APP_SERVICE_NAME'] }
+    if (-not $AllowedIpRanges) { $AllowedIpRanges = $env_vars['ALLOWED_IP_RANGES']?.Split(',') | ForEach-Object { $_.Trim() } }
+}
+
+# Validate
+if (-not $ResourceGroup -or -not $AppServiceName -or -not $AllowedIpRanges) {
+    Write-Error "Missing required parameters: ResourceGroup, AppServiceName, AllowedIpRanges"
+    Write-Host "Provide via CLI parameters or .env file" -ForegroundColor Yellow
+    exit 1
+}
 
 az webapp update --resource-group $ResourceGroup --name $AppServiceName --https-only true
 
@@ -810,9 +1066,36 @@ Review your backend logging code and confirm:
 # secrets or raw email content are present before going live.
 
 param(
-    [Parameter(Mandatory)] [string]$ResourceGroup,
-    [Parameter(Mandatory)] [string]$AppServiceName
+    [string]$ResourceGroup,
+    [string]$AppServiceName
 )
+
+# Load from .env if parameters not provided
+function Load-EnvFile {
+    param([string]$EnvPath)
+    $env_vars = @{}
+    if (Test-Path $EnvPath) {
+        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
+            $key, $value = $_ -split '=', 2
+            $env_vars[$key.Trim()] = $value.Trim()
+        }
+    }
+    return $env_vars
+}
+
+$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+if (Test-Path $env_file) {
+    $env_vars = Load-EnvFile $env_file
+    if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
+    if (-not $AppServiceName) { $AppServiceName = $env_vars['APP_SERVICE_NAME'] }
+}
+
+# Validate
+if (-not $ResourceGroup -or -not $AppServiceName) {
+    Write-Error "Missing required parameters: ResourceGroup, AppServiceName"
+    Write-Host "Provide via CLI parameters or .env file" -ForegroundColor Yellow
+    exit 1
+}
 
 az webapp log tail --resource-group $ResourceGroup --name $AppServiceName
 ```

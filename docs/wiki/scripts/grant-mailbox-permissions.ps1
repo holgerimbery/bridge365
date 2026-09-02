@@ -4,10 +4,39 @@
 # access the specified shared mailbox, instead of every mailbox in the tenant.
 
 param(
-    [Parameter(Mandatory)] [string]$ClientId,
-    [Parameter(Mandatory)] [string]$MailboxAddress,
-    [Parameter(Mandatory)] [string]$SecurityGroupName
+    [string]$ClientId,
+    [string]$MailboxAddress,
+    [string]$SecurityGroupName
 )
+
+# Load from .env if parameters not provided
+function Load-EnvFile {
+    param([string]$EnvPath)
+    $env_vars = @{}
+    if (Test-Path $EnvPath) {
+        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
+            $key, $value = $_ -split '=', 2
+            $env_vars[$key.Trim()] = $value.Trim()
+        }
+    }
+    return $env_vars
+}
+
+$RepoRoot = Split-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) -Parent
+$env_file = Join-Path $RepoRoot "backend-service\.env"
+if (Test-Path $env_file) {
+    $env_vars = Load-EnvFile $env_file
+    if (-not $ClientId) { $ClientId = $env_vars['CLIENT_ID'] }
+    if (-not $MailboxAddress) { $MailboxAddress = $env_vars['MAILBOX_ADDRESS'] }
+    if (-not $SecurityGroupName) { $SecurityGroupName = $env_vars['SECURITY_GROUP_NAME'] }
+}
+
+# Validate
+if (-not $ClientId -or -not $MailboxAddress -or -not $SecurityGroupName) {
+    Write-Error "Missing required parameters: ClientId, MailboxAddress, SecurityGroupName"
+    Write-Host "Provide via CLI parameters or backend-service/.env file" -ForegroundColor Yellow
+    exit 1
+}
 
 Connect-ExchangeOnline
 
