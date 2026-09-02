@@ -11,6 +11,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.1] - 2026-09-02
+
+### What's New
+- Reordered implementation plan: Copilot Studio standard harness (primary) + GitHub Copilot (parallel)
+- New phase sequence: Foundation → Shared Mailbox Skill → Classification Table → Draft → Override → MCP → BART → Release
+- Created wiki module structure under `docs/wiki/`
+- Phase 1 wiki guide: `docs/wiki/phase-1-mailbox-setup.md`
+- PowerShell helper scripts with copyright headers (skill setup, connector setup)
+- Explicit copyright and license headers on all code elements
+
+### What's Fixed
+- None
+
+### What's Modified
+- Implementation plan now emphasizes Copilot Studio-first approach
+- All phases include both harnesses (Copilot Studio primary, GitHub Copilot parallel)
+
+### Breaking Changes
+- None (plan update only)
+
+---
+
 ## [0.1.0] - 2026-09-02
 
 ### What's New
@@ -21,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Unit test framework and initial test suite
 - Implementation plan with 8-phase roadmap (v0.1.0 → v1.0.0)
 - Commit and PR message conventions documented
-- Source documentation: docs/shared-mailbox-classification-master-guide.md
+- Source documentation: `docs/shared-mailbox-classification-master-guide.md`
 
 ### What's Fixed
 - N/A
@@ -37,50 +59,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0] - TBD
 
 ### What's New
-- Removable internal routing block (text and HTML formats)
-- Routing block detector and removal function
-- Separate cleanup operation (CLI/MCP/connector)
-- Configuration: INCLUDE_ROUTING_BLOCK, ROUTING_BLOCK_POSITION, REQUIRE_ROUTING_BLOCK_REMOVAL_BEFORE_SEND
-- Prepare-send guard that rejects drafts with block present
+- Shared mailbox Copilot Studio skill
+- Custom connector for mailbox operations
+- PowerShell provisioning scripts
+- Wiki documentation for setup
 
 ### What's Fixed
 - N/A
 
 ### What's Modified
-- Prepare-send behavior: now validates routing block removal
+- N/A
 
 ### Breaking Changes
-- Prepare-send will reject drafts containing the internal routing block
+- None
 
 ---
 
 ## [0.3.0] - TBD
 
 ### What's New
-- Pluggable ClassificationProvider protocol/interface
-- RuleBasedClassifier wrapper for deterministic logic
-- Provider factory and configuration selection
-- Provider version tracking in results
-- Configuration: CLASSIFICATION_PROVIDER, CLASSIFICATION_MIN_SCORE, CLASSIFICATION_AMBIGUITY_DELTA
+- Classification table (Dataverse) with schema
+- Rule-based classifier
+- Classification provider abstraction
 
 ### What's Fixed
 - N/A
 
 ### What's Modified
-- Classification output now includes provider and model version
+- N/A
 
 ### Breaking Changes
-- None (output is backward compatible)
+- None
 
 ---
 
 ## [0.4.0] - TBD
 
 ### What's New
-- BART zero-shot proof of concept
-- Evaluation framework and metrics collection
-- Frozen multi-label test set (100+ reviewed messages)
-- Decision document: fine-tuning feasibility
+- Draft creation with routing block
+- Knowledge retrieval integration
+- Prepare-send guard
 
 ### What's Fixed
 - N/A
@@ -89,19 +107,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - N/A
 
 ### Breaking Changes
-- None (research phase; no production code)
+- None
 
 ---
 
 ## [0.5.0] - TBD
 
 ### What's New
-- Fine-tuned BART multi-label classifier
-- Training data export (JSONL format, multi-label)
-- Label map with stable modelLabel identifiers
-- Threshold calibration logic (global and per-class)
-- Model card documenting data, languages, and limitations
-- Tests for long-message truncation and language variants
+- Classification override workflow
+- Dataverse audit tables
+- Routing block regeneration
 
 ### What's Fixed
 - N/A
@@ -117,58 +132,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.6.0] - TBD
 
 ### What's New
-- Foundry BART endpoint deployment
-- Azure ML managed online endpoint configuration
-- RBAC setup with least-privilege roles
-- PowerShell test script for endpoint invocation
-- Endpoint monitoring and scaling configuration
+- MCP server integration
+- Standardized tool layer
+- MCP tools for all operations
 
 ### What's Fixed
 - N/A
 
 ### What's Modified
-- Classification provider can now use Foundry-hosted BART
+- N/A
 
 ### Breaking Changes
-- None (Foundry endpoint is transparent to harnesses)
+- None
 
 ---
 
 ## [0.7.0] - TBD
 
 ### What's New
-- Copilot Studio MCP integration
-- Copilot Studio custom connector operations
-- GitHub Copilot executable skill commands
-- GitHub Copilot MCP tools
-- Harness-specific SKILL.md documentation
+- BART classifier
+- Foundry/Azure ML deployment
+- Multi-label threshold calibration
 
 ### What's Fixed
 - N/A
 
 ### What's Modified
-- All harnesses now support Foundry BART classification
-
-### Breaking Changes
-- None (harness APIs are stable)
-
----
-
-## [0.8.0] - TBD
-
-### What's New
-- Fallback orchestration (BART → rules → manual review)
-- Durable idempotency and approval replay protection
-- Comprehensive audit logging
-- Monitoring and alerting for drift
-- Human correction tracking for retraining
-- Operations runbook
-
-### What's Fixed
 - N/A
-
-### What's Modified
-- Endpoint failures automatically fall back to deterministic rules
 
 ### Breaking Changes
 - None
@@ -181,8 +171,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Production-ready release
 - Complete end-to-end acceptance tests
 - Full operational documentation
-- Security review completed
-- Performance benchmarks
 
 ### What's Fixed
 - All known issues resolved
@@ -191,7 +179,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - N/A
 
 ### Breaking Changes
-- None (v1.0.0 is stable production release)
+- None
 
 ---
 

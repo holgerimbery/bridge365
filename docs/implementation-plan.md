@@ -1,6 +1,6 @@
 # Email Classification Module — Implementation Plan
 
-**Version:** 0.1.0  
+**Version:** 0.1.1  
 **Last Updated:** 2026-09-02  
 **Status:** In Development
 
@@ -8,25 +8,33 @@
 
 ## Overview
 
-This document outlines the phased implementation of the Incoming Email Classification, Knowledge-Grounded Draft Responses, and Foundry BART module. Each major step introduces a complete functional element that can be independently shipped and versioned.
+This document outlines the phased implementation of the shared mailbox email classification and drafting module for Microsoft Power Platform environments. Implementation prioritizes **Copilot Studio standard harness** with **GitHub Copilot harness integration in parallel** for all phases.
 
-Source guidance: See docs/shared-mailbox-classification-master-guide.md.
+Source guidance: See `docs/shared-mailbox-classification-master-guide.md`.
 
 ---
 
 ## Major Implementation Steps (Feature-Level)
 
-`mermaid
+```mermaid
 graph TD
-    A["Phase 0: Foundation<br/>(v0.1.0)"] --> B["Phase 1: Routing Block<br/>(v0.2.0)"]
-    B --> C["Phase 2: Provider Abstraction<br/>(v0.3.0)"]
-    C --> D["Phase 3: BART Proof of Concept<br/>(v0.4.0)"]
-    D --> E["Phase 4: Fine-Tuning<br/>(v0.5.0)"]
-    E --> F["Phase 5: Foundry Deployment<br/>(v0.6.0)"]
-    F --> G["Phase 6: Harness Integration<br/>(v0.7.0)"]
-    G --> H["Phase 7: Production Controls<br/>(v0.8.0)"]
-    H --> I["v1.0.0: Release Candidate"]
-`
+    A["Phase 0: Foundation<br/>(v0.1.0)"] --> B["Phase 1: Shared Mailbox Skill<br/>+ Connector (v0.2.0)"]
+    B --> C["Phase 2: Classification via Table<br/>(v0.3.0)"]
+    C --> D["Phase 3: Draft Creation<br/>(v0.4.0)"]
+    D --> E["Phase 4: Override/Change<br/>Classification (v0.5.0)"]
+    E --> F["Phase 5: MCP Server<br/>Integration (v0.6.0)"]
+    F --> G["Phase 6: BART Classifier<br/>(v0.7.0)"]
+    G --> H["v1.0.0: Release Candidate"]
+    
+    B -.-> B1["GitHub Copilot Skill"]
+    C -.-> C1["GitHub Copilot Skill"]
+    D -.-> D1["GitHub Copilot Skill"]
+    E -.-> E1["GitHub Copilot Skill"]
+    F -.-> F1["GitHub Copilot MCP"]
+    G -.-> G1["GitHub Copilot MCP"]
+```
+
+**Legend:** Solid lines = Copilot Studio standard harness (primary). Dotted lines = GitHub Copilot harness (parallel implementation).
 
 ---
 
@@ -37,218 +45,277 @@ graph TD
 **Objective:** Project structure, dependencies, configuration, and base service scaffolding.
 
 **Deliverables:**
-- Project layout (src/, tests/, docs/)
-- Python environment (dependencies in equirements.txt)
-- Configuration schema (.env template and Pydantic models)
+- Project layout (src/, tests/, docs/, docs/wiki/)
+- Python environment (dependencies in `requirements.txt`)
+- Configuration schema (`.env` template and Pydantic models)
 - Base service class with dependency injection
-- Unit test framework and first test suite
-- This implementation plan and changelog
+- Unit test framework
+- This implementation plan, changelog, and wiki module structure
 
 **Success Criteria:**
 - Project runs and all tests pass
 - Configuration is externalized and validated
-- No classification/routing logic yet
+- Wiki structure is ready for phase documentation
 
-**Major PR:** "Foundation: project structure and configuration scaffolding"
-
----
-
-### Phase 1: Routing Block (v0.2.0)
-
-**Objective:** Add the removable internal routing block to every draft, with detection and cleanup operations.
-
-**Deliverables:**
-- Routing block generator (text and HTML)
-- Routing block detector (check if present in draft)
-- Routing block removal function (safe extraction)
-- Configuration: INCLUDE_ROUTING_BLOCK, ROUTING_BLOCK_POSITION, REQUIRE_ROUTING_BLOCK_REMOVAL_BEFORE_SEND
-- Prepare-send guard that rejects drafts with the block still present
-- Separate cleanup CLI/MCP/connector operation
-- Unit tests: zero/single/multiple classification scenarios
-
-**Success Criteria:**
-- Every generated draft includes the exact removable block format
-- Block contains sender, all classNames, targets, and emails
-- Prepare-send rejects drafts with the block still embedded
-- Cleanup removes only the marked block and is audited
-- All existing functionality remains unchanged
-
-**Major PR:** "Feature: removable internal routing block and cleanup operation"
+**Major PR:** "Foundation: project structure, configuration, and wiki scaffolding"
 
 ---
 
-### Phase 2: Provider Abstraction (v0.3.0)
+### Phase 1: Shared Mailbox Skill + Custom Connector (v0.2.0)
 
-**Objective:** Create a pluggable classification provider interface so the deterministic classifier can be swapped for BART or structured models.
+**Objective:** Build the core shared mailbox service, Copilot Studio skill, and custom connector.
 
-**Deliverables:**
-- ClassificationProvider protocol/interface
-- RuleBasedClassifier wrapper around existing deterministic logic
-- Provider factory and configuration selection
-- Unified output schema across all providers
-- Provider version tracking in results and audit
-- Configuration: CLASSIFICATION_PROVIDER, CLASSIFICATION_MIN_SCORE, CLASSIFICATION_AMBIGUITY_DELTA
-- Unit tests for factory and provider selection
-
-**Success Criteria:**
-- Rules classifier behaves identically to before
-- Provider can be switched via environment configuration
-- Output schema is identical regardless of provider
-- Model version is captured in every result
-- No breaking changes to harness APIs
-
-**Major PR:** "Feature: pluggable classification provider abstraction"
-
----
-
-### Phase 3: BART Proof of Concept (v0.4.0)
-
-**Objective:** Evaluate a pretrained zero-shot BART model on organization email without fine-tuning.
-
-**Deliverables:**
-- Export active classification table labels and reviewed examples
-- Setup Hugging Face acebook/bart-large-mnli zero-shot classifier
-- Create frozen multi-label test set (100+ reviewed messages)
-- Implement zero-shot evaluation script
-- Metrics: per-class precision, recall, micro/macro F1, routing-risk rate
-- Decision document: is there enough data for fine-tuning?
-- Evaluation report stored in docs/evaluations/
-
-**Success Criteria:**
-- Zero-shot model runs and produces scores
-- Test set is reviewed and frozen
-- Metrics are recorded per-class and aggregated
-- Clear decision on whether to proceed to fine-tuning
-
-**Major PR:** "Research: BART zero-shot evaluation and proof of concept"
-
----
-
-### Phase 4: Fine-Tuning (v0.5.0)
-
-**Objective:** Train a custom multi-label BART classifier on organization data.
-
-**Deliverables:**
-- Reviewed train/validation/test JSONL files (multi-label format)
-- Stable label map using modelLabel field
-- Fine-tuning script with multi-label cross-entropy loss
-- Threshold calibration logic (global and per-class)
-- Training metrics and validation plots
-- Model artifact registered and versioned
-- Model card with data summary, language coverage, known limitations
-- Tests for long-message truncation, language variants, imbalance handling
-
-**Success Criteria:**
-- Model trains without errors
-- Validation metrics exceed proof-of-concept baseline
-- Thresholds are calibrated on validation set
-- Model artifact is versioned and reproducible
-- Model card documents assumptions and limitations
-
-**Major PR:** "Feature: fine-tuned BART multi-label classifier"
-
----
-
-### Phase 5: Foundry Deployment (v0.6.0)
-
-**Objective:** Deploy the fine-tuned model to a managed inference endpoint.
-
-**Deliverables:**
-- Check Foundry catalog for model availability
-- If available: register and deploy via Foundry managed compute
-- If not: register artifact and deploy as Azure ML managed online endpoint
-- Endpoint configuration: scaling, networking, monitoring
-- RBAC roles and identity setup (least privilege)
-- Environment variables for endpoint URL and audience
-- PowerShell test script for endpoint invocation
-- Documentation of consume URL and schema
-
-**Success Criteria:**
-- Endpoint is accessible and responds to requests
-- Azure RBAC is configured with least-privilege roles
-- Endpoint URL and audience are in protected configuration
-- Test script successfully invokes the endpoint
-- Latency and cost per inference are acceptable
-
-**Major PR:** "Feature: Foundry BART endpoint deployment and configuration"
-
----
-
-### Phase 6: Harness Integration (v0.7.0)
-
-**Objective:** Wire the deployed BART classifier into the target harness(es).
+**Harnesses:** Copilot Studio standard (primary) + GitHub Copilot executable skill (parallel)
 
 **Deliverables:**
 
-**For Copilot Studio MCP:**
-- Configure MCP service to use CLASSIFICATION_PROVIDER=foundry-bart
-- MCP tools: classify_incoming_email, create_grounded_response_draft, emove_internal_routing_block
-- Grant MCP workload identity permission to invoke endpoint
+**Shared Mailbox Service (core):**
+- Microsoft Graph mailbox client
+- Message fetching and iteration
+- Webhook/subscription handling
+- Configuration for shared mailbox address and permissions
 
-**For Copilot Studio custom connector:**
-- OpenAPI spec additions for classification, draft, cleanup operations
-- Connector implementation without model endpoint credentials
+**Copilot Studio Standard Harness (primary):**
+- Skill scaffolding and registration
+- Skill actions for message retrieval and draft management
+- Custom connector OpenAPI spec (endpoints for mailbox operations)
+- Authentication (workload identity / Entra)
+- Connector operations stubs (to be filled in later phases)
 
-**For GitHub Copilot executable skill:**
-- CLI commands: classify-email, create-response-draft, emove-routing-block
-- SKILL.md documentation with usage examples
+**GitHub Copilot Harness (parallel):**
+- Executable skill CLI commands for mailbox access
+- `SKILL.md` documentation with usage examples
+- Authentication integration
 
-**For GitHub Copilot MCP:**
-- Reuse same MCP tools as Copilot Studio path
-
-**Common:**
-- Integration tests for each harness
-- No harness receives model endpoint credentials directly
+**Wiki & Documentation:**
+- `docs/wiki/phase-1-mailbox-setup.md` — human-readable Copilot Studio setup guide
+- `docs/wiki/scripts/setup-shared-mailbox-skill.ps1` — PowerShell provisioning script
+- `docs/wiki/scripts/setup-custom-connector.ps1` — Custom connector setup script
+- Mermaid diagrams for message fetching flow
 
 **Success Criteria:**
-- Each harness can classify a test email without errors
-- BART endpoint is only invoked from the service/MCP layer
-- Harnesses never receive endpoint credentials
-- Multi-label results are correctly handled in all paths
-- Existing prepare-send and approval flows remain unchanged
+- Skill can authenticate and fetch messages from shared mailbox
+- Connector operations are registered in OpenAPI spec
+- Both harnesses can retrieve a test message
+- Wiki includes step-by-step Copilot Studio setup
+- PowerShell scripts automate connector registration
 
-**Major PR:** "Feature: Harness integration for BART classification"
+**Major PR:** "Feature: Shared mailbox skill and custom connector (Phase 1)"
 
 ---
 
-### Phase 7: Production Controls (v0.8.0)
+### Phase 2: Classification via Table (v0.3.0)
 
-**Objective:** Add monitoring, fallback, audit, and safety controls for production use.
+**Objective:** Integrate classification table, implement rule-based classifier, and route messages.
+
+**Harnesses:** Copilot Studio standard (primary) + GitHub Copilot skill (parallel)
 
 **Deliverables:**
-- Fallback orchestration (BART → deterministic rules → manual review)
-- Routing block removal guard enforced before send
-- Durable idempotency and approval replay protection
-- Audit logging: provider, model version, classifications, corrections
-- Monitoring: endpoint latency, availability, drift, class distribution
-- Human correction tracking for controlled retraining
-- Evaluation re-run trigger logic
-- Dataverse integration (optional) for classification audit trail
-- Documentation of operations runbook
+
+**Classification Table & Provider:**
+- Dataverse classification table schema (uuid, className, classExamples, classTarget, classTargetEmail, isActive, priority, modelLabel)
+- Rule-based classifier (deterministic keyword matching)
+- Classification output schema (messageId, classifications[], needsHumanRoutingDecision, provider, modelVersion)
+- Validation against table rows
+
+**Copilot Studio Standard Harness:**
+- Skill action: `classify_message` returns all plausible classifications
+- Connector operation: `ClassifyMessage`
+- Store classification results in Dataverse audit table
+
+**GitHub Copilot Harness:**
+- CLI command: `classify-message --message-id '<id>'`
+- Output matches Copilot Studio schema
+
+**Wiki & Documentation:**
+- `docs/wiki/phase-2-classification-table.md` — table setup and rule configuration
+- `docs/wiki/scripts/setup-classification-table.ps1` — Dataverse table provisioning
+- `docs/wiki/scripts/create-sample-classifications.ps1` — Sample classification data
+- Mermaid diagram: classification flow
 
 **Success Criteria:**
-- Endpoint unavailability automatically falls back to deterministic rules
-- Auto-send remains disabled; human approval is mandatory
-- All decisions are auditable with timestamps and versions
-- Monitoring alerts trigger on drift or degradation
-- Human corrections feed into retraining pipeline
+- Classification table created in Dataverse with sample data
+- Rule-based classifier returns all matching classes
+- Multi-class results are handled correctly
+- Both harnesses return identical classification output
+- PowerShell scripts automate table setup
 
-**Major PR:** "Feature: production controls, monitoring, and audit trail"
+**Major PR:** "Feature: Classification via table and rule-based classifier (Phase 2)"
 
 ---
 
-### Phase 8: Release Candidate (v1.0.0)
+### Phase 3: Draft Creation (v0.4.0)
 
-**Objective:** Stabilize, document, and prepare for production release.
+**Objective:** Generate reply drafts with routing block and optional knowledge integration.
+
+**Harnesses:** Copilot Studio standard (primary) + GitHub Copilot skill (parallel)
+
+**Deliverables:**
+
+**Draft Generation:**
+- Routing block generator (HTML format, sender + classifications + departments)
+- Routing block detector and removal functions
+- Draft creation via Microsoft Graph `createReply`
+- Knowledge retrieval (optional) from approved sources
+- Customer-facing answer composition
+- Complete draft body: routing block + answer + original email below
+
+**Copilot Studio Standard Harness:**
+- Skill action: `create_response_draft` takes messageId, classifications, optional knowledge passages
+- Skill action: `remove_routing_block` for cleanup after review
+- Connector operations: `CreateResponseDraft`, `RemoveRoutingBlock`
+- Prepare-send guard that rejects drafts with routing block present
+
+**GitHub Copilot Harness:**
+- CLI commands: `create-response-draft`, `remove-routing-block`
+- Same output and validation
+
+**Wiki & Documentation:**
+- `docs/wiki/phase-3-draft-creation.md` — draft generation workflow and approval flow
+- `docs/wiki/scripts/test-draft-creation.ps1` — Test script to verify draft generation
+- Mermaid diagram: end-to-end draft workflow (original email → classification → draft → review)
+
+**Success Criteria:**
+- Drafts include routing block with all classifications and departments
+- Routing block is marked with `data-internal-routing-block="true"`
+- Original email is sanitized and included below the proposed answer
+- Prepare-send rejects drafts while block is present
+- Both harnesses create identical drafts
+
+**Major PR:** "Feature: Draft creation with routing block and knowledge grounding (Phase 3)"
+
+---
+
+### Phase 4: Override/Change Classification (v0.5.0)
+
+**Objective:** Allow reviewers to accept, reject, or override automated classifications before sending.
+
+**Harnesses:** Copilot Studio standard (primary) + GitHub Copilot skill (parallel)
+
+**Deliverables:**
+
+**Override Workflow:**
+- Dataverse classification audit records (proposed and final classifications)
+- Override table that captures reviewer decisions and comments
+- Rebuild routing block after override
+- Invalidate prior prepare-send approval on override
+
+**Copilot Studio Standard Harness:**
+- Skill action: `get_classification_record` (fetch processing record and all proposed classifications)
+- Skill action: `set_classification_override` (accept/reject/change classifications)
+- Skill action: `rebuild_routing_block` (regenerate block from final classifications)
+- Model-driven app form (optional) for classification review UI
+
+**GitHub Copilot Harness:**
+- CLI commands: `get-classification-record`, `set-classification-override`, `rebuild-routing-block`
+
+**Wiki & Documentation:**
+- `docs/wiki/phase-4-override-workflow.md` — override and approval workflow
+- `docs/wiki/scripts/test-override-workflow.ps1` — Test override and rebuild
+- Mermaid state diagram: classification workflow (proposed → review → override? → final → send)
+
+**Success Criteria:**
+- Reviewers can view all proposed classifications and change them
+- Override comment is mandatory
+- Routing block is regenerated with final classifications
+- Prepare-send approval is invalidated after override
+- Audit trail captures all changes
+
+**Major PR:** "Feature: Classification override and workflow control (Phase 4)"
+
+---
+
+### Phase 5: MCP Server Integration (v0.6.0)
+
+**Objective:** Add MCP server layer for standardized tool invocation across harnesses.
+
+**Harnesses:** Copilot Studio standard + GitHub Copilot (both via MCP)
+
+**Deliverables:**
+
+**MCP Server:**
+- Implement MCP tools for all mailbox operations:
+  - `fetch_incoming_message`
+  - `classify_incoming_email`
+  - `retrieve_answer_knowledge`
+  - `create_grounded_response_draft`
+  - `get_classification_processing_record`
+  - `set_classification_override`
+  - `rebuild_draft_routing_block`
+  - `remove_internal_routing_block`
+- Tool schemas with input validation
+- Error handling and retry logic
+
+**Copilot Studio Standard Harness:**
+- MCP integration (connect skill to MCP server)
+- Agents can invoke MCP tools directly
+
+**GitHub Copilot Harness:**
+- MCP client configuration
+- CLI commands invoke MCP tools
+
+**Wiki & Documentation:**
+- `docs/wiki/phase-5-mcp-integration.md` — MCP server architecture and tool schemas
+- `docs/wiki/scripts/start-mcp-server.ps1` — Start MCP server for local testing
+- Mermaid diagram: tool call flow (harness → MCP server → backend service)
+
+**Success Criteria:**
+- MCP server starts and exposes all tools
+- Both harnesses can invoke tools via MCP
+- Tool schemas are complete and validated
+- Error responses are informative
+
+**Major PR:** "Feature: MCP server and standardized tool layer (Phase 5)"
+
+---
+
+### Phase 6: BART Classifier (v0.7.0)
+
+**Objective:** Add machine learning classifier option (Foundry BART or Azure ML).
+
+**Harnesses:** Copilot Studio standard + GitHub Copilot (via MCP)
+
+**Deliverables:**
+
+**BART Classifier:**
+- Foundry BART endpoint deployment (or Azure ML managed online endpoint)
+- Classification provider factory (switch between rules and BART)
+- Configuration: `CLASSIFICATION_PROVIDER=foundry-bart`, `BART_ENDPOINT`, `BART_AUDIENCE`
+- Multi-label score processing and threshold calibration
+- Fallback to rules if BART endpoint fails
+
+**Copilot Studio / GitHub Copilot:**
+- MCP tool `classify_incoming_email` auto-selects provider based on config
+- No harness-level changes needed; provider is transparent
+
+**Wiki & Documentation:**
+- `docs/wiki/phase-6-bart-classifier.md` — BART model training, deployment, and evaluation
+- `docs/wiki/scripts/deploy-bart-endpoint.ps1` — Foundry/Azure ML deployment script
+- `docs/wiki/scripts/evaluate-bart.ps1` — Evaluation and metrics collection
+- Python training script reference (transformers + multi-label setup)
+
+**Success Criteria:**
+- BART endpoint is deployed and responsive
+- Classification provider factory selects BART correctly
+- Multi-label thresholds are calibrated
+- Fallback to rules works on endpoint failure
+- Evaluation metrics are documented
+
+**Major PR:** "Feature: BART machine learning classifier and Foundry deployment (Phase 6)"
+
+---
+
+### Phase 7: Release Candidate (v1.0.0)
+
+**Objective:** Stabilize, test, and prepare for production release.
 
 **Deliverables:**
 - All phases complete and tested
-- End-to-end acceptance tests pass
-- Documentation complete: architecture, operations, troubleshooting
-- Security review completed
-- Performance benchmarks documented
-- Changelog fully up-to-date
-- CONTRIBUTING guide for future maintenance
+- End-to-end acceptance tests
+- Complete wiki documentation
+- Security review and hardening
+- Operations runbook and monitoring setup
+- Performance benchmarks
 
 **Success Criteria:**
 - All acceptance criteria from all phases are met
@@ -263,12 +330,12 @@ graph TD
 
 | Version Range | Trigger | Change Type |
 |---|---|---|
-|  .1.0 →  .2.0 | New feature or element adds functionality | Minor |
-|  .2.1 | Bug fix, security patch, documentation | Patch |
-|  .1.0 → 1.0.0 | Feature complete, production-ready | Major |
+| `0.1.0` → `0.2.0` | New feature or element adds functionality | Minor |
+| `0.2.1` | Bug fix, security patch, documentation | Patch |
+| `0.1.0` → `1.0.0` | Feature complete, production-ready | Major |
 
 **Rules:**
-- **Major:** Product at release-candidate quality; significant architecture changes.
+- **Major:** Product at release-candidate quality.
 - **Minor:** New feature, element, or capability (phases in this plan).
 - **Patch:** Bug fixes, documentation, non-breaking refactors.
 
@@ -278,7 +345,7 @@ graph TD
 
 Every commit tied to a major phase should follow this structure:
 
-\\\
+```
 <Type>: <Short summary>
 
 What's New:
@@ -294,33 +361,49 @@ Breaking Changes:
 - None. (or describe incompatibilities)
 
 Co-authored-by: Copilot App <223556219+Copilot@users.noreply.github.com>
-\\\
+```
 
-**Examples:**
+---
 
-\\\
-Feature: removable internal routing block and cleanup operation
+## Wiki Module Structure
 
-What's New:
-- Add routing block generator (text and HTML formats)
-- Add routing block detector
-- Add cleanup operation as separate CLI/MCP/connector tool
-- Add REQUIRE_ROUTING_BLOCK_REMOVAL_BEFORE_SEND guard to prepare-send
+All human-readable documentation is stored under `docs/wiki/` as a self-contained module:
 
-What's Fixed:
-- N/A
+- `docs/wiki/index.md` — overview and navigation
+- `docs/wiki/phase-<N>-<topic>.md` — per-phase setup guides
+- `docs/wiki/scripts/` — PowerShell helper scripts
+- `docs/wiki/diagrams/` — Mermaid diagram sources
 
-What's Modified:
-- Prepare-send now rejects drafts containing the internal routing block
+Each phase wiki includes:
+- Step-by-step Copilot Studio/Azure setup instructions
+- PowerShell scripts with full copyright and license headers
+- Mermaid diagrams illustrating workflows
 
-Breaking Changes:
-- None.
-\\\
+---
+
+## Copyright & License
+
+All code and documentation in this repository includes copyright headers:
+
+```
+(c) 2026 Holger Imbery (contact@holgerimbery.blog)
+Licensed under [LICENSE FILE]
+```
+
+---
+
+## Next Steps
+
+1. Implement Phase 0 (already v0.1.0).
+2. Implement Phase 1 (Shared Mailbox Skill + Connector) → tag `v0.2.0`.
+3. Implement Phase 2 (Classification via Table) → tag `v0.3.0`.
+4. Continue sequentially through Phase 6 → tag `v1.0.0`.
 
 ---
 
 ## References
 
-- Source: docs/shared-mailbox-classification-master-guide.md
-- Changelog: CHANGELOG.md
-- Commit conventions: See commit messages in this repo
+- Source: `docs/shared-mailbox-classification-master-guide.md`
+- Changelog: `CHANGELOG.md`
+- Commit conventions: `COMMIT_CONVENTION.md`
+- Wiki: `docs/wiki/`
