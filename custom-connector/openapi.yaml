@@ -1,0 +1,179 @@
+# (c) 2026 Holger Imbery (contact@holgerimbery.blog)
+# Licensed under the project LICENSE file.
+# OpenAPI (Swagger 2.0) definition for the SharedMailboxConnector custom connector.
+# Import this file when creating the connector from OpenAPI (see README.md, Step 5.2).
+
+swagger: "2.0"
+info:
+  title: SharedMailboxConnector
+  description: Custom connector for the shared mailbox classification backend service.
+  version: "1.0.0"
+host: shared-mailbox-classifier.azurewebsites.net
+basePath: /
+schemes:
+  - https
+consumes:
+  - application/json
+produces:
+  - application/json
+securityDefinitions:
+  azure_ad:
+    type: oauth2
+    flow: application
+    tokenUrl: https://login.microsoftonline.com/common/oauth2/v2.0/token
+    scopes: {}
+security:
+  - azure_ad: []
+paths:
+  /api/mailbox/messages:
+    get:
+      summary: GetMessages
+      operationId: GetMessages
+      parameters:
+        - name: mailboxAddress
+          in: query
+          required: true
+          type: string
+        - name: top
+          in: query
+          required: false
+          type: integer
+          default: 10
+      responses:
+        "200":
+          description: Array of Message objects
+  /api/mailbox/messages/poll:
+    get:
+      summary: NewMessageReceived
+      description: Triggers when a new message arrives in the shared mailbox. Used as an autonomous agent trigger in Copilot Studio (agent Overview > Triggers), not called manually from a topic.
+      operationId: NewMessageReceived
+      x-ms-trigger: batch
+      x-ms-trigger-hint: "Send an email to the shared mailbox to see it work."
+      parameters:
+        - name: mailboxAddress
+          in: query
+          required: true
+          type: string
+          x-ms-summary: Mailbox Address
+          x-ms-visibility: important
+        - name: since
+          in: query
+          required: false
+          type: string
+          format: date-time
+          x-ms-summary: Checkpoint (internal)
+          x-ms-visibility: internal
+          description: "Internal polling checkpoint managed by the flow engine. Do not set manually."
+      responses:
+        "200":
+          description: Array of new Message objects, newest first
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                id:
+                  type: string
+                subject:
+                  type: string
+                receivedDateTime:
+                  type: string
+                  format: date-time
+  /api/mailbox/messages/{messageId}:
+    get:
+      summary: GetMessage
+      operationId: GetMessage
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          type: string
+        - name: mailboxAddress
+          in: query
+          required: true
+          type: string
+      responses:
+        "200":
+          description: Single Message object
+  /api/mailbox/classify:
+    post:
+      summary: ClassifyMessage
+      operationId: ClassifyMessage
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              messageId:
+                type: string
+      responses:
+        "200":
+          description: Array of Classifications
+  /api/mailbox/drafts:
+    post:
+      summary: CreateDraft
+      operationId: CreateDraft
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              messageId:
+                type: string
+              subject:
+                type: string
+              body:
+                type: string
+              classifications:
+                type: array
+                items:
+                  type: object
+      responses:
+        "200":
+          description: "{ draftId, draftUrl }"
+  /api/mailbox/messages/send:
+    post:
+      summary: SendMessage
+      operationId: SendMessage
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              mailboxAddress:
+                type: string
+              to:
+                type: string
+              subject:
+                type: string
+              body:
+                type: string
+      responses:
+        "200":
+          description: "{ status }"
+  /api/mailbox/drafts/{draftId}/send:
+    post:
+      summary: SendDraftMessage
+      operationId: SendDraftMessage
+      parameters:
+        - name: draftId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              mailboxAddress:
+                type: string
+      responses:
+        "200":
+          description: "{ status, draftId }"
