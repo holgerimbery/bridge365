@@ -62,66 +62,107 @@ graph TB
     style Backend fill:#4CAF50,color:#fff
 ```
 
-**Key Architecture Points:**
-
-1. **Standard Harness = Custom Connector only** – Direct HTTP bridge to backend service
-2. **GitHub Copilot Harness = Executable Skills** – Reusable skill components in Copilot Studio
-3. **Both call the same backend** – Consistent behavior, single source of truth
-4. **Backend handles all business logic** – Mailbox access, classification, draft creation
-
 ---
 
 ## 3. Application Registration (Required - for Graph API Access)
 
 You **MUST** create an app registration because your backend service needs authenticated access to the shared mailbox.
 
-### Why It's Needed
+### Step 3.1: Register the Application in Entra ID
 
-Your backend service must authenticate to Microsoft Graph to:
-- Read emails from the shared mailbox
-- Send draft emails on behalf of the shared mailbox
-- Access mailbox metadata
-
-Only authenticated applications can access shared mailboxes via Graph API.
-
-### How to Create It
-
-#### Step 1: Register the Application in Entra ID
-
-1. Navigate to **[Azure Portal](https://portal.azure.com)** → **Microsoft Entra ID** → **App registrations**
-2. Click **New registration**
-3. Fill in:
+1. Navigate to **[Azure Portal](https://portal.azure.com)**
+2. Search for **Microsoft Entra ID** (or click left sidebar → **Microsoft Entra ID**)
+3. Click **App registrations** (left sidebar)
+4. Click **New registration** (top-left button)
+5. Fill in:
    - **Name:** `SharedMailboxClassifier`
    - **Supported account types:** `Accounts in this organizational directory only`
    - **Redirect URI:** Leave blank
-4. Click **Register**
+6. Click **Register**
 
-#### Step 2: Add API Permissions
+### Step 3.2: Add API Permissions
 
-1. Go to **API permissions**
-2. Click **Add a permission** → **Microsoft Graph**
-3. Select **Application permissions** (for daemon/service scenario)
-4. Add these permissions:
+1. In the app registration, click **API permissions** (left sidebar)
+2. Click **Add a permission** (top-left)
+3. Search for and select **Microsoft Graph**
+4. Choose **Application permissions** (not Delegated)
+5. Search and add these permissions:
    - `Mail.Read` – Read messages
    - `Mail.Read.Shared` – Read shared mailboxes
    - `Mail.Send` – Send emails
    - `Mail.Send.Shared` – Send as shared mailbox
-5. Click **Add permissions**
-6. Click **Grant admin consent for [Tenant]**
+6. Click **Add permissions**
+7. Click **Grant admin consent for [Your Tenant]** (and confirm)
 
-#### Step 3: Create Client Credentials
+### Step 3.3: Create Client Credentials
 
-1. Go to **Certificates & secrets**
-2. Click **New client secret**
-3. Expiration: **12 months** (or your policy)
-4. Copy and **store securely:**
-   - **Client ID** (Application ID)
-   - **Tenant ID** (Directory ID)
-   - **Client Secret** (Value - never share this)
+1. Click **Certificates & secrets** (left sidebar)
+2. Click **New client secret** (top-left button)
+3. Set expiration to **12 months** (or your policy)
+4. Click **Add**
+5. **Copy the Value immediately** (you can't see it again!)
+6. Note your:
+   - **Client ID** (from Overview tab: Application (client) ID)
+   - **Tenant ID** (from Overview tab: Directory (tenant) ID)
+   - **Client Secret** (from Certificates & secrets: Value)
 
-Use a secure vault for secrets (Azure Key Vault, GitHub Secrets, etc.)
+Store these securely in Azure Key Vault or a password manager.
 
-#### Step 4: Grant Mailbox Permissions
+### Step 3.4: Test App Registration
+
+```powershell
+# (c) 2026 Holger Imbery (contact@holgerimbery.blog)
+# Licensed under the project LICENSE file.
+# Test app registration credentials
+
+param(
+    [Parameter(Mandatory)] [string]$ClientId,
+    [Parameter(Mandatory)] [string]$ClientSecret,
+    [Parameter(Mandatory)] [string]$TenantId
+)
+
+$TokenUrl = "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token"
+
+$Body = @{
+    grant_type = "client_credentials"
+    client_id = $ClientId
+    client_secret = $ClientSecret
+    scope = "https://graph.microsoft.com/.default"
+}
+
+try {
+    $Response = Invoke-RestMethod -Uri $TokenUrl -Method Post -Body $Body
+    Write-Host "✓ Token acquired successfully" -ForegroundColor Green
+    Write-Host "  Token expires in: $($Response.expires_in) seconds" -ForegroundColor Gray
+    Write-Host "  Access Token: $($Response.access_token.Substring(0, 50))..." -ForegroundColor Gray
+} catch {
+    Write-Host "✗ Token acquisition failed" -ForegroundColor Red
+    Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
+}
+```
+
+Run it:
+
+```powershell
+.\docs\wiki\scripts\test-app-registration.ps1 `
+    -ClientId "your-client-id" `
+    -ClientSecret "your-client-secret" `
+    -TenantId "your-tenant-id"
+```
+
+**Expected output:**
+```
+✓ Token acquired successfully
+  Token expires in: 3599 seconds
+  Access Token: eyJ0eXAiOiJKV1QiLCJhbGciOi...
+```
+
+If you get **401 Unauthorized**, check that:
+- Client ID, secret, and tenant ID are correct
+- Secret hasn't expired
+- App registration is in the correct tenant
+
+### Step 3.5: Grant Mailbox Permissions
 
 Give the app registration access to send emails from the shared mailbox:
 
@@ -155,76 +196,18 @@ Run it:
     -MailboxAddress "shared-mailbox@company.com"
 ```
 
+**Expected output:**
+```
+✓ SendAs permission granted for 12345678-1234-1234-1234-123456789012 on shared-mailbox@company.com
+```
+
 ---
 
 ## 4. Backend Service Deployment (How to Get the URL)
 
 This is the central component that both harnesses call. You must deploy it to Azure.
 
-### 4.1 What is the Backend Service?
-
-A Python or .NET web application that:
-- Authenticates to Microsoft Graph using the app registration
-- Reads messages from the shared mailbox
-- Classifies messages (Phase 2+)
-- Creates draft replies
-- Logs audit data to Dataverse
-
-### 4.2 Deploy to Azure App Service
-
-#### Option A: Deploy from GitHub (Recommended)
-
-1. **Create Azure App Service:**
-   ```powershell
-   # (c) 2026 Holger Imbery (contact@holgerimbery.blog)
-   # Licensed under the project LICENSE file.
-   
-   $ResourceGroup = "your-resource-group"
-   $AppServiceName = "shared-mailbox-classifier"
-   $Location = "eastus"
-   
-   az group create --name $ResourceGroup --location $Location
-   
-   az appservice plan create `
-       --resource-group $ResourceGroup `
-       --name "$AppServiceName-plan" `
-       --sku B1 `
-       --is-linux
-   
-   az webapp create `
-       --resource-group $ResourceGroup `
-       --plan "$AppServiceName-plan" `
-       --name $AppServiceName `
-       --runtime "PYTHON:3.11"
-   
-   Write-Host "✓ App Service created: https://$AppServiceName.azurewebsites.net" -ForegroundColor Green
-   ```
-
-2. **Configure environment variables in App Service:**
-   ```powershell
-   az webapp config appsettings set `
-       --resource-group $ResourceGroup `
-       --name $AppServiceName `
-       --settings `
-           AZURE_CLIENT_ID="your-client-id" `
-           AZURE_CLIENT_SECRET="your-client-secret" `
-           AZURE_TENANT_ID="your-tenant-id"
-   
-   Write-Host "✓ Environment variables configured" -ForegroundColor Green
-   ```
-
-3. **Deploy code to App Service:**
-   ```powershell
-   cd backend
-   
-   # Push to App Service Git repository
-   git remote add azure https://$AppServiceName.scm.azurewebsites.net/$AppServiceName.git
-   git push azure main
-   
-   Write-Host "✓ Backend deployed to: https://$AppServiceName.azurewebsites.net" -ForegroundColor Green
-   ```
-
-#### Option B: Deploy from Local Machine (for testing)
+### Step 4.1: Create Azure App Service
 
 ```powershell
 # (c) 2026 Holger Imbery (contact@holgerimbery.blog)
@@ -233,278 +216,115 @@ A Python or .NET web application that:
 param(
     [Parameter(Mandatory)] [string]$ResourceGroup,
     [Parameter(Mandatory)] [string]$AppServiceName,
-    [string]$CodePath = ".\backend"
+    [string]$Location = "eastus"
 )
 
-# Create deployment package
-Write-Host "Creating deployment package..." -ForegroundColor Yellow
-$PublishPath = "$env:TEMP\publish"
-New-Item -ItemType Directory -Path $PublishPath -Force | Out-Null
-Copy-Item "$CodePath\*" $PublishPath -Recurse -Force
+Write-Host "Creating Azure App Service..." -ForegroundColor Yellow
 
-# Publish to App Service
-Write-Host "Deploying to Azure App Service..." -ForegroundColor Yellow
-az webapp deployment source config-zip `
+# Create resource group
+az group create --name $ResourceGroup --location $Location
+Write-Host "✓ Resource group created: $ResourceGroup" -ForegroundColor Green
+
+# Create App Service plan
+az appservice plan create `
     --resource-group $ResourceGroup `
+    --name "$AppServiceName-plan" `
+    --sku B1 `
+    --is-linux
+
+Write-Host "✓ App Service plan created" -ForegroundColor Green
+
+# Create web app
+az webapp create `
+    --resource-group $ResourceGroup `
+    --plan "$AppServiceName-plan" `
     --name $AppServiceName `
-    --src "$PublishPath.zip"
+    --runtime "PYTHON:3.11"
 
 $Url = "https://$AppServiceName.azurewebsites.net"
-Write-Host "✓ Backend deployed to: $Url" -ForegroundColor Green
-Write-Host "  Verify deployment: curl -I $Url/health" -ForegroundColor Cyan
+Write-Host "✓ App Service created: $Url" -ForegroundColor Green
 ```
 
-### 4.3 Get Your Backend Service URL
-
-After deployment, the URL is:
-
-```
-https://<AppServiceName>.azurewebsites.net
-```
-
-**Example:**
-- Resource Group: `my-mailbox-rg`
-- App Service Name: `shared-mailbox-classifier`
-- **Backend URL: `https://shared-mailbox-classifier.azurewebsites.net`**
-
-**Find existing URL:**
-```powershell
-# List all app services
-az webapp list --query "[].{Name:name, Url:defaultHostName}"
-
-# Get specific URL
-az webapp show `
-    --resource-group "my-mailbox-rg" `
-    --name "shared-mailbox-classifier" `
-    --query "defaultHostName" -o tsv
-```
-
-### 4.4 Verify Backend is Running
+Run it:
 
 ```powershell
-# Test health endpoint
+.\docs\wiki\scripts\create-app-service.ps1 `
+    -ResourceGroup "shared-mailbox-rg" `
+    -AppServiceName "shared-mailbox-classifier"
+```
+
+**Expected output:**
+```
+Creating Azure App Service...
+✓ Resource group created: shared-mailbox-rg
+✓ App Service plan created
+✓ App Service created: https://shared-mailbox-classifier.azurewebsites.net
+```
+
+### Step 4.2: Test App Service is Running
+
+```powershell
 $BackendUrl = "https://shared-mailbox-classifier.azurewebsites.net"
-curl -I "$BackendUrl/health"
 
-# Expected response: HTTP 200 OK
+# Test connectivity
+$Response = Invoke-WebRequest -Uri "$BackendUrl/health" -SkipHttpErrorCheck
+
+Write-Host "Status Code: $($Response.StatusCode)" -ForegroundColor Green
+Write-Host "Response: $($Response.Content)" -ForegroundColor Gray
 ```
 
----
+**Expected output (initially):**
+```
+Status Code: 404
+Response: <!DOCTYPE html><html><body><h1>404 - Web app not found</h1>
+```
 
-## 5. Custom Connector Setup (Standard Harness)
+This is normal — the app is running but no code is deployed yet. We'll deploy code in the next step.
 
-Now that you have the backend URL, configure the custom connector.
-
-### 5.1 Create the Connector in Power Platform
-
-1. Open **Power Platform** → **Data** → **Connectors** → **New Connector** → **From OpenAPI**
-2. Name: `SharedMailboxConnector`
-3. Host: `shared-mailbox-classifier.azurewebsites.net` (your actual backend URL from Step 4.3)
-
-### 5.2 API Endpoints
-
-The connector defines the interface between Copilot Studio and your backend:
-
-**GET /api/mailbox/messages**
-- Query messages from shared mailbox
-- Parameters: mailboxAddress, top (default 10)
-- Returns: Array of Message objects
-
-**GET /api/mailbox/messages/{messageId}**
-- Fetch single message
-- Returns: Message object with id, subject, from, body, receivedDateTime
-
-**POST /api/mailbox/classify**
-- Classify a message
-- Body: { messageId: string }
-- Returns: Array of classifications with className, confidence, targetEmail
-
-**POST /api/mailbox/drafts**
-- Create reply draft
-- Body: { messageId, subject, body, classifications }
-- Returns: { draftId, url }
-
-### 5.3 Configure Authentication
-
-1. **Authentication type:** Azure AD (Entra)
-2. **Tenant ID:** Your Azure tenant ID
-3. **Client ID:** Your app registration Client ID
-4. **Client secret:** Stored securely in Azure Key Vault
-
-Use the PowerShell script:
+### Step 4.3: Configure Environment Variables
 
 ```powershell
-.\docs\wiki\scripts\setup-custom-connector.ps1 `
-    -EnvironmentId "your-env-id" `
-    -ConnectorName "SharedMailboxConnector" `
-    -ApiHost "shared-mailbox-classifier.azurewebsites.net"
-```
+# (c) 2026 Holger Imbery (contact@holgerimbery.blog)
+# Licensed under the project LICENSE file.
 
----
-
-## 6. GitHub Copilot Harness (Parallel - Executable Skills)
-
-### 6.1 Create Executable Skills in Copilot Studio
-
-Add executable skills that provide the same operations as the custom connector:
-
-**Skill 1: FetchMessage**
-```
-Input: 
-  - mailboxAddress (text)
-  - messageId (text)
-
-Output:
-  - message (object: {id, subject, from, body, receivedDateTime})
-```
-
-**Skill 2: ClassifyMessage**
-```
-Input:
-  - mailboxAddress (text)
-  - messageId (text)
-
-Output:
-  - classifications (array: [{className, confidence, targetEmail}])
-```
-
-**Skill 3: CreateDraft**
-```
-Input:
-  - mailboxAddress (text)
-  - messageId (text)
-  - subject (text)
-  - body (text)
-  - classifications (array)
-
-Output:
-  - draftId (text)
-  - draftUrl (text)
-```
-
-### 6.2 Implementation in Copilot Studio
-
-Each executable skill calls the backend service via HTTP:
-
-```json
-{
-  "name": "FetchMessage",
-  "type": "executable",
-  "trigger": "invocation",
-  "inputs": {
-    "mailboxAddress": "string",
-    "messageId": "string"
-  },
-  "actions": [
-    {
-      "type": "http",
-      "method": "GET",
-      "url": "https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/messages/{messageId}",
-      "headers": {
-        "Authorization": "Bearer <token>",
-        "Content-Type": "application/json"
-      }
-    }
-  ],
-  "outputs": {
-    "message": "<http-response-body>"
-  }
-}
-```
-
-### 6.3 SKILL.md Documentation
-
-Create `SKILL.md` with usage examples:
-
-```markdown
-# Shared Mailbox Classifier Skills
-
-## Available Skills
-
-### FetchMessage
-Retrieve a single message from the shared mailbox.
-
-**Usage:**
-```
-FetchMessage(
-  mailboxAddress: "shared@company.com",
-  messageId: "AAMkADhhZGFmND..."
+param(
+    [Parameter(Mandatory)] [string]$ResourceGroup,
+    [Parameter(Mandatory)] [string]$AppServiceName,
+    [Parameter(Mandatory)] [string]$ClientId,
+    [Parameter(Mandatory)] [string]$ClientSecret,
+    [Parameter(Mandatory)] [string]$TenantId
 )
+
+az webapp config appsettings set `
+    --resource-group $ResourceGroup `
+    --name $AppServiceName `
+    --settings `
+        AZURE_CLIENT_ID=$ClientId `
+        AZURE_CLIENT_SECRET=$ClientSecret `
+        AZURE_TENANT_ID=$TenantId
+
+Write-Host "✓ Environment variables configured" -ForegroundColor Green
 ```
 
-**Returns:**
-```json
-{
-  "id": "AAMkADhhZGFmND...",
-  "subject": "Invoice for August",
-  "from": "sender@external.com",
-  "body": "Please review attached invoice...",
-  "receivedDateTime": "2026-09-02T10:30:00Z"
-}
+Run it:
+
+```powershell
+.\docs\wiki\scripts\configure-app-service.ps1 `
+    -ResourceGroup "shared-mailbox-rg" `
+    -AppServiceName "shared-mailbox-classifier" `
+    -ClientId "your-client-id" `
+    -ClientSecret "your-client-secret" `
+    -TenantId "your-tenant-id"
 ```
 
-### ClassifyMessage
-Classify a message based on Dataverse rules.
-
-**Usage:**
+**Expected output:**
 ```
-ClassifyMessage(
-  mailboxAddress: "shared@company.com",
-  messageId: "AAMkADhhZGFmND..."
-)
+✓ Environment variables configured
 ```
 
-**Returns:**
-```json
-[
-  {
-    "className": "Invoice Question",
-    "confidence": 0.92,
-    "targetEmail": "finance@company.com"
-  }
-]
-```
+### Step 4.4: Deploy Backend Code
 
-### CreateDraft
-Create a reply draft with classification and routing.
-
-**Usage:**
-```
-CreateDraft(
-  mailboxAddress: "shared@company.com",
-  messageId: "AAMkADhhZGFmND...",
-  subject: "Re: Invoice for August",
-  body: "Thank you for your inquiry. Your invoice has been routed to Finance.",
-  classifications: [{"className": "Invoice Question"}]
-)
-```
-
-**Returns:**
-```json
-{
-  "draftId": "AAMkADhhZGFmND...",
-  "draftUrl": "https://outlook.office.com/mail/..."
-}
-```
-```
-
----
-
-## 7. Backend Service Reference Implementation
-
-Your backend service (hosted on Azure App Service) must:
-
-1. **Authenticate to Microsoft Graph** using the app registration credentials
-2. **Expose REST endpoints:**
-   - GET /api/mailbox/messages – List messages
-   - GET /api/mailbox/messages/{id} – Get single message
-   - POST /api/mailbox/classify – Classify message
-   - POST /api/mailbox/drafts – Create draft
-   - GET /health – Health check
-3. **Handle Dataverse calls** (Phase 2) for classification lookups
-4. **Log audit trails** to Dataverse
-
-Example backend structure:
+Create the Python backend application:
 
 ```python
 # (c) 2026 Holger Imbery (contact@holgerimbery.blog)
@@ -515,116 +335,470 @@ from flask import Flask, request, jsonify
 from azure.identity import ClientSecretCredential
 from msgraph.core import GraphClient
 import os
+import logging
 
 app = Flask(__name__)
+logging.basicConfig(level=logging.INFO)
 
 # Initialize Graph client
-credential = ClientSecretCredential(
-    client_id=os.getenv("AZURE_CLIENT_ID"),
-    client_secret=os.getenv("AZURE_CLIENT_SECRET"),
-    tenant_id=os.getenv("AZURE_TENANT_ID")
-)
-graph_client = GraphClient(credential=credential)
+try:
+    credential = ClientSecretCredential(
+        client_id=os.getenv("AZURE_CLIENT_ID"),
+        client_secret=os.getenv("AZURE_CLIENT_SECRET"),
+        tenant_id=os.getenv("AZURE_TENANT_ID")
+    )
+    graph_client = GraphClient(credential=credential)
+    logging.info("Graph client initialized successfully")
+except Exception as e:
+    logging.error(f"Failed to initialize Graph client: {e}")
 
 @app.route("/health", methods=["GET"])
 def health():
     """Health check endpoint"""
-    return jsonify({"status": "healthy"}), 200
+    return jsonify({"status": "healthy", "service": "shared-mailbox-classifier"}), 200
 
 @app.route("/api/mailbox/messages", methods=["GET"])
 def get_messages():
     """Fetch messages from shared mailbox"""
-    mailbox = request.args.get("mailboxAddress")
-    top = request.args.get("top", 10, type=int)
-    
-    # Call Microsoft Graph API
-    response = graph_client.get(
-        f"/users/{mailbox}/messages?$top={top}"
-    )
-    return jsonify(response.json())
+    try:
+        mailbox = request.args.get("mailboxAddress")
+        top = request.args.get("top", 10, type=int)
+        
+        if not mailbox:
+            return jsonify({"error": "mailboxAddress parameter required"}), 400
+        
+        # Call Microsoft Graph API
+        response = graph_client.get(
+            f"/users/{mailbox}/messages?$top={top}&$select=id,subject,from,receivedDateTime,bodyPreview"
+        )
+        return jsonify(response.json()), 200
+    except Exception as e:
+        logging.error(f"Error fetching messages: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/mailbox/messages/<message_id>", methods=["GET"])
+def get_message(message_id):
+    """Fetch single message"""
+    try:
+        mailbox = request.args.get("mailboxAddress")
+        if not mailbox:
+            return jsonify({"error": "mailboxAddress parameter required"}), 400
+        
+        response = graph_client.get(
+            f"/users/{mailbox}/messages/{message_id}"
+        )
+        return jsonify(response.json()), 200
+    except Exception as e:
+        logging.error(f"Error fetching message: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/mailbox/classify", methods=["POST"])
 def classify_message():
     """Classify message based on rules"""
-    data = request.json
-    message_id = data.get("messageId")
-    
-    # Query Dataverse for classification rules (Phase 2)
-    # Apply rule-based classifier
-    
-    return jsonify({
-        "classifications": [
-            {"className": "Invoice Question", "confidence": 0.92, "targetEmail": "finance@company.com"}
-        ]
-    })
+    try:
+        data = request.json
+        message_id = data.get("messageId")
+        
+        if not message_id:
+            return jsonify({"error": "messageId required"}), 400
+        
+        # Placeholder: Query Dataverse for classification rules (Phase 2)
+        # Apply rule-based classifier
+        
+        return jsonify({
+            "classifications": [
+                {"className": "Invoice Question", "confidence": 0.92, "targetEmail": "finance@company.com"}
+            ]
+        }), 200
+    except Exception as e:
+        logging.error(f"Error classifying message: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/mailbox/drafts", methods=["POST"])
+def create_draft():
+    """Create reply draft"""
+    try:
+        data = request.json
+        message_id = data.get("messageId")
+        subject = data.get("subject")
+        body = data.get("body")
+        
+        if not all([message_id, subject, body]):
+            return jsonify({"error": "messageId, subject, body required"}), 400
+        
+        # Placeholder: Create draft via Graph API (Phase 3)
+        
+        return jsonify({
+            "draftId": "draft-placeholder",
+            "draftUrl": "https://outlook.office.com/mail/..."
+        }), 200
+    except Exception as e:
+        logging.error(f"Error creating draft: {e}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
 ```
 
----
+Create `backend/requirements.txt`:
 
-## 8. Testing the Setup
-
-### Test Backend Health
-
-```powershell
-$BackendUrl = "https://shared-mailbox-classifier.azurewebsites.net"
-curl -I "$BackendUrl/health"
-# Expected: HTTP 200 OK
+```
+Flask==2.3.0
+azure-identity==1.13.0
+msgraph-core==0.2.2
 ```
 
-### Test Custom Connector (Standard Harness)
+Deploy to App Service:
 
-1. Open **Power Platform** → **Data** → **Connectors** → **SharedMailboxConnector**
-2. Click **Test**
-3. Invoke GetMessages with your shared mailbox address
-4. Verify HTTP 200 and message array in response
+```powershell
+cd backend
+git remote add azure https://shared-mailbox-classifier.scm.azurewebsites.net/shared-mailbox-classifier.git
+git push azure main
+cd ..
 
-### Test Executable Skills (GitHub Copilot Harness)
+Write-Host "✓ Backend deployed" -ForegroundColor Green
+```
 
-1. Open your Copilot Studio agent
-2. Add the **FetchMessage** executable skill to a topic
-3. Invoke with test mailbox address and message ID
-4. Verify output matches custom connector response
+### Step 4.5: Test Backend Endpoints
 
-### Integration Test
+```powershell
+# (c) 2026 Holger Imbery (contact@holgerimbery.blog)
+# Licensed under the project LICENSE file.
 
-Create a simple Copilot Studio topic that:
-1. Calls FetchMessage to get a message
-2. Calls ClassifyMessage to classify it
-3. Calls CreateDraft to generate a response
-4. Verify the complete flow works
+param(
+    [Parameter(Mandatory)] [string]$BackendUrl,
+    [string]$MailboxAddress = "test@company.com"
+)
+
+Write-Host "Testing Backend Endpoints" -ForegroundColor Cyan
+Write-Host "Backend: $BackendUrl" -ForegroundColor Gray
+Write-Host ""
+
+# Test 1: Health endpoint
+Write-Host "1. Testing /health endpoint..." -ForegroundColor Yellow
+try {
+    $Response = Invoke-RestMethod -Uri "$BackendUrl/health" -Method Get
+    Write-Host "   ✓ Health check passed" -ForegroundColor Green
+    Write-Host "   Response: $($Response | ConvertTo-Json)" -ForegroundColor Gray
+} catch {
+    Write-Host "   ✗ Health check failed: $($_.Exception.Message)" -ForegroundColor Red
+}
+
+Write-Host ""
+
+# Test 2: Get messages endpoint
+Write-Host "2. Testing /api/mailbox/messages endpoint..." -ForegroundColor Yellow
+try {
+    $Response = Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/messages?mailboxAddress=$MailboxAddress&top=5" `
+        -Method Get -ErrorAction Stop
+    Write-Host "   ✓ Messages endpoint works" -ForegroundColor Green
+    Write-Host "   Found $($Response.value.Count) messages" -ForegroundColor Gray
+} catch {
+    Write-Host "   ⚠ Warning: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "     (This is normal if app registration doesn't have mailbox access yet)" -ForegroundColor Gray
+}
+
+Write-Host ""
+
+# Test 3: Classify endpoint
+Write-Host "3. Testing /api/mailbox/classify endpoint..." -ForegroundColor Yellow
+try {
+    $Body = @{ messageId = "test-message-id" } | ConvertTo-Json
+    $Response = Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/classify" `
+        -Method Post -Body $Body -ContentType "application/json"
+    Write-Host "   ✓ Classify endpoint works" -ForegroundColor Green
+    Write-Host "   Response: $($Response | ConvertTo-Json)" -ForegroundColor Gray
+} catch {
+    Write-Host "   ✗ Classify endpoint failed: $($_.Exception.Message)" -ForegroundColor Red
+}
+
+Write-Host ""
+Write-Host "Testing complete!" -ForegroundColor Cyan
+```
+
+Run it:
+
+```powershell
+.\docs\wiki\scripts\test-backend.ps1 `
+    -BackendUrl "https://shared-mailbox-classifier.azurewebsites.net" `
+    -MailboxAddress "shared@company.com"
+```
+
+**Expected output:**
+```
+Testing Backend Endpoints
+Backend: https://shared-mailbox-classifier.azurewebsites.net
+
+1. Testing /health endpoint...
+   ✓ Health check passed
+   Response: {
+     "status": "healthy",
+     "service": "shared-mailbox-classifier"
+   }
+
+2. Testing /api/mailbox/messages endpoint...
+   ⚠ Warning: 401 Unauthorized
+     (This is normal if app registration doesn't have mailbox access yet)
+
+3. Testing /api/mailbox/classify endpoint...
+   ✓ Classify endpoint works
+   Response: {
+     "classifications": [{"className": "Invoice Question", ...}]
+   }
+
+Testing complete!
+```
 
 ---
 
-## 9. Troubleshooting
+## 5. Custom Connector Setup (Standard Harness)
+
+### Step 5.1: Navigate to Power Platform Connectors
+
+1. Open **[Power Platform Admin Center](https://admin.powerplatform.com)**
+   - Or: Azure Portal → search **Power Platform** → click **Environments**
+2. Select your **environment** (where Copilot Studio is deployed)
+3. Click **Power Platform** → **Connectors** (left sidebar)
+   - Or: Click the **Environments** tab → your environment → **Connectors**
+4. Click **New connector** (top-right)
+5. Choose **From OpenAPI**
+
+**Alternative Route (if using Copilot Studio directly):**
+1. Open **[Copilot Studio](https://copilotstudio.microsoft.com)**
+2. Click your **agent** (or create new)
+3. Click **Connectors** (left sidebar under Skills)
+4. Click **Create new connector**
+5. Select **From OpenAPI**
+
+### Step 5.2: Create the Connector
+
+1. Name: `SharedMailboxConnector`
+2. Host: `shared-mailbox-classifier.azurewebsites.net` (your actual backend URL)
+3. Leave all other fields default
+4. Click **Create**
+
+### Step 5.3: Add API Operations
+
+1. Click **Definition** tab
+2. Add these operations:
+
+**Operation 1: GetMessages**
+```
+Method: GET
+Path: /api/mailbox/messages
+Query Parameters:
+  - mailboxAddress (string, required)
+  - top (integer, optional, default: 10)
+Response: Array of Message objects
+```
+
+**Operation 2: GetMessage**
+```
+Method: GET
+Path: /api/mailbox/messages/{messageId}
+URL Parameters:
+  - messageId (string, required)
+Query Parameters:
+  - mailboxAddress (string, required)
+Response: Single Message object
+```
+
+**Operation 3: ClassifyMessage**
+```
+Method: POST
+Path: /api/mailbox/classify
+Body (JSON):
+  {
+    "messageId": "string"
+  }
+Response: Array of Classifications
+```
+
+**Operation 4: CreateDraft**
+```
+Method: POST
+Path: /api/mailbox/drafts
+Body (JSON):
+  {
+    "messageId": "string",
+    "subject": "string",
+    "body": "string",
+    "classifications": []
+  }
+Response: { draftId, draftUrl }
+```
+
+### Step 5.4: Configure Authentication
+
+1. Click **Security** tab
+2. **Authentication type:** Azure AD
+3. **Tenant ID:** Your Azure tenant ID
+4. **Client ID:** Your app registration Client ID
+5. **Client secret:** Stored in Azure Key Vault (reference: `@Microsoft.KeyVault(SecretUri=...)`)
+
+### Step 5.5: Test Custom Connector
+
+1. Click **Test** (top-right)
+2. Choose **GetMessages** operation
+3. Enter:
+   - mailboxAddress: `shared@company.com`
+   - top: `5`
+4. Click **Test operation**
+
+**Expected output:**
+```json
+{
+  "value": [
+    {
+      "id": "AAMkADhhZGFmND...",
+      "subject": "Invoice for August",
+      "from": {
+        "emailAddress": {
+          "address": "sender@external.com",
+          "name": "External Sender"
+        }
+      },
+      "receivedDateTime": "2026-09-02T10:30:00Z"
+    }
+  ]
+}
+```
+
+If you get **401 Unauthorized**, verify:
+- App registration credentials are correct
+- Client ID and secret match
+- API permissions are granted and admin consent is given
+
+---
+
+## 6. GitHub Copilot Harness (Parallel - Executable Skills)
+
+### Step 6.1: Create Executable Skills in Copilot Studio
+
+1. Open **Copilot Studio**
+2. Click your **agent**
+3. Click **Skills** (left sidebar)
+4. Click **Create new skill**
+5. Name: `SharedMailboxSkills`
+6. Description: `Shared mailbox classification and draft management`
+
+### Step 6.2: Add Skill Actions
+
+Add three actions:
+
+**Action 1: FetchMessage**
+```
+Input: 
+  - mailboxAddress (text)
+  - messageId (text)
+
+Output:
+  - message (object)
+```
+
+**Action 2: ClassifyMessage**
+```
+Input:
+  - mailboxAddress (text)
+  - messageId (text)
+
+Output:
+  - classifications (array)
+```
+
+**Action 3: CreateDraft**
+```
+Input:
+  - mailboxAddress (text)
+  - messageId (text)
+  - subject (text)
+  - body (text)
+
+Output:
+  - draftId (text)
+  - draftUrl (text)
+```
+
+### Step 6.3: Implement Actions (Call Backend)
+
+For each action, add an HTTP call to your backend:
+
+```
+FetchMessage:
+  HTTP GET → https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/messages/{messageId}?mailboxAddress={mailboxAddress}
+  Headers: Authorization: Bearer <token>
+
+ClassifyMessage:
+  HTTP POST → https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/classify
+  Body: { "messageId": "{messageId}" }
+
+CreateDraft:
+  HTTP POST → https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/drafts
+  Body: { "messageId", "subject", "body", "classifications" }
+```
+
+### Step 6.4: Test Executable Skills
+
+In your Copilot Studio agent:
+
+1. Add a **Topic** that uses the **SharedMailboxSkills**
+2. Add a step: Call **FetchMessage** skill
+3. Set inputs: mailboxAddress = `shared@company.com`, messageId = `<known-id>`
+4. **Test** the agent
+
+**Expected output:**
+```
+Message retrieved:
+  Subject: Invoice for August
+  From: sender@external.com
+  Received: 2026-09-02 10:30 AM
+```
+
+---
+
+## 7. Integration Test: End-to-End
+
+Create a Copilot Studio topic that demonstrates both harnesses:
+
+1. **Standard Harness (Custom Connector):**
+   - Call custom connector GetMessages
+   - Display results
+
+2. **GitHub Copilot Harness (Executable Skills):**
+   - Call FetchMessage skill
+   - Verify output matches connector
+
+3. **Verify consistency:** Both should return identical message data
+
+---
+
+## 8. Troubleshooting
 
 | Issue | Resolution |
 |---|---|
-| **Backend URL not found** | Run `az webapp show --resource-group <rg> --name <app> --query defaultHostName` |
-| **401 Unauthorized from backend** | Verify app registration credentials are set in App Service environment variables |
-| **503 Service Unavailable** | Check App Service is running; view logs in Azure Portal |
-| **403 Forbidden on Graph API** | Verify API permissions and admin consent in Entra ID |
-| **Connector authentication fails** | Verify Entra credentials match app registration in custom connector |
+| **Cannot find Power Platform connectors** | Ensure you're in Power Platform Admin Center (admin.powerplatform.com), not Azure Portal |
+| **Backend URL returns 404** | App Service is running but code isn't deployed. Push code via git or use zip deploy |
+| **401 Unauthorized from backend** | Verify app registration credentials in environment variables |
+| **Custom connector test fails** | Check backend /health endpoint is responding. Verify Azure AD authentication is configured |
+| **Executable skill times out** | Increase timeout in skill definition. Verify backend is responding to HTTP calls |
 
 ---
 
-## 10. Next Steps
+## 9. Next Steps
 
 - Proceed to Phase 2: Classification via Dataverse table
-- Implement backend service endpoints
+- Implement remaining backend endpoints
 - Create sample classification data
 
 ---
 
 ## References
 
+- [Power Platform Admin Center](https://admin.powerplatform.com)
+- [Copilot Studio](https://copilotstudio.microsoft.com)
 - [Microsoft Graph Mail API](https://learn.microsoft.com/graph/api/resources/message)
-- [Copilot Studio Skills](https://learn.microsoft.com/power-virtual-agents/advanced-generative-actions)
 - [Power Platform Custom Connectors](https://learn.microsoft.com/connectors/custom-connectors/)
 - [Azure App Service](https://learn.microsoft.com/azure/app-service/)
-- [OAuth 2.0 Client Credentials Flow](https://learn.microsoft.com/entra/identity-platform/v2-oauth2-client-creds-grant-flow)
 
 ---
 
