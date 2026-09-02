@@ -23,7 +23,7 @@ function Load-EnvFile {
 }
 
 $RepoRoot = Split-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) -Parent
-$env_file = Join-Path $RepoRoot "backend-service\.env"
+$env_file = Join-Path $RepoRoot ".env"
 if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
     if (-not $ClientId) { $ClientId = $env_vars['CLIENT_ID'] }
@@ -34,7 +34,7 @@ if (Test-Path $env_file) {
 # Validate
 if (-not $ClientId -or -not $MailboxAddress -or -not $SecurityGroupName) {
     Write-Error "Missing required parameters: ClientId, MailboxAddress, SecurityGroupName"
-    Write-Host "Provide via CLI parameters or backend-service/.env file" -ForegroundColor Yellow
+    Write-Host "Provide via CLI parameters or .env file in the repo root" -ForegroundColor Yellow
     exit 1
 }
 

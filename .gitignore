@@ -1,6 +1,5 @@
 # Environment files with secrets
 .env
-backend-service/.env
 *.env
 !*.env.example
 

@@ -24,10 +24,11 @@ This project provides:
 | Phase 1: Copilot Studio Workflow Trigger (GitHub Copilot Harness) | ✅ Complete | v0.4.2 |
 | Phase 1: Script Parameter Management (.env Support) | ✅ Complete | v0.4.3 |
 | Phase 1: Extract Remaining Inline Test Scripts (.env Support) | ✅ Complete | v0.4.4 |
+| Phase 1: Move .env to Repo Root | ✅ Complete | v0.4.5 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
-## Quick Start (Phase 1: v0.4.4)
+## Quick Start (Phase 1: v0.4.5)
 
 ### Prerequisites
 
@@ -248,6 +249,11 @@ All code samples include copyright headers. See individual files for details.
 - ✅ New `confirm-mailbox-scope-restriction.ps1` (`docs/wiki/scripts/`) extracted from the inline Step 4.6.3 snippet, with `.env` support
 - ✅ All 12 scripts referenced in `docs/wiki/phase-1-mailbox-setup.md` now have matching script files, `.env` support, and a `**Script:**` link
 
+### v0.4.5: Move .env to Repo Root
+- ✅ `.env.example` moved from `backend-service/.env.example` to the repo root, so it is visible immediately instead of buried inside `backend-service/`
+- ✅ All 12 setup scripts now read the real `.env` from the repo root instead of `backend-service/.env`
+- ⚠️ Breaking: if you already created a `backend-service/.env`, move it to the repo root (`.env`)
+
 ---
 
 ## 🔄 IN PROGRESS
@@ -317,4 +323,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.4.4 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.4.5 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)

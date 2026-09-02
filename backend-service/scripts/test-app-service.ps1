@@ -21,7 +21,7 @@ function Load-EnvFile {
     return $env_vars
 }
 
-$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+$env_file = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) ".env"
 if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
     if (-not $BackendUrl) { $BackendUrl = $env_vars['BACKEND_URL'] }
@@ -30,7 +30,7 @@ if (Test-Path $env_file) {
 # Validate
 if (-not $BackendUrl) {
     Write-Error "Missing required parameter: BackendUrl"
-    Write-Host "Provide via CLI parameter or .env file" -ForegroundColor Yellow
+    Write-Host "Provide via CLI parameter or .env file in the repo root" -ForegroundColor Yellow
     exit 1
 }
 

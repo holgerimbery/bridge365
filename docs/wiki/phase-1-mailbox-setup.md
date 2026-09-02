@@ -135,7 +135,7 @@ function Load-EnvFile {
 }
 
 $RepoRoot = Split-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) -Parent
-$env_file = Join-Path $RepoRoot "backend-service\.env"
+$env_file = Join-Path $RepoRoot ".env"
 if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
     if (-not $ClientId) { $ClientId = $env_vars['CLIENT_ID'] }
@@ -146,7 +146,7 @@ if (Test-Path $env_file) {
 # Validate
 if (-not $ClientId -or -not $ClientSecret -or -not $TenantId) {
     Write-Error "Missing required parameters: ClientId, ClientSecret, TenantId"
-    Write-Host "Provide via CLI parameters or backend-service/.env file" -ForegroundColor Yellow
+    Write-Host "Provide via CLI parameters or .env file in the repo root" -ForegroundColor Yellow
     exit 1
 }
 
@@ -223,7 +223,7 @@ function Load-EnvFile {
 }
 
 $RepoRoot = Split-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) -Parent
-$env_file = Join-Path $RepoRoot "backend-service\.env"
+$env_file = Join-Path $RepoRoot ".env"
 if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
     if (-not $ClientId) { $ClientId = $env_vars['CLIENT_ID'] }
@@ -234,7 +234,7 @@ if (Test-Path $env_file) {
 # Validate
 if (-not $ClientId -or -not $MailboxAddress -or -not $SecurityGroupName) {
     Write-Error "Missing required parameters: ClientId, MailboxAddress, SecurityGroupName"
-    Write-Host "Provide via CLI parameters or backend-service/.env file" -ForegroundColor Yellow
+    Write-Host "Provide via CLI parameters or .env file in the repo root" -ForegroundColor Yellow
     exit 1
 }
 
@@ -327,7 +327,7 @@ function Load-EnvFile {
     return $env_vars
 }
 
-$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+$env_file = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) ".env"
 if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
     if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
@@ -338,7 +338,7 @@ if (Test-Path $env_file) {
 # Validate
 if (-not $ResourceGroup -or -not $AppServiceName) {
     Write-Error "Missing required parameters: ResourceGroup, AppServiceName"
-    Write-Host "Provide via CLI parameters or .env file" -ForegroundColor Yellow
+    Write-Host "Provide via CLI parameters or .env file in the repo root" -ForegroundColor Yellow
     exit 1
 }
 
@@ -412,7 +412,7 @@ function Load-EnvFile {
     return $env_vars
 }
 
-$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+$env_file = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) ".env"
 if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
     if (-not $BackendUrl) { $BackendUrl = $env_vars['BACKEND_URL'] }
@@ -421,7 +421,7 @@ if (Test-Path $env_file) {
 # Validate
 if (-not $BackendUrl) {
     Write-Error "Missing required parameter: BackendUrl"
-    Write-Host "Provide via CLI parameter or .env file" -ForegroundColor Yellow
+    Write-Host "Provide via CLI parameter or .env file in the repo root" -ForegroundColor Yellow
     exit 1
 }
 
@@ -475,7 +475,7 @@ function Load-EnvFile {
     return $env_vars
 }
 
-$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+$env_file = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) ".env"
 if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
     if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
@@ -488,7 +488,7 @@ if (Test-Path $env_file) {
 # Validate
 if (-not $ResourceGroup -or -not $AppServiceName -or -not $ClientId -or -not $ClientSecret -or -not $TenantId) {
     Write-Error "Missing required parameters: ResourceGroup, AppServiceName, ClientId, ClientSecret, TenantId"
-    Write-Host "Provide via CLI parameters or .env file" -ForegroundColor Yellow
+    Write-Host "Provide via CLI parameters or .env file in the repo root" -ForegroundColor Yellow
     exit 1
 }
 
@@ -561,7 +561,7 @@ function Load-EnvFile {
     return $env_vars
 }
 
-$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+$env_file = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) ".env"
 if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
     if (-not $BackendUrl) { $BackendUrl = $env_vars['BACKEND_URL'] }
@@ -571,7 +571,7 @@ if (Test-Path $env_file) {
 # Validate
 if (-not $BackendUrl) {
     Write-Error "Missing required parameter: BackendUrl"
-    Write-Host "Provide via CLI parameter or .env file" -ForegroundColor Yellow
+    Write-Host "Provide via CLI parameter or .env file in the repo root" -ForegroundColor Yellow
     exit 1
 }
 
@@ -753,7 +753,7 @@ function Load-EnvFile {
     return $env_vars
 }
 
-$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+$env_file = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) ".env"
 if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
     if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
@@ -765,7 +765,7 @@ if (Test-Path $env_file) {
 # Validate
 if (-not $ResourceGroup -or -not $AppServiceName -or -not $TenantId -or -not $ClientId) {
     Write-Error "Missing required parameters: ResourceGroup, AppServiceName, TenantId, ClientId"
-    Write-Host "Provide via CLI parameters or .env file" -ForegroundColor Yellow
+    Write-Host "Provide via CLI parameters or .env file in the repo root" -ForegroundColor Yellow
     exit 1
 }
 
@@ -838,7 +838,7 @@ function Load-EnvFile {
     return $env_vars
 }
 
-$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+$env_file = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) ".env"
 if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
     if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
@@ -850,7 +850,7 @@ if (Test-Path $env_file) {
 # Validate
 if (-not $ResourceGroup -or -not $AppServiceName -or -not $AllowedTenantId -or -not $AllowedClientIds) {
     Write-Error "Missing required parameters: ResourceGroup, AppServiceName, AllowedTenantId, AllowedClientIds"
-    Write-Host "Provide via CLI parameters or .env file" -ForegroundColor Yellow
+    Write-Host "Provide via CLI parameters or .env file in the repo root" -ForegroundColor Yellow
     exit 1
 }
 
@@ -926,7 +926,7 @@ function Load-EnvFile {
 }
 
 $RepoRoot = Split-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) -Parent
-$env_file = Join-Path $RepoRoot "backend-service\.env"
+$env_file = Join-Path $RepoRoot ".env"
 if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
     if (-not $ClientId) { $ClientId = $env_vars['CLIENT_ID'] }
@@ -936,7 +936,7 @@ if (Test-Path $env_file) {
 # Validate
 if (-not $ClientId -or -not $MailboxAddress) {
     Write-Error "Missing required parameters: ClientId, MailboxAddress"
-    Write-Host "Provide via CLI parameters or backend-service/.env file" -ForegroundColor Yellow
+    Write-Host "Provide via CLI parameters or .env file in the repo root" -ForegroundColor Yellow
     exit 1
 }
 
@@ -993,7 +993,7 @@ function Load-EnvFile {
     return $env_vars
 }
 
-$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+$env_file = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) ".env"
 if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
     if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
@@ -1005,7 +1005,7 @@ if (Test-Path $env_file) {
 # Validate
 if (-not $ResourceGroup -or -not $KeyVaultName -or -not $AppServiceName -or -not $ClientSecret) {
     Write-Error "Missing required parameters: ResourceGroup, KeyVaultName, AppServiceName, ClientSecret"
-    Write-Host "Provide via CLI parameters or .env file" -ForegroundColor Yellow
+    Write-Host "Provide via CLI parameters or .env file in the repo root" -ForegroundColor Yellow
     exit 1
 }
 
@@ -1085,7 +1085,7 @@ function Load-EnvFile {
     return $env_vars
 }
 
-$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+$env_file = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) ".env"
 if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
     if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
@@ -1096,7 +1096,7 @@ if (Test-Path $env_file) {
 # Validate
 if (-not $ResourceGroup -or -not $AppServiceName -or -not $AllowedIpRanges) {
     Write-Error "Missing required parameters: ResourceGroup, AppServiceName, AllowedIpRanges"
-    Write-Host "Provide via CLI parameters or .env file" -ForegroundColor Yellow
+    Write-Host "Provide via CLI parameters or .env file in the repo root" -ForegroundColor Yellow
     exit 1
 }
 
@@ -1174,7 +1174,7 @@ function Load-EnvFile {
     return $env_vars
 }
 
-$env_file = Join-Path (Split-Path $PSScriptRoot -Parent) ".env"
+$env_file = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) ".env"
 if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
     if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
@@ -1184,7 +1184,7 @@ if (Test-Path $env_file) {
 # Validate
 if (-not $ResourceGroup -or -not $AppServiceName) {
     Write-Error "Missing required parameters: ResourceGroup, AppServiceName"
-    Write-Host "Provide via CLI parameters or .env file" -ForegroundColor Yellow
+    Write-Host "Provide via CLI parameters or .env file in the repo root" -ForegroundColor Yellow
     exit 1
 }
 
