@@ -87,12 +87,13 @@ You **MUST** create an app registration because your backend service needs authe
 3. Search for and select **Microsoft Graph**
 4. Choose **Application permissions** (not Delegated)
 5. Search and add these permissions:
-   - `Mail.Read` – Read messages
-   - `Mail.Read.Shared` – Read shared mailboxes
-   - `Mail.Send` – Send emails
-   - `Mail.Send.Shared` – Send as shared mailbox
+   - `Mail.Read` - Read messages (application permission)
+   - `Mail.Send` - Send emails (application permission)
 6. Click **Add permissions**
 7. Click **Grant admin consent for [Your Tenant]** (and confirm)
+
+> **Important:** `Mail.Read.Shared` and `Mail.Send.Shared` will **not** appear in this picker.
+> Those scopes only apply to delegated permissions (a signed-in user acting on a shared mailbox they have delegate access to). Since this backend uses application (client credentials) permissions, shared mailbox access is granted differently by giving the app’s service principal `FullAccess` and `SendAs` rights directly on the mailbox in Exchange Online (see Step 3.5 below).
 
 ### Step 3.3: Create Client Credentials
 
@@ -162,44 +163,93 @@ If you get **401 Unauthorized**, check that:
 - Secret hasn't expired
 - App registration is in the correct tenant
 
-### Step 3.5: Grant Mailbox Permissions
+### Step 3.5: Grant Shared Mailbox Access in Exchange Online
 
-Give the app registration access to send emails from the shared mailbox:
+App-only (client credentials) Graph permissions do not grant shared mailbox access by themselves. You must also grant the app's service principal two rights directly on the mailbox in Exchange Online:
+
+- FullAccess - lets the app read mailbox content (messages, folders)
+- SendAs - lets the app send email that appears to come from the shared mailbox
 
 ```powershell
 # (c) 2026 Holger Imbery (contact@holgerimbery.blog)
 # Licensed under the project LICENSE file.
+# Grants Exchange Online mailbox rights (FullAccess + SendAs) to an Entra
+# app registration's service principal, for app-only Graph API access.
 
 param(
-    [Parameter(Mandatory)] [string]$ClientId,
+    [Parameter(Mandatory)] [string]$AppId,
     [Parameter(Mandatory)] [string]$MailboxAddress
 )
 
 # Connect to Exchange Online
 Connect-ExchangeOnline
 
-# Grant Send As permission
+# Resolve the app registration's service principal in Exchange Online
+$ServicePrincipal = Get-ServicePrincipal -Identity $AppId
+
+if (-not $ServicePrincipal) {
+    throw "Service principal for AppId '$AppId' was not found in Exchange Online."
+}
+
+# Grant FullAccess (read mailbox content)
 Add-MailboxPermission -Identity $MailboxAddress `
-    -User $ClientId `
-    -AccessRights SendAs `
+    -User $ServicePrincipal.Identity `
+    -AccessRights FullAccess `
     -InheritanceType All `
+    -AutoMapping:$false `
     -Confirm:$false
 
-Write-Host "✓ SendAs permission granted for $ClientId on $MailboxAddress" -ForegroundColor Green
+# Grant SendAs (send email as the shared mailbox)
+Add-RecipientPermission -Identity $MailboxAddress `
+    -Trustee $ServicePrincipal.Identity `
+    -AccessRights SendAs `
+    -Confirm:$false
+
+Write-Host "FullAccess and SendAs granted for AppId $AppId on $MailboxAddress" -ForegroundColor Green
 ```
+
+Save it as `docs/wiki/scripts/grant-mailbox-permissions.ps1`.
 
 Run it:
 
 ```powershell
 .\docs\wiki\scripts\grant-mailbox-permissions.ps1 `
-    -ClientId "your-client-id-here" `
+    -AppId "your-app-client-id" `
     -MailboxAddress "shared-mailbox@company.com"
 ```
 
 **Expected output:**
 ```
-✓ SendAs permission granted for 12345678-1234-1234-1234-123456789012 on shared-mailbox@company.com
+FullAccess and SendAs granted for AppId 12345678-1234-1234-1234-123456789012 on shared-mailbox@company.com
 ```
+
+**Verify the grant took effect:**
+
+```powershell
+Connect-ExchangeOnline
+$Sp = Get-ServicePrincipal -Identity "your-app-client-id"
+
+Get-MailboxPermission -Identity "shared-mailbox@company.com" |
+    Where-Object { $_.User -like "*$($Sp.Identity)*" } |
+    Format-Table User, AccessRights, IsInherited
+
+Get-RecipientPermission -Identity "shared-mailbox@company.com" |
+    Where-Object { $_.Trustee -like "*$($Sp.Identity)*" } |
+    Format-Table Trustee, AccessRights, IsInherited
+```
+
+**Expected output (example):**
+```
+User                            AccessRights   IsInherited
+----                            ------------   -----------
+your-app-service-principal      {FullAccess}   False
+
+Trustee                         AccessRights   IsInherited
+-------                         ------------   -----------
+your-app-service-principal      {SendAs}       False
+```
+
+If permissions don't show up immediately, wait 5-10 minutes for Exchange Online replication and re-run the verification command.
 
 ---
 
