@@ -92,9 +92,6 @@ You **MUST** create an app registration because your backend service needs authe
 6. Click **Add permissions**
 7. Click **Grant admin consent for [Your Tenant]** (and confirm)
 
-> **Important:** `Mail.Read.Shared` and `Mail.Send.Shared` will **not** appear in this picker.
-> Those scopes only apply to delegated permissions (a signed-in user acting on a shared mailbox they have delegate access to). Since this backend uses application (client credentials) permissions, shared mailbox access is granted differently by giving the app’s service principal `FullAccess` and `SendAs` rights directly on the mailbox in Exchange Online (see Step 3.5 below).
-
 ### Step 3.3: Create Client Credentials
 
 1. Click **Certificates & secrets** (left sidebar)
