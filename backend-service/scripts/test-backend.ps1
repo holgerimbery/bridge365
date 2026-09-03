@@ -23,7 +23,7 @@ $env_file = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) ".
 if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
     if (-not $BackendUrl) { $BackendUrl = $env_vars['BACKEND_URL'] }
-    if ($MailboxAddress -eq "test@company.com") { $MailboxAddress = $env_vars['MAILBOX_ADDRESS'] -or "test@company.com" }
+    if ($MailboxAddress -eq "test@company.com" -and $env_vars['MAILBOX_ADDRESS']) { $MailboxAddress = $env_vars['MAILBOX_ADDRESS'] }
 }
 
 # Validate

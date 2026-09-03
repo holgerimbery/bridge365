@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.9] - 2026-09-03
+
+### What's Fixed
+- `create-app-service.ps1` and `test-backend.ps1`: fixed a bug where the `.env`-sourced default fallback for `-Location` / `-MailboxAddress` used PowerShell's `-or` operator (e.g. `['LOCATION'] -or "eastus"`), which is a *boolean* operator, not a null-coalescing fallback. It evaluated both sides as booleans and returned the literal string `"True"` instead of the intended value - causing `create-app-service.ps1` to fail with `LocationNotAvailableForResourceGroup: The provided location 'True' is not available` even though `.env` correctly set `LOCATION=eastus`.
+- `docs/wiki/phase-1-mailbox-setup.md`: both embedded code blocks resynced to match.
+
+### What's Modified
+- None.
+
+### Breaking Changes
+- None.
+
+---
+
 ## [0.4.8] - 2026-09-02
 
 ### What's Fixed
