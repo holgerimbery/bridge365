@@ -11,6 +11,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.11] - 2026-09-04
+
+### What's Fixed
+- `docs/wiki/phase-1-mailbox-setup.md`: fixed a pre-existing documentation bug where 6 of the 7 backend script sections (`configure-app-service.ps1`, `enable-backend-auth.ps1`, `configure-allowlist.ps1`, `secure-client-secret.ps1`, `restrict-network-access.ps1`, `review-backend-logs.ps1`) each embedded their script twice - a stale copy under "Script:" (missing the `Confirm-AzureContext`/exit-code checks from v0.4.10) and the current copy mislabeled under "Run it:". Each section now has exactly one, up-to-date, embedded script plus a short invocation example.
+- `backend-service/app.py` previously had **no** enforcement code at all for the caller allowlist described in the wiki - `ALLOWED_TENANT_ID`/`ALLOWED_CLIENT_IDS` were documented as something "your backend code must read" but were never actually implemented.
+
+### What's New
+- Added OAuth-based authorization to the backend: a `before_request` hook in `app.py` reads the `X-MS-CLIENT-PRINCIPAL-NAME` header that Azure App Service Authentication (Easy Auth, enabled via `enable-backend-auth.ps1`) injects for every caller it has already authenticated via Microsoft Entra ID, and rejects (`403 Forbidden`) any request to a non-`/health` endpoint whose caller email is not in the new `ALLOWED_EMAIL_ADDRESSES` allowlist. Authentication itself is fully delegated to Microsoft/Entra ID - this app only decides authorization.
+- Added `ALLOWED_EMAIL_ADDRESSES` (comma-separated) to `.env.example` and to `configure-allowlist.ps1`'s app-settings write.
+
+### What's Modified
+- `configure-allowlist.ps1`: replaced the `-AllowedTenantId`/`-AllowedClientIds` parameters (which set app settings that no backend code ever read) with a single `-AllowedEmailAddresses` parameter, writing `ALLOWED_EMAIL_ADDRESSES` instead of `ALLOWED_TENANT_ID`/`ALLOWED_CLIENT_IDS`. The unrelated `-TenantId`/`-SubscriptionId`/`Confirm-AzureContext` deployment-safety logic (added in v0.4.10) is unchanged.
+- `docs/wiki/phase-1-mailbox-setup.md` Section 4.6.2 ("Restrict Callers with an Allowlist") rewritten to describe and demonstrate the new email-based allowlist model, including updated "Test it" verification steps.
+
+### Breaking Changes
+- **Env var rename**: `ALLOWED_TENANT_ID` and `ALLOWED_CLIENT_IDS` are replaced by `ALLOWED_EMAIL_ADDRESSES`. If your `.env` or App Service app settings set the old variables, update them to `ALLOWED_EMAIL_ADDRESSES=user1@company.com,user2@company.com` - the old variables are no longer read anywhere. In practice this is a low-impact change since the old variables were never actually enforced by any backend code.
+
+---
+
 ## [0.4.10] - 2026-09-03
 
 ### What's Fixed

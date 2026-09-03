@@ -1,13 +1,16 @@
 # (c) 2026 Holger Imbery (contact@holgerimbery.blog)
 # Licensed under the project LICENSE file.
-# Sets the tenant and client-id allowlist your backend code checks against
-# on every incoming token, in addition to Easy Auth's signature validation.
+# Sets the email-address allowlist your backend code checks against the
+# X-MS-CLIENT-PRINCIPAL-NAME header that Easy Auth (see enable-backend-auth.ps1)
+# injects for every caller it has already authenticated via Microsoft Entra ID.
+# Authentication (who is this caller, is their sign-in valid) is fully handled
+# by Easy Auth; this allowlist only decides which authenticated identities are
+# authorized to use the API.
 
 param(
     [string]$ResourceGroup,
     [string]$AppServiceName,
-    [string]$AllowedTenantId,
-    [string]$AllowedClientIds,
+    [string]$AllowedEmailAddresses,
     [string]$TenantId,
     [string]$SubscriptionId
 )
@@ -60,15 +63,14 @@ if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
     if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
     if (-not $AppServiceName) { $AppServiceName = $env_vars['APP_SERVICE_NAME'] }
-    if (-not $AllowedTenantId) { $AllowedTenantId = $env_vars['ALLOWED_TENANT_ID'] }
-    if (-not $AllowedClientIds) { $AllowedClientIds = $env_vars['ALLOWED_CLIENT_IDS'] }
+    if (-not $AllowedEmailAddresses) { $AllowedEmailAddresses = $env_vars['ALLOWED_EMAIL_ADDRESSES'] }
     if (-not $TenantId) { $TenantId = $env_vars['TENANT_ID'] }
     if (-not $SubscriptionId) { $SubscriptionId = $env_vars['AZURE_SUBSCRIPTION_ID'] }
 }
 
 # Validate
-if (-not $ResourceGroup -or -not $AppServiceName -or -not $AllowedTenantId -or -not $AllowedClientIds) {
-    Write-Error "Missing required parameters: ResourceGroup, AppServiceName, AllowedTenantId, AllowedClientIds"
+if (-not $ResourceGroup -or -not $AppServiceName -or -not $AllowedEmailAddresses) {
+    Write-Error "Missing required parameters: ResourceGroup, AppServiceName, AllowedEmailAddresses"
     Write-Host "Provide via CLI parameters or .env file in the repo root" -ForegroundColor Yellow
     exit 1
 }
@@ -79,11 +81,10 @@ az webapp config appsettings set `
     --resource-group $ResourceGroup `
     --name $AppServiceName `
     --settings `
-        ALLOWED_TENANT_ID="$AllowedTenantId" `
-        ALLOWED_CLIENT_IDS="$AllowedClientIds"
+        ALLOWED_EMAIL_ADDRESSES="$AllowedEmailAddresses"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed to configure allowlist on '$AppServiceName'. See az CLI output above for details."
     exit 1
 }
-Write-Host "Allowlist configured on $AppServiceName" -ForegroundColor Green
+Write-Host "Email allowlist configured on $AppServiceName" -ForegroundColor Green

@@ -30,10 +30,11 @@ This project provides:
 | Phase 1: Fix .env Quoted-Value Parsing | ✅ Complete | v0.4.8 |
 | Phase 1: Fix .env Default-Fallback Bug (LOCATION/MAILBOX_ADDRESS) | ✅ Complete | v0.4.9 |
 | Phase 1: Azure Deployment Safety Hardening (exit-code checks, tenant/subscription guard) | ✅ Complete | v0.4.10 |
+| Phase 1: Email Allowlist OAuth Authorization + Wiki Doc Cleanup | ✅ Complete | v0.4.11 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
-## Quick Start (Phase 1: v0.4.10)
+## Quick Start (Phase 1: v0.4.11)
 
 ### Prerequisites
 
@@ -280,6 +281,14 @@ All code samples include copyright headers. See individual files for details.
 - ✨ New `AZURE_SUBSCRIPTION_ID` entry in `.env.example`
 - 🔧 `docs/wiki/phase-1-mailbox-setup.md`: all 7 embedded script blocks resynced; new troubleshooting entries for tenant/subscription mismatch errors
 
+### v0.4.11: Email Allowlist OAuth Authorization + Wiki Doc Cleanup
+- 🐛 Fixed `docs/wiki/phase-1-mailbox-setup.md`: 6 backend script sections each had their script embedded twice (a stale copy under "Script:" and the current copy mislabeled under "Run it:") - each section now has exactly one up-to-date embed plus a short invocation example
+- 🐛 Fixed `backend-service/app.py`: previously had zero enforcement code for the caller allowlist the wiki docs claimed existed
+- ✨ New OAuth-based authorization: `app.py` now enforces an `ALLOWED_EMAIL_ADDRESSES` allowlist against the `X-MS-CLIENT-PRINCIPAL-NAME` header injected by Azure App Service Authentication (Easy Auth) - authentication itself stays fully delegated to Microsoft Entra ID
+- 🔧 `configure-allowlist.ps1`: replaced `-AllowedTenantId`/`-AllowedClientIds` with `-AllowedEmailAddresses`
+- 🔧 `docs/wiki/phase-1-mailbox-setup.md` Section 4.6.2 rewritten for the new email-allowlist model
+- ⚠️ Breaking: `ALLOWED_TENANT_ID`/`ALLOWED_CLIENT_IDS` env vars are replaced by `ALLOWED_EMAIL_ADDRESSES` (low impact - the old vars were never actually enforced by any backend code)
+
 ---
 
 ## 🔄 IN PROGRESS
@@ -349,4 +358,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.4.10 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.4.11 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
