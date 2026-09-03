@@ -507,61 +507,6 @@ param(
     [string]$AppServiceName,
     [string]$ClientId,
     [string]$ClientSecret,
-    [string]$TenantId
-)
-
-# Load from .env if parameters not provided
-function Load-EnvFile {
-    param([string]$EnvPath)
-    $env_vars = @{}
-    if (Test-Path $EnvPath) {
-        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
-            $key, $value = $_ -split '=', 2
-            $env_vars[$key.Trim()] = $value.Trim().Trim('"').Trim("'")
-        }
-    }
-    return $env_vars
-}
-
-$env_file = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) ".env"
-if (Test-Path $env_file) {
-    $env_vars = Load-EnvFile $env_file
-    if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
-    if (-not $AppServiceName) { $AppServiceName = $env_vars['APP_SERVICE_NAME'] }
-    if (-not $ClientId) { $ClientId = $env_vars['CLIENT_ID'] }
-    if (-not $ClientSecret) { $ClientSecret = $env_vars['CLIENT_SECRET'] }
-    if (-not $TenantId) { $TenantId = $env_vars['TENANT_ID'] }
-}
-
-# Validate
-if (-not $ResourceGroup -or -not $AppServiceName -or -not $ClientId -or -not $ClientSecret -or -not $TenantId) {
-    Write-Error "Missing required parameters: ResourceGroup, AppServiceName, ClientId, ClientSecret, TenantId"
-    Write-Host "Provide via CLI parameters or .env file in the repo root" -ForegroundColor Yellow
-    exit 1
-}
-
-az webapp config appsettings set `
-    --resource-group $ResourceGroup `
-    --name $AppServiceName `
-    --settings `
-        AZURE_CLIENT_ID=$ClientId `
-        AZURE_CLIENT_SECRET=$ClientSecret `
-        AZURE_TENANT_ID=$TenantId
-
-Write-Host "✓ Environment variables configured" -ForegroundColor Green
-```
-
-Run it:
-
-```powershell
-# (c) 2026 Holger Imbery (contact@holgerimbery.blog)
-# Licensed under the project LICENSE file.
-
-param(
-    [string]$ResourceGroup,
-    [string]$AppServiceName,
-    [string]$ClientId,
-    [string]$ClientSecret,
     [string]$TenantId,
     [string]$SubscriptionId
 )
@@ -642,6 +587,20 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 Write-Host "✓ Environment variables configured" -ForegroundColor Green
+```
+
+Save it as `backend-service/scripts/configure-app-service.ps1`.
+
+Run it:
+
+```powershell
+.\backend-service\scripts\configure-app-service.ps1 `
+    -ResourceGroup "rg-shared-mailbox" `
+    -AppServiceName "shared-mailbox-classifier" `
+    -ClientId "<app-client-id>" `
+    -ClientSecret "<app-client-secret>" `
+    -TenantId "<tenant-id>" `
+    -SubscriptionId "<subscription-id>"
 ```
 
 **Expected output:**
@@ -867,64 +826,6 @@ param(
     [string]$ResourceGroup,
     [string]$AppServiceName,
     [string]$TenantId,
-    [string]$ClientId
-)
-
-# Load from .env if parameters not provided
-function Load-EnvFile {
-    param([string]$EnvPath)
-    $env_vars = @{}
-    if (Test-Path $EnvPath) {
-        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
-            $key, $value = $_ -split '=', 2
-            $env_vars[$key.Trim()] = $value.Trim().Trim('"').Trim("'")
-        }
-    }
-    return $env_vars
-}
-
-$env_file = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) ".env"
-if (Test-Path $env_file) {
-    $env_vars = Load-EnvFile $env_file
-    if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
-    if (-not $AppServiceName) { $AppServiceName = $env_vars['APP_SERVICE_NAME'] }
-    if (-not $TenantId) { $TenantId = $env_vars['TENANT_ID'] }
-    if (-not $ClientId) { $ClientId = $env_vars['CLIENT_ID'] }
-}
-
-# Validate
-if (-not $ResourceGroup -or -not $AppServiceName -or -not $TenantId -or -not $ClientId) {
-    Write-Error "Missing required parameters: ResourceGroup, AppServiceName, TenantId, ClientId"
-    Write-Host "Provide via CLI parameters or .env file in the repo root" -ForegroundColor Yellow
-    exit 1
-}
-
-az webapp auth update `
-    --resource-group $ResourceGroup `
-    --name $AppServiceName `
-    --enabled true `
-    --action LoginWithAzureActiveDirectory `
-    --aad-client-id $ClientId `
-    --aad-token-issuer-url "https://sts.windows.net/$TenantId/"
-
-Write-Host "Entra authentication enabled for $AppServiceName" -ForegroundColor Green
-```
-
-Save it as `backend-service/scripts/enable-backend-auth.ps1`.
-
-Run it:
-
-```powershell
-# (c) 2026 Holger Imbery (contact@holgerimbery.blog)
-# Licensed under the project LICENSE file.
-# Enables Azure App Service built-in authentication (Easy Auth) with
-# Microsoft Entra ID as the identity provider, so unauthenticated
-# requests are rejected before they reach your application code.
-
-param(
-    [string]$ResourceGroup,
-    [string]$AppServiceName,
-    [string]$TenantId,
     [string]$ClientId,
     [string]$SubscriptionId
 )
@@ -1006,6 +907,19 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Entra authentication enabled for $AppServiceName" -ForegroundColor Green
 ```
 
+Save it as `backend-service/scripts/enable-backend-auth.ps1`.
+
+Run it:
+
+```powershell
+.\backend-service\scripts\enable-backend-auth.ps1 `
+    -ResourceGroup "rg-shared-mailbox" `
+    -AppServiceName "shared-mailbox-classifier" `
+    -TenantId "<tenant-id>" `
+    -ClientId "<app-client-id>" `
+    -SubscriptionId "<subscription-id>"
+```
+
 **Expected output:**
 ```
 Entra authentication enabled for shared-mailbox-classifier
@@ -1020,79 +934,26 @@ Invoke-RestMethod -Uri "https://shared-mailbox-classifier.azurewebsites.net/api/
 
 **Expected result:** the call fails with `401 Unauthorized` (or a redirect to sign-in). If it still succeeds without a token, authentication is not correctly enabled — repeat this step before continuing.
 
-### Step 4.6.2: Restrict Callers with an Allowlist
+### Step 4.6.2: Restrict Callers with an Email Allowlist
 
 **Script:** [`configure-allowlist.ps1`](../../backend-service/scripts/configure-allowlist.ps1)
 
-Even with a valid token, only your known connector/client application(s) should be allowed to call the backend. Add an allowlist check in your application configuration (environment variables read by your backend code):
+Authentication (validating *who* is calling) is fully handled by Azure App Service Authentication (Easy Auth), enabled in [Step 4.6.1](#step-461-enable-app-service-authentication-easy-auth). Once a caller signs in with Microsoft Entra ID, Easy Auth injects their email/UPN into the `X-MS-CLIENT-PRINCIPAL-NAME` request header before your code ever runs — no token parsing needed in the backend. This step adds the *authorization* layer on top: an allowlist of which signed-in email addresses are permitted to call the API at all.
 
 ```powershell
 # (c) 2026 Holger Imbery (contact@holgerimbery.blog)
 # Licensed under the project LICENSE file.
-# Sets the tenant and client-id allowlist your backend code checks against
-# on every incoming token, in addition to Easy Auth's signature validation.
+# Sets the email-address allowlist your backend code checks against the
+# X-MS-CLIENT-PRINCIPAL-NAME header that Easy Auth (see enable-backend-auth.ps1)
+# injects for every caller it has already authenticated via Microsoft Entra ID.
+# Authentication (who is this caller, is their sign-in valid) is fully handled
+# by Easy Auth; this allowlist only decides which authenticated identities are
+# authorized to use the API.
 
 param(
     [string]$ResourceGroup,
     [string]$AppServiceName,
-    [string]$AllowedTenantId,
-    [string]$AllowedClientIds
-)
-
-# Load from .env if parameters not provided
-function Load-EnvFile {
-    param([string]$EnvPath)
-    $env_vars = @{}
-    if (Test-Path $EnvPath) {
-        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
-            $key, $value = $_ -split '=', 2
-            $env_vars[$key.Trim()] = $value.Trim().Trim('"').Trim("'")
-        }
-    }
-    return $env_vars
-}
-
-$env_file = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) ".env"
-if (Test-Path $env_file) {
-    $env_vars = Load-EnvFile $env_file
-    if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
-    if (-not $AppServiceName) { $AppServiceName = $env_vars['APP_SERVICE_NAME'] }
-    if (-not $AllowedTenantId) { $AllowedTenantId = $env_vars['ALLOWED_TENANT_ID'] }
-    if (-not $AllowedClientIds) { $AllowedClientIds = $env_vars['ALLOWED_CLIENT_IDS'] }
-}
-
-# Validate
-if (-not $ResourceGroup -or -not $AppServiceName -or -not $AllowedTenantId -or -not $AllowedClientIds) {
-    Write-Error "Missing required parameters: ResourceGroup, AppServiceName, AllowedTenantId, AllowedClientIds"
-    Write-Host "Provide via CLI parameters or .env file in the repo root" -ForegroundColor Yellow
-    exit 1
-}
-
-az webapp config appsettings set `
-    --resource-group $ResourceGroup `
-    --name $AppServiceName `
-    --settings `
-        ALLOWED_TENANT_ID="$AllowedTenantId" `
-        ALLOWED_CLIENT_IDS="$AllowedClientIds"
-
-Write-Host "Allowlist configured on $AppServiceName" -ForegroundColor Green
-```
-
-Save it as `backend-service/scripts/configure-allowlist.ps1`.
-
-Run it:
-
-```powershell
-# (c) 2026 Holger Imbery (contact@holgerimbery.blog)
-# Licensed under the project LICENSE file.
-# Sets the tenant and client-id allowlist your backend code checks against
-# on every incoming token, in addition to Easy Auth's signature validation.
-
-param(
-    [string]$ResourceGroup,
-    [string]$AppServiceName,
-    [string]$AllowedTenantId,
-    [string]$AllowedClientIds,
+    [string]$AllowedEmailAddresses,
     [string]$TenantId,
     [string]$SubscriptionId
 )
@@ -1145,15 +1006,14 @@ if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
     if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
     if (-not $AppServiceName) { $AppServiceName = $env_vars['APP_SERVICE_NAME'] }
-    if (-not $AllowedTenantId) { $AllowedTenantId = $env_vars['ALLOWED_TENANT_ID'] }
-    if (-not $AllowedClientIds) { $AllowedClientIds = $env_vars['ALLOWED_CLIENT_IDS'] }
+    if (-not $AllowedEmailAddresses) { $AllowedEmailAddresses = $env_vars['ALLOWED_EMAIL_ADDRESSES'] }
     if (-not $TenantId) { $TenantId = $env_vars['TENANT_ID'] }
     if (-not $SubscriptionId) { $SubscriptionId = $env_vars['AZURE_SUBSCRIPTION_ID'] }
 }
 
 # Validate
-if (-not $ResourceGroup -or -not $AppServiceName -or -not $AllowedTenantId -or -not $AllowedClientIds) {
-    Write-Error "Missing required parameters: ResourceGroup, AppServiceName, AllowedTenantId, AllowedClientIds"
+if (-not $ResourceGroup -or -not $AppServiceName -or -not $AllowedEmailAddresses) {
+    Write-Error "Missing required parameters: ResourceGroup, AppServiceName, AllowedEmailAddresses"
     Write-Host "Provide via CLI parameters or .env file in the repo root" -ForegroundColor Yellow
     exit 1
 }
@@ -1164,22 +1024,34 @@ az webapp config appsettings set `
     --resource-group $ResourceGroup `
     --name $AppServiceName `
     --settings `
-        ALLOWED_TENANT_ID="$AllowedTenantId" `
-        ALLOWED_CLIENT_IDS="$AllowedClientIds"
+        ALLOWED_EMAIL_ADDRESSES="$AllowedEmailAddresses"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed to configure allowlist on '$AppServiceName'. See az CLI output above for details."
     exit 1
 }
-Write-Host "Allowlist configured on $AppServiceName" -ForegroundColor Green
+Write-Host "Email allowlist configured on $AppServiceName" -ForegroundColor Green
+```
+
+Save it as `backend-service/scripts/configure-allowlist.ps1`.
+
+Run it:
+
+```powershell
+.\backend-service\scripts\configure-allowlist.ps1 `
+    -ResourceGroup "rg-shared-mailbox" `
+    -AppServiceName "shared-mailbox-classifier" `
+    -AllowedEmailAddresses "alice@company.com,bob@company.com" `
+    -TenantId "<tenant-id>" `
+    -SubscriptionId "<subscription-id>"
 ```
 
 **Expected output:**
 ```
-Allowlist configured on shared-mailbox-classifier
+Email allowlist configured on shared-mailbox-classifier
 ```
 
-Your backend code must read `ALLOWED_TENANT_ID` and `ALLOWED_CLIENT_IDS` and reject any token whose `tid` (tenant) or `appid`/`azp` (client) claim is not in the list, returning `403 Forbidden`.
+`app.py` reads `ALLOWED_EMAIL_ADDRESSES` (a comma-separated list) on startup and enforces it in a `before_request` hook: every request except `/health` must carry an `X-MS-CLIENT-PRINCIPAL-NAME` header (set by Easy Auth) whose value, case-insensitively, matches one of the allowed addresses — otherwise the backend returns `403 Forbidden` before any Graph API call is made.
 
 **Test it:**
 
@@ -1187,10 +1059,10 @@ Your backend code must read `ALLOWED_TENANT_ID` and `ALLOWED_CLIENT_IDS` and rej
 # Restart so the app picks up new settings, then confirm they are applied
 az webapp restart --resource-group "rg-shared-mailbox" --name "shared-mailbox-classifier"
 az webapp config appsettings list --resource-group "rg-shared-mailbox" --name "shared-mailbox-classifier" `
-    --query "[?name=='ALLOWED_CLIENT_IDS']"
+    --query "[?name=='ALLOWED_EMAIL_ADDRESSES']"
 ```
 
-**Expected output:** the allowlist value you set is returned, confirming it's active.
+**Expected output:** the allowlist value you set is returned, confirming it's active. Then, signed in as an account **not** on the list, calling any endpoint other than `/health` should return `403 Forbidden`; signed in as an allowed account, it should succeed.
 
 ### Step 4.6.3: Confirm Mailbox Scope Restriction
 
@@ -1263,74 +1135,6 @@ If this policy is missing, the app can read/send mail for **every mailbox in the
 ### Step 4.6.4: Move the Client Secret to Key Vault
 
 **Script:** [`secure-client-secret.ps1`](../../backend-service/scripts/secure-client-secret.ps1)
-
-```powershell
-# (c) 2026 Holger Imbery (contact@holgerimbery.blog)
-# Licensed under the project LICENSE file.
-# Stores the app registration client secret in Key Vault and wires the
-# App Service to read it via a Key Vault reference, instead of storing
-# the plaintext secret directly in application settings.
-
-param(
-    [string]$ResourceGroup,
-    [string]$KeyVaultName,
-    [string]$AppServiceName,
-    [string]$ClientSecret
-)
-
-# Load from .env if parameters not provided
-function Load-EnvFile {
-    param([string]$EnvPath)
-    $env_vars = @{}
-    if (Test-Path $EnvPath) {
-        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
-            $key, $value = $_ -split '=', 2
-            $env_vars[$key.Trim()] = $value.Trim().Trim('"').Trim("'")
-        }
-    }
-    return $env_vars
-}
-
-$env_file = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) ".env"
-if (Test-Path $env_file) {
-    $env_vars = Load-EnvFile $env_file
-    if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
-    if (-not $KeyVaultName) { $KeyVaultName = $env_vars['KEY_VAULT_NAME'] }
-    if (-not $AppServiceName) { $AppServiceName = $env_vars['APP_SERVICE_NAME'] }
-    if (-not $ClientSecret) { $ClientSecret = $env_vars['CLIENT_SECRET'] }
-}
-
-# Validate
-if (-not $ResourceGroup -or -not $KeyVaultName -or -not $AppServiceName -or -not $ClientSecret) {
-    Write-Error "Missing required parameters: ResourceGroup, KeyVaultName, AppServiceName, ClientSecret"
-    Write-Host "Provide via CLI parameters or .env file in the repo root" -ForegroundColor Yellow
-    exit 1
-}
-
-# Create Key Vault if it doesn't already exist
-az keyvault create --resource-group $ResourceGroup --name $KeyVaultName --location "westeurope" 2>$null
-
-# Store the secret
-az keyvault secret set --vault-name $KeyVaultName --name "AzureClientSecret" --value $ClientSecret | Out-Null
-
-# Grant the App Service managed identity access to read secrets
-az webapp identity assign --resource-group $ResourceGroup --name $AppServiceName | Out-Null
-$PrincipalId = az webapp identity show --resource-group $ResourceGroup --name $AppServiceName --query principalId -o tsv
-
-az keyvault set-policy --name $KeyVaultName --object-id $PrincipalId --secret-permissions get list | Out-Null
-
-# Point the app setting to the Key Vault reference instead of the raw value
-az webapp config appsettings set `
-    --resource-group $ResourceGroup `
-    --name $AppServiceName `
-    --settings AZURE_CLIENT_SECRET="@Microsoft.KeyVault(VaultName=$KeyVaultName;SecretName=AzureClientSecret)"
-
-Write-Host "Client secret moved to Key Vault: $KeyVaultName" -ForegroundColor Green
-```
-
-Save it as `backend-service/scripts/secure-client-secret.ps1`.
-
-Run it:
 
 ```powershell
 # (c) 2026 Holger Imbery (contact@holgerimbery.blog)
@@ -1459,6 +1263,20 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Client secret moved to Key Vault: $KeyVaultName" -ForegroundColor Green
 ```
 
+Save it as `backend-service/scripts/secure-client-secret.ps1`.
+
+Run it:
+
+```powershell
+.\backend-service\scripts\secure-client-secret.ps1 `
+    -ResourceGroup "rg-shared-mailbox" `
+    -KeyVaultName "kv-shared-mailbox" `
+    -AppServiceName "shared-mailbox-classifier" `
+    -ClientSecret "<app-client-secret>" `
+    -TenantId "<tenant-id>" `
+    -SubscriptionId "<subscription-id>"
+```
+
 **Expected output:**
 ```
 Client secret moved to Key Vault: kv-shared-mailbox
@@ -1476,67 +1294,6 @@ az webapp config appsettings list --resource-group "rg-shared-mailbox" --name "s
 ### Step 4.6.5: Restrict Network Access (HTTPS-Only + Ingress Control)
 
 **Script:** [`restrict-network-access.ps1`](../../backend-service/scripts/restrict-network-access.ps1)
-
-```powershell
-# (c) 2026 Holger Imbery (contact@holgerimbery.blog)
-# Licensed under the project LICENSE file.
-# Enforces HTTPS-only traffic and restricts inbound access to an
-# allowlisted set of IP ranges (e.g. Power Platform / your office egress).
-
-param(
-    [string]$ResourceGroup,
-    [string]$AppServiceName,
-    [string[]]$AllowedIpRanges
-)
-
-# Load from .env if parameters not provided
-function Load-EnvFile {
-    param([string]$EnvPath)
-    $env_vars = @{}
-    if (Test-Path $EnvPath) {
-        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
-            $key, $value = $_ -split '=', 2
-            $env_vars[$key.Trim()] = $value.Trim().Trim('"').Trim("'")
-        }
-    }
-    return $env_vars
-}
-
-$env_file = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) ".env"
-if (Test-Path $env_file) {
-    $env_vars = Load-EnvFile $env_file
-    if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
-    if (-not $AppServiceName) { $AppServiceName = $env_vars['APP_SERVICE_NAME'] }
-    if (-not $AllowedIpRanges) { $AllowedIpRanges = $env_vars['ALLOWED_IP_RANGES']?.Split(',') | ForEach-Object { $_.Trim() } }
-}
-
-# Validate
-if (-not $ResourceGroup -or -not $AppServiceName -or -not $AllowedIpRanges) {
-    Write-Error "Missing required parameters: ResourceGroup, AppServiceName, AllowedIpRanges"
-    Write-Host "Provide via CLI parameters or .env file in the repo root" -ForegroundColor Yellow
-    exit 1
-}
-
-az webapp update --resource-group $ResourceGroup --name $AppServiceName --https-only true
-
-$Priority = 100
-foreach ($Range in $AllowedIpRanges) {
-    az webapp config access-restriction add `
-        --resource-group $ResourceGroup `
-        --name $AppServiceName `
-        --rule-name "Allow-$Range" `
-        --action Allow `
-        --ip-address $Range `
-        --priority $Priority
-    $Priority += 10
-}
-
-Write-Host "HTTPS-only enforced and ingress restricted on $AppServiceName" -ForegroundColor Green
-```
-
-Save it as `backend-service/scripts/restrict-network-access.ps1`.
-
-Run it:
 
 ```powershell
 # (c) 2026 Holger Imbery (contact@holgerimbery.blog)
@@ -1639,6 +1396,19 @@ foreach ($Range in $AllowedIpRanges) {
 Write-Host "HTTPS-only enforced and ingress restricted on $AppServiceName" -ForegroundColor Green
 ```
 
+Save it as `backend-service/scripts/restrict-network-access.ps1`.
+
+Run it:
+
+```powershell
+.\backend-service\scripts\restrict-network-access.ps1 `
+    -ResourceGroup "rg-shared-mailbox" `
+    -AppServiceName "shared-mailbox-classifier" `
+    -AllowedIpRanges "203.0.113.0/24","198.51.100.10" `
+    -TenantId "<tenant-id>" `
+    -SubscriptionId "<subscription-id>"
+```
+
 **Expected output:**
 ```
 HTTPS-only enforced and ingress restricted on shared-mailbox-classifier
@@ -1660,51 +1430,6 @@ Invoke-WebRequest -Uri "http://shared-mailbox-classifier.azurewebsites.net/healt
 Review your backend logging code and confirm:
 - Tokens, client secrets, and connection strings are never written to logs.
 - Full email body/subject content is not logged by default — log only metadata (message ID, classification label, timestamp, correlation ID).
-
-```powershell
-# (c) 2026 Holger Imbery (contact@holgerimbery.blog)
-# Licensed under the project LICENSE file.
-# Pulls recent App Service log lines so you can manually verify no
-# secrets or raw email content are present before going live.
-
-param(
-    [string]$ResourceGroup,
-    [string]$AppServiceName
-)
-
-# Load from .env if parameters not provided
-function Load-EnvFile {
-    param([string]$EnvPath)
-    $env_vars = @{}
-    if (Test-Path $EnvPath) {
-        Get-Content $EnvPath | Where-Object { $_ -match '=' -and -not $_.StartsWith('#') } | ForEach-Object {
-            $key, $value = $_ -split '=', 2
-            $env_vars[$key.Trim()] = $value.Trim().Trim('"').Trim("'")
-        }
-    }
-    return $env_vars
-}
-
-$env_file = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) ".env"
-if (Test-Path $env_file) {
-    $env_vars = Load-EnvFile $env_file
-    if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
-    if (-not $AppServiceName) { $AppServiceName = $env_vars['APP_SERVICE_NAME'] }
-}
-
-# Validate
-if (-not $ResourceGroup -or -not $AppServiceName) {
-    Write-Error "Missing required parameters: ResourceGroup, AppServiceName"
-    Write-Host "Provide via CLI parameters or .env file in the repo root" -ForegroundColor Yellow
-    exit 1
-}
-
-az webapp log tail --resource-group $ResourceGroup --name $AppServiceName
-```
-
-Save it as `backend-service/scripts/review-backend-logs.ps1`.
-
-Run it (then trigger a few test requests in another window):
 
 ```powershell
 # (c) 2026 Holger Imbery (contact@holgerimbery.blog)
@@ -1781,6 +1506,18 @@ if (-not $ResourceGroup -or -not $AppServiceName) {
 Confirm-AzureContext -ExpectedTenantId $TenantId -ExpectedSubscriptionId $SubscriptionId
 
 az webapp log tail --resource-group $ResourceGroup --name $AppServiceName
+```
+
+Save it as `backend-service/scripts/review-backend-logs.ps1`.
+
+Run it (then trigger a few test requests in another window):
+
+```powershell
+.\backend-service\scripts\review-backend-logs.ps1 `
+    -ResourceGroup "rg-shared-mailbox" `
+    -AppServiceName "shared-mailbox-classifier" `
+    -TenantId "<tenant-id>" `
+    -SubscriptionId "<subscription-id>"
 ```
 
 **Expected output:** log lines showing request metadata (method, path, status code, correlation ID) with **no** visible tokens, secrets, or full email bodies. Press `Ctrl+C` to stop tailing.

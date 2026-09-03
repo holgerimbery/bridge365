@@ -23,6 +23,38 @@ try:
 except Exception as e:
     logging.error(f"Failed to initialize Graph client: {e}")
 
+# Authorization allowlist of caller email addresses. Authentication itself
+# (who is this caller, is their Microsoft sign-in valid) is handled entirely
+# by Azure App Service Authentication (Easy Auth) with Microsoft Entra ID as
+# the identity provider - see enable-backend-auth.ps1. Easy Auth injects the
+# signed-in caller's email/UPN into the X-MS-CLIENT-PRINCIPAL-NAME header
+# after validating their sign-in; this app only decides whether that email is
+# authorized to call the API.
+ALLOWED_EMAIL_ADDRESSES = {
+    email.strip().lower()
+    for email in os.getenv("ALLOWED_EMAIL_ADDRESSES", "").split(",")
+    if email.strip()
+}
+
+@app.before_request
+def enforce_email_allowlist():
+    """Rejects requests from callers not on ALLOWED_EMAIL_ADDRESSES.
+
+    Skips /health so uptime probes (which are unauthenticated) keep working.
+    If ALLOWED_EMAIL_ADDRESSES is unset, allowlist enforcement is skipped
+    entirely (e.g. local development without Easy Auth configured) - set it
+    before exposing the service to production traffic.
+    """
+    if request.path == "/health" or not ALLOWED_EMAIL_ADDRESSES:
+        return None
+
+    caller_email = request.headers.get("X-MS-CLIENT-PRINCIPAL-NAME", "")
+    if not caller_email or caller_email.strip().lower() not in ALLOWED_EMAIL_ADDRESSES:
+        logging.warning(f"Rejected request from unauthorized caller: {caller_email or '(no identity header)'}")
+        return jsonify({"error": "Forbidden: caller is not on the allowed email list"}), 403
+
+    return None
+
 @app.route("/health", methods=["GET"])
 def health():
     """Health check endpoint"""
