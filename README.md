@@ -32,10 +32,11 @@ This project provides:
 | Phase 1: Azure Deployment Safety Hardening (exit-code checks, tenant/subscription guard) | ✅ Complete | v0.4.10 |
 | Phase 1: Email Allowlist OAuth Authorization + Wiki Doc Cleanup | ✅ Complete | v0.4.11 |
 | Phase 1: Shared Mailbox Draft Create/Update (Graph createReply + PATCH) | ✅ Complete | v0.4.12 |
+| Phase 1: Security Model Documentation (Worked Example) | ✅ Complete | v0.4.13 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
-## Quick Start (Phase 1: v0.4.12)
+## Quick Start (Phase 1: v0.4.13)
 
 ### Prerequisites
 
@@ -297,6 +298,9 @@ All code samples include copyright headers. See individual files for details.
 - 🔧 `backend-service/scripts/test-backend.ps1` and `docs/wiki/phase-1-mailbox-setup.md`: added CreateDraft/UpdateDraft smoke tests (now 8 tests total, renumbered).
 - 🔧 `docs/wiki/phase-1-mailbox-setup.md`: Operations/Actions reference tables renumbered and updated for the new `CreateDraft` request shape and the new `UpdateDraft` operation/action.
 
+### v0.4.13: Security Model Documentation (Worked Example)
+- ✨ `docs/wiki/phase-1-mailbox-setup.md` Section 4.6: new "Understanding the Combined Security Model (Worked Example)" subsection - walks through a concrete example (generic tenant/mailbox/user addresses) showing that a caller can operate the backend and draft mail in the shared mailbox based on Easy Auth (tenant restriction) + the email allowlist, and clarifies that Exchange shared-mailbox membership/delegation is irrelevant to this API's authorization chain.
+
 ---
 
 ## 🔄 IN PROGRESS
@@ -366,4 +370,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.4.12 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.4.13 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)

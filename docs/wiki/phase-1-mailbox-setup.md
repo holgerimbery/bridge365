@@ -1170,6 +1170,22 @@ AccessCheckedResult : Granted
 
 If this policy is missing, the app can read/send mail for **every mailbox in the tenant**, not just the shared mailbox. Do not proceed to production without this control in place.
 
+### Understanding the Combined Security Model (Worked Example)
+
+Steps 4.6.1-4.6.3 layer together into two independent checks, plus one thing that is commonly (and incorrectly) assumed to matter but doesn't. Walking through a concrete example makes this clearer.
+
+**Scenario:** Tenant `contoso.onmicrosoft.com`. App registration lives in that tenant. Shared mailbox is `shared-mailbox@contoso.com`. Two users, `user1@contoso.com` and `user2@contoso.com`, are both (a) members/delegates of the shared mailbox in Exchange/Outlook, and (b) listed in `ALLOWED_EMAIL_ADDRESSES`.
+
+Can `user1@contoso.com` sign in and successfully create a draft in `shared-mailbox@contoso.com` through this backend? **Yes** - but for reasons that involve two checks, not three:
+
+1. **Easy Auth (Step 4.6.1) - "Is this a valid sign-in from the right tenant?"** `user1@contoso.com` signs in with Entra ID. Because `enable-backend-auth.ps1` scopes the issuer to `https://sts.windows.net/<contoso-tenant-id>/`, only sign-ins from the `contoso.onmicrosoft.com` tenant are accepted. This passes, and Easy Auth injects `X-MS-CLIENT-PRINCIPAL-NAME: user1@contoso.com` into the request.
+2. **Email allowlist (Step 4.6.2) - "Is this specific person allowed to call the API?"** `app.py` compares that header against `ALLOWED_EMAIL_ADDRESSES`. `user1@contoso.com` is on the list, so the request is authorized and reaches the endpoint logic.
+3. **Application access policy (Step 4.6.3) - "Which mailbox can the app itself touch?"** Once authorized, the backend calls Microsoft Graph using its own app-only `ClientSecretCredential` - a completely separate identity from `user1@contoso.com`. The application access policy scopes that app-only identity to `shared-mailbox@contoso.com`, so the Graph call succeeds against that mailbox.
+
+**What does *not* matter here:** `user1@contoso.com` being an Exchange member/delegate of `shared-mailbox@contoso.com` is irrelevant to this flow. The backend never impersonates the caller or checks their personal mailbox permissions - it authenticates to Graph as itself (the app registration), authorized purely by the application access policy from Step 4.6.3. A user could be a full delegate on the shared mailbox and still get `403 Forbidden` if their email isn't in `ALLOWED_EMAIL_ADDRESSES`; conversely, a user with zero Exchange delegate rights on the mailbox can still draft mail through it if they pass both Easy Auth and the allowlist. Mailbox membership is an Outlook/Exchange concept for people using a mail client directly - it has no bearing on this API's authorization chain.
+
+**Practical implication:** keep both lists in sync deliberately. Add someone to `ALLOWED_EMAIL_ADDRESSES` only when they should be able to use this API, regardless of their Exchange mailbox permissions - and don't assume removing someone's Exchange delegate access also revokes their API access (it doesn't; update the allowlist too).
+
 ### Step 4.6.4: Move the Client Secret to Key Vault
 
 **Script:** [`secure-client-secret.ps1`](../../backend-service/scripts/secure-client-secret.ps1)
