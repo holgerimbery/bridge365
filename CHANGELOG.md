@@ -11,6 +11,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.12] - 2026-09-03
+
+### What's Fixed
+- `custom-connector/openapi.yaml` and `SharedMailboxSkills/skills.json`: the `CreateDraft` operation/action's request body was missing `mailboxAddress` entirely - the connector/skill could never have told the backend which shared mailbox to create the draft in.
+- `backend-service/app.py`: `create_draft()` was a placeholder that always returned a hardcoded `draft-placeholder` id/URL and never called Microsoft Graph.
+
+### What's New
+- `backend-service/app.py`: `POST /api/mailbox/drafts` (`create_draft`) now calls Graph's `createReply`/`createReplyAll` action against `/users/{mailboxAddress}/messages/{messageId}` to create the reply draft directly in the **shared mailbox's own Drafts folder** (never the calling user's personal mailbox), then `PATCH`es the new draft with the caller-supplied `subject`/`body`. Accepts an optional `replyAll` flag.
+- `backend-service/app.py`: new `PATCH /api/mailbox/drafts/<draft_id>` (`update_draft`) endpoint - edits an existing shared-mailbox draft's `subject`/`body`/`toRecipients` before it is sent, changing only the fields supplied.
+- `custom-connector/openapi.yaml`: new `UpdateDraft` operation (`PATCH /api/mailbox/drafts/{draftId}`).
+- `SharedMailboxSkills/skills.json`: new `UpdateDraft` skill action, matching the new backend endpoint.
+- `backend-service/scripts/test-backend.ps1`: added CreateDraft/UpdateDraft smoke tests (now 8 tests total).
+
+### What's Modified
+- `custom-connector/openapi.yaml`, `SharedMailboxSkills/skills.json`: `CreateDraft` request schema gained `mailboxAddress` (bug fix) and an optional `replyAll` flag; response now also returns `subject`.
+- `custom-connector/README.md`, `SharedMailboxSkills/README.md`: action/operation counts and sample HTTP call bodies updated for `CreateDraft`'s corrected shape and the new `UpdateDraft` action.
+- `docs/wiki/phase-1-mailbox-setup.md`: Operations 4-7 and Actions 3-6 reference tables renumbered and updated; embedded `test-backend.ps1` copy and its "Expected output" resynced with the new 8-test script.
+
+### Breaking Changes
+- None. `CreateDraft`'s new `mailboxAddress` field is required going forward (it was silently broken before, since the backend has always required it), and the new `replyAll`/`to` fields are optional.
+
+---
+
 ## [0.4.10] - 2026-09-03
 
 ### What's Fixed

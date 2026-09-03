@@ -114,24 +114,96 @@ def classify_message():
 
 @app.route("/api/mailbox/drafts", methods=["POST"])
 def create_draft():
-    """Create reply draft"""
+    """Create a reply draft in the SHARED mailbox's own Drafts folder.
+
+    Uses Graph's createReply/createReplyAll action against
+    /users/{mailboxAddress}/messages/{messageId} - the app-only Graph client
+    always operates against the shared mailbox named by mailboxAddress, never
+    against a user's personal mailbox. createReply returns a draft populated
+    with Graph's auto-generated quoted-reply body; we then PATCH that draft
+    to set the exact subject/body the caller supplied.
+    """
     try:
-        data = request.json
+        data = request.json or {}
+        mailbox = data.get("mailboxAddress")
         message_id = data.get("messageId")
         subject = data.get("subject")
         body = data.get("body")
-        
-        if not all([message_id, subject, body]):
-            return jsonify({"error": "messageId, subject, body required"}), 400
-        
-        # Placeholder: Create draft via Graph API (Phase 3)
-        
+        reply_all = bool(data.get("replyAll", False))
+
+        if not all([mailbox, message_id, body]):
+            return jsonify({"error": "mailboxAddress, messageId, body required"}), 400
+
+        reply_action = "createReplyAll" if reply_all else "createReply"
+        draft = graph_client.post(
+            f"/users/{mailbox}/messages/{message_id}/{reply_action}",
+            json={}
+        ).json()
+
+        draft_id = draft.get("id")
+        if not draft_id:
+            return jsonify({"error": "Graph did not return a draft id"}), 502
+
+        update_payload = {"body": {"contentType": "Text", "content": body}}
+        if subject:
+            update_payload["subject"] = subject
+
+        updated = graph_client.patch(
+            f"/users/{mailbox}/messages/{draft_id}",
+            json=update_payload
+        ).json()
+
         return jsonify({
-            "draftId": "draft-placeholder",
-            "draftUrl": "https://outlook.office.com/mail/..."
+            "draftId": draft_id,
+            "subject": updated.get("subject"),
+            "draftUrl": updated.get("webLink", "")
         }), 200
     except Exception as e:
         logging.error(f"Error creating draft: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/mailbox/drafts/<draft_id>", methods=["PATCH"])
+def update_draft(draft_id):
+    """Update an existing draft's subject/body/recipients in a shared mailbox
+    before sending it. Only the fields provided are changed; the draft must
+    already exist in mailboxAddress's Drafts folder (e.g. created via
+    createReply above, or already present because a user drafted it in
+    Outlook)."""
+    try:
+        data = request.json or {}
+        mailbox = data.get("mailboxAddress")
+        subject = data.get("subject")
+        body = data.get("body")
+        to = data.get("to")
+
+        if not mailbox:
+            return jsonify({"error": "mailboxAddress parameter required"}), 400
+        if subject is None and body is None and to is None:
+            return jsonify({"error": "at least one of subject, body, to required"}), 400
+
+        update_payload = {}
+        if subject is not None:
+            update_payload["subject"] = subject
+        if body is not None:
+            update_payload["body"] = {"contentType": "Text", "content": body}
+        if to is not None:
+            recipients = to if isinstance(to, list) else [to]
+            update_payload["toRecipients"] = [
+                {"emailAddress": {"address": address}} for address in recipients
+            ]
+
+        updated = graph_client.patch(
+            f"/users/{mailbox}/messages/{draft_id}",
+            json=update_payload
+        ).json()
+
+        return jsonify({
+            "draftId": draft_id,
+            "subject": updated.get("subject"),
+            "draftUrl": updated.get("webLink", "")
+        }), 200
+    except Exception as e:
+        logging.error(f"Error updating draft: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/mailbox/messages/send", methods=["POST"])
