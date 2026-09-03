@@ -25,7 +25,7 @@ if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
     if (-not $ResourceGroup) { $ResourceGroup = $env_vars['RESOURCE_GROUP'] }
     if (-not $AppServiceName) { $AppServiceName = $env_vars['APP_SERVICE_NAME'] }
-    if ($Location -eq "eastus") { $Location = $env_vars['LOCATION'] -or "eastus" }
+    if ($Location -eq "eastus" -and $env_vars['LOCATION']) { $Location = $env_vars['LOCATION'] }
 }
 
 # Validate
