@@ -11,6 +11,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.10] - 2026-09-03
+
+### What's Fixed
+- `create-app-service.ps1`, `configure-app-service.ps1`, `configure-allowlist.ps1`, `enable-backend-auth.ps1`, `restrict-network-access.ps1`, `secure-client-secret.ps1`: added `$LASTEXITCODE` checks after every `az` CLI call. Previously, scripts printed unconditional "✓ ... created/configured" success messages even when the underlying `az` command failed (e.g. `create-app-service.ps1` reported "✓ App Service plan created" and "✓ App Service created" after an Azure quota error, masking the real failure).
+- All 7 backend deployment/test scripts (`create-app-service.ps1`, `configure-app-service.ps1`, `configure-allowlist.ps1`, `enable-backend-auth.ps1`, `restrict-network-access.ps1`, `secure-client-secret.ps1`, `review-backend-logs.ps1`): fixed a security/correctness gap where scripts never verified the active Azure CLI tenant/subscription before creating or modifying resources - a stale `az login` session could silently deploy resources into the wrong tenant (reported: a resource group was created in the wrong tenant because `.env`'s `TENANT_ID` was never checked against the logged-in Azure CLI context).
+
+### What's New
+- Added a shared `Confirm-AzureContext` function to all 7 backend scripts. When `.env` (or CLI parameters) supply `AZURE_SUBSCRIPTION_ID`, it runs `az account set --subscription` before any mutating/read call. When `TENANT_ID` is supplied, it compares `az account show --query tenantId` against it and exits with a clear remediation message (`az login --tenant <TENANT_ID>`) on mismatch. Both checks are opt-in - if neither value is present, scripts behave exactly as before.
+- Added new `$TenantId` / `$SubscriptionId` parameters to all 7 scripts (backward-compatible; `configure-allowlist.ps1` keeps its existing `$AllowedTenantId` parameter, which serves a different purpose - the token-validation allowlist - and is unrelated to the new deployment-context check).
+- Added `AZURE_SUBSCRIPTION_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` to `.env.example`.
+- Added troubleshooting entries in `docs/wiki/phase-1-mailbox-setup.md` for the new tenant/subscription mismatch errors and the exit-code-check fix.
+
+### What's Modified
+- `docs/wiki/phase-1-mailbox-setup.md`: all 7 embedded script code blocks resynced to match the updated source scripts.
+
+### Breaking Changes
+- None. New parameters are optional and only activate the safety checks when `.env` supplies `TENANT_ID` and/or `AZURE_SUBSCRIPTION_ID`.
+
+---
+
 ## [0.4.9] - 2026-09-03
 
 ### What's Fixed

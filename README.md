@@ -29,10 +29,11 @@ This project provides:
 | Phase 1: Fix Wiki Internal Page Links | ✅ Complete | v0.4.7 |
 | Phase 1: Fix .env Quoted-Value Parsing | ✅ Complete | v0.4.8 |
 | Phase 1: Fix .env Default-Fallback Bug (LOCATION/MAILBOX_ADDRESS) | ✅ Complete | v0.4.9 |
+| Phase 1: Azure Deployment Safety Hardening (exit-code checks, tenant/subscription guard) | ✅ Complete | v0.4.10 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
-## Quick Start (Phase 1: v0.4.9)
+## Quick Start (Phase 1: v0.4.10)
 
 ### Prerequisites
 
@@ -272,6 +273,13 @@ All code samples include copyright headers. See individual files for details.
 ### v0.4.9: Fix .env Default-Fallback Bug (LOCATION/MAILBOX_ADDRESS)
 - 🐛 Fixed `create-app-service.ps1` and `test-backend.ps1`: the `.env` fallback for `-Location`/`-MailboxAddress` used PowerShell's boolean `-or` operator instead of a proper conditional, so it evaluated to the literal string `"True"` instead of the `.env` value - causing `az group create` to fail with `LocationNotAvailableForResourceGroup: The provided location 'True' is not available`
 
+### v0.4.10: Azure Deployment Safety Hardening
+- 🐛 Fixed 6 backend scripts (`create-app-service.ps1`, `configure-app-service.ps1`, `configure-allowlist.ps1`, `enable-backend-auth.ps1`, `restrict-network-access.ps1`, `secure-client-secret.ps1`) to check `$LASTEXITCODE` after every `az` call - they previously printed false-positive "✓ ... created" success messages even when the underlying Azure CLI command failed (e.g. quota errors)
+- 🐛 Fixed a wrong-tenant deployment risk across all 7 backend scripts: none of them verified the active Azure CLI tenant/subscription before creating or modifying resources, so a stale `az login` session could silently deploy into the wrong tenant
+- ✨ New shared `Confirm-AzureContext` function (all 7 scripts) - runs `az account set --subscription` when `.env`'s `AZURE_SUBSCRIPTION_ID` is set, and verifies `az account show --query tenantId` matches `.env`'s `TENANT_ID`, exiting with a clear remediation message on mismatch
+- ✨ New `AZURE_SUBSCRIPTION_ID` entry in `.env.example`
+- 🔧 `docs/wiki/phase-1-mailbox-setup.md`: all 7 embedded script blocks resynced; new troubleshooting entries for tenant/subscription mismatch errors
+
 ---
 
 ## 🔄 IN PROGRESS
@@ -341,4 +349,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.4.9 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.4.10 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
