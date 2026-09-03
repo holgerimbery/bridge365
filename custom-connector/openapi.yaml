@@ -122,19 +122,49 @@ paths:
           schema:
             type: object
             properties:
+              mailboxAddress:
+                type: string
               messageId:
                 type: string
               subject:
                 type: string
               body:
                 type: string
+              replyAll:
+                type: boolean
               classifications:
                 type: array
                 items:
                   type: object
       responses:
         "200":
-          description: "{ draftId, draftUrl }"
+          description: "{ draftId, subject, draftUrl }"
+  /api/mailbox/drafts/{draftId}:
+    patch:
+      summary: UpdateDraft
+      operationId: UpdateDraft
+      parameters:
+        - name: draftId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              mailboxAddress:
+                type: string
+              subject:
+                type: string
+              body:
+                type: string
+              to:
+                type: string
+      responses:
+        "200":
+          description: "{ draftId, subject, draftUrl }"
   /api/mailbox/messages/send:
     post:
       summary: SendMessage

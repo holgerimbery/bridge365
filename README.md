@@ -31,10 +31,11 @@ This project provides:
 | Phase 1: Fix .env Default-Fallback Bug (LOCATION/MAILBOX_ADDRESS) | ✅ Complete | v0.4.9 |
 | Phase 1: Azure Deployment Safety Hardening (exit-code checks, tenant/subscription guard) | ✅ Complete | v0.4.10 |
 | Phase 1: Email Allowlist OAuth Authorization + Wiki Doc Cleanup | ✅ Complete | v0.4.11 |
+| Phase 1: Shared Mailbox Draft Create/Update (Graph createReply + PATCH) | ✅ Complete | v0.4.12 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
-## Quick Start (Phase 1: v0.4.11)
+## Quick Start (Phase 1: v0.4.12)
 
 ### Prerequisites
 
@@ -289,6 +290,13 @@ All code samples include copyright headers. See individual files for details.
 - 🔧 `docs/wiki/phase-1-mailbox-setup.md` Section 4.6.2 rewritten for the new email-allowlist model
 - ⚠️ Breaking: `ALLOWED_TENANT_ID`/`ALLOWED_CLIENT_IDS` env vars are replaced by `ALLOWED_EMAIL_ADDRESSES` (low impact - the old vars were never actually enforced by any backend code)
 
+### v0.4.12: Shared Mailbox Draft Create/Update
+- ✨ Implemented real `CreateDraft` (`POST /api/mailbox/drafts`): calls Graph's `createReply`/`createReplyAll` against `/users/{mailboxAddress}/messages/{messageId}` to create the reply draft directly in the **shared mailbox's own Drafts folder** - never in the calling user's personal mailbox - then PATCHes the new draft with the caller-supplied subject/body. Previously this endpoint returned a hardcoded `draft-placeholder` and never called Graph at all.
+- ✨ New `UpdateDraft` endpoint (`PATCH /api/mailbox/drafts/{draftId}`) - edits an existing shared-mailbox draft's subject/body/recipients before it is sent (e.g. after a human reviews a `CreateDraft` result).
+- 🔧 `custom-connector/openapi.yaml` and `SharedMailboxSkills/skills.json`: added the new `UpdateDraft` operation/action, and fixed `CreateDraft`'s body definition, which was missing `mailboxAddress` entirely (a pre-existing bug - the connector could never have told the backend which shared mailbox to draft in).
+- 🔧 `backend-service/scripts/test-backend.ps1` and `docs/wiki/phase-1-mailbox-setup.md`: added CreateDraft/UpdateDraft smoke tests (now 8 tests total, renumbered).
+- 🔧 `docs/wiki/phase-1-mailbox-setup.md`: Operations/Actions reference tables renumbered and updated for the new `CreateDraft` request shape and the new `UpdateDraft` operation/action.
+
 ---
 
 ## 🔄 IN PROGRESS
@@ -358,4 +366,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.4.11 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.4.12 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)

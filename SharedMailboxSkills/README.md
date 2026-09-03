@@ -9,8 +9,8 @@ skill set in Copilot Studio, used by the GitHub Copilot harness (parallel to the
 
 ## Contents
 
-- `skills.json` - Declarative definition of the skill's five actions (`FetchMessage`,
-  `ClassifyMessage`, `CreateDraft`, `SendMessage`, `SendDraftMessage`), their
+- `skills.json` - Declarative definition of the skill's six actions (`FetchMessage`,
+  `ClassifyMessage`, `CreateDraft`, `UpdateDraft`, `SendMessage`, `SendDraftMessage`), their
   inputs/outputs, and the backend HTTP call each action maps to.
 
 ## Step 1: Create Executable Skills in Copilot Studio
@@ -24,11 +24,12 @@ skill set in Copilot Studio, used by the GitHub Copilot harness (parallel to the
 
 ## Step 2: Add Skill Actions
 
-Add the five actions defined in `skills.json`:
+Add the six actions defined in `skills.json`:
 
 - **FetchMessage** - input: `mailboxAddress`, `messageId` -> output: `message`
 - **ClassifyMessage** - input: `mailboxAddress`, `messageId` -> output: `classifications`
-- **CreateDraft** - input: `mailboxAddress`, `messageId`, `subject`, `body` -> output: `draftId`, `draftUrl`
+- **CreateDraft** - input: `mailboxAddress`, `messageId`, `subject`, `body`, `replyAll` (optional) -> output: `draftId`, `subject`, `draftUrl`. Creates the draft directly in the **shared mailbox's** own Drafts folder (via Graph `createReply`/`createReplyAll`) - never in a user's personal mailbox.
+- **UpdateDraft** - input: `mailboxAddress`, `draftId`, `subject` (optional), `body` (optional), `to` (optional) -> output: `draftId`, `subject`, `draftUrl`. Edits an existing shared-mailbox draft (e.g. one created by `CreateDraft`) before it is sent.
 - **SendMessage** - input: `mailboxAddress`, `to`, `subject`, `body` -> output: `status`
 - **SendDraftMessage** - input: `mailboxAddress`, `draftId` -> output: `status`, `draftId`
 
@@ -48,7 +49,11 @@ ClassifyMessage:
 
 CreateDraft:
   HTTP POST -> https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/drafts
-  Body: { "messageId", "subject", "body", "classifications" }
+  Body: { "mailboxAddress", "messageId", "subject", "body", "replyAll" }
+
+UpdateDraft:
+  HTTP PATCH -> https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/drafts/{draftId}
+  Body: { "mailboxAddress", "subject", "body", "to" }
 
 SendMessage:
   HTTP POST -> https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/messages/send

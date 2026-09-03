@@ -89,8 +89,38 @@ try {
     Write-Host "     (This is normal if app registration doesn't have mailbox access yet)" -ForegroundColor Gray
 }
 
-# Test 5: Send message endpoint
-Write-Host "5. Testing /api/mailbox/messages/send endpoint..." -ForegroundColor Yellow
+# Test 5: Create draft endpoint (in the shared mailbox's own Drafts folder)
+Write-Host "5. Testing /api/mailbox/drafts (CreateDraft) endpoint..." -ForegroundColor Yellow
+try {
+    $Body = @{ mailboxAddress = $MailboxAddress; messageId = "test-message-id"; subject = "Re: Test"; body = "Test reply body" } | ConvertTo-Json
+    $Response = Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/drafts" `
+        -Method Post -Body $Body -ContentType "application/json" -ErrorAction Stop
+    Write-Host "   ✓ Create draft endpoint works" -ForegroundColor Green
+    Write-Host "   Response: $($Response | ConvertTo-Json)" -ForegroundColor Gray
+} catch {
+    Write-Host "   ⚠ Warning: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "     (This is normal if messageId doesn't refer to a real message yet)" -ForegroundColor Gray
+}
+
+Write-Host ""
+
+# Test 6: Update draft endpoint
+Write-Host "6. Testing /api/mailbox/drafts/{draftId} (UpdateDraft) endpoint..." -ForegroundColor Yellow
+try {
+    $Body = @{ mailboxAddress = $MailboxAddress; subject = "Re: Test (edited)"; body = "Edited reply body" } | ConvertTo-Json
+    $Response = Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/drafts/test-draft-id" `
+        -Method Patch -Body $Body -ContentType "application/json" -ErrorAction Stop
+    Write-Host "   ✓ Update draft endpoint works" -ForegroundColor Green
+    Write-Host "   Response: $($Response | ConvertTo-Json)" -ForegroundColor Gray
+} catch {
+    Write-Host "   ⚠ Warning: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "     (This is normal if test-draft-id doesn't refer to a real draft yet)" -ForegroundColor Gray
+}
+
+Write-Host ""
+
+# Test 7: Send message endpoint
+Write-Host "7. Testing /api/mailbox/messages/send endpoint..." -ForegroundColor Yellow
 try {
     $Body = @{ mailboxAddress = $MailboxAddress; to = "recipient@company.com"; subject = "Test"; body = "Test body" } | ConvertTo-Json
     $Response = Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/messages/send" `
@@ -104,8 +134,8 @@ try {
 
 Write-Host ""
 
-# Test 6: Send draft message endpoint
-Write-Host "6. Testing /api/mailbox/drafts/{draftId}/send endpoint..." -ForegroundColor Yellow
+# Test 8: Send draft message endpoint
+Write-Host "8. Testing /api/mailbox/drafts/{draftId}/send endpoint..." -ForegroundColor Yellow
 try {
     $Body = @{ mailboxAddress = $MailboxAddress } | ConvertTo-Json
     $Response = Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/drafts/test-draft-id/send" `
