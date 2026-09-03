@@ -720,8 +720,38 @@ try {
     Write-Host "     (This is normal if app registration doesn't have mailbox access yet)" -ForegroundColor Gray
 }
 
-# Test 5: Send message endpoint
-Write-Host "5. Testing /api/mailbox/messages/send endpoint..." -ForegroundColor Yellow
+# Test 5: Create draft endpoint (in the shared mailbox's own Drafts folder)
+Write-Host "5. Testing /api/mailbox/drafts (CreateDraft) endpoint..." -ForegroundColor Yellow
+try {
+    $Body = @{ mailboxAddress = $MailboxAddress; messageId = "test-message-id"; subject = "Re: Test"; body = "Test reply body" } | ConvertTo-Json
+    $Response = Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/drafts" `
+        -Method Post -Body $Body -ContentType "application/json" -ErrorAction Stop
+    Write-Host "   ✓ Create draft endpoint works" -ForegroundColor Green
+    Write-Host "   Response: $($Response | ConvertTo-Json)" -ForegroundColor Gray
+} catch {
+    Write-Host "   ⚠ Warning: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "     (This is normal if messageId doesn't refer to a real message yet)" -ForegroundColor Gray
+}
+
+Write-Host ""
+
+# Test 6: Update draft endpoint
+Write-Host "6. Testing /api/mailbox/drafts/{draftId} (UpdateDraft) endpoint..." -ForegroundColor Yellow
+try {
+    $Body = @{ mailboxAddress = $MailboxAddress; subject = "Re: Test (edited)"; body = "Edited reply body" } | ConvertTo-Json
+    $Response = Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/drafts/test-draft-id" `
+        -Method Patch -Body $Body -ContentType "application/json" -ErrorAction Stop
+    Write-Host "   ✓ Update draft endpoint works" -ForegroundColor Green
+    Write-Host "   Response: $($Response | ConvertTo-Json)" -ForegroundColor Gray
+} catch {
+    Write-Host "   ⚠ Warning: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "     (This is normal if test-draft-id doesn't refer to a real draft yet)" -ForegroundColor Gray
+}
+
+Write-Host ""
+
+# Test 7: Send message endpoint
+Write-Host "7. Testing /api/mailbox/messages/send endpoint..." -ForegroundColor Yellow
 try {
     $Body = @{ mailboxAddress = $MailboxAddress; to = "recipient@company.com"; subject = "Test"; body = "Test body" } | ConvertTo-Json
     $Response = Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/messages/send" `
@@ -735,8 +765,8 @@ try {
 
 Write-Host ""
 
-# Test 6: Send draft message endpoint
-Write-Host "6. Testing /api/mailbox/drafts/{draftId}/send endpoint..." -ForegroundColor Yellow
+# Test 8: Send draft message endpoint
+Write-Host "8. Testing /api/mailbox/drafts/{draftId}/send endpoint..." -ForegroundColor Yellow
 try {
     $Body = @{ mailboxAddress = $MailboxAddress } | ConvertTo-Json
     $Response = Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/drafts/test-draft-id/send" `
@@ -785,11 +815,19 @@ Backend: https://shared-mailbox-classifier.azurewebsites.net
    ⚠ Warning: 401 Unauthorized
      (This is normal if app registration doesn't have mailbox access yet)
 
-5. Testing /api/mailbox/messages/send endpoint...
+5. Testing /api/mailbox/drafts (CreateDraft) endpoint...
+   ⚠ Warning: 401 Unauthorized
+     (This is normal if messageId doesn't refer to a real message yet)
+
+6. Testing /api/mailbox/drafts/{draftId} (UpdateDraft) endpoint...
+   ⚠ Warning: 401 Unauthorized
+     (This is normal if test-draft-id doesn't refer to a real draft yet)
+
+7. Testing /api/mailbox/messages/send endpoint...
    ⚠ Warning: 401 Unauthorized
      (This is normal if app registration doesn't have mailbox access yet)
 
-6. Testing /api/mailbox/drafts/{draftId}/send endpoint...
+8. Testing /api/mailbox/drafts/{draftId}/send endpoint...
    ⚠ Warning: 401 Unauthorized
      (This is normal if app registration doesn't have mailbox access yet)
 
@@ -1606,20 +1644,47 @@ Response: Array of Classifications
 ```
 
 **Operation 4: CreateDraft**
+
+Creates the reply draft directly in the **shared mailbox's own Drafts folder**
+(via Graph `createReply`/`createReplyAll`) - never in the calling user's
+personal mailbox. The app-only Graph client always targets `mailboxAddress`.
+
 ```
 Method: POST
 Path: /api/mailbox/drafts
 Body (JSON):
   {
+    "mailboxAddress": "string",
     "messageId": "string",
     "subject": "string",
     "body": "string",
-    "classifications": []
+    "replyAll": false
   }
-Response: { draftId, draftUrl }
+Response: { draftId, subject, draftUrl }
 ```
 
-**Operation 5: SendMessage**
+**Operation 5: UpdateDraft**
+
+Edits an existing draft (e.g. one created by CreateDraft above, or already
+sitting in the shared mailbox's Drafts folder) before it is sent. Only the
+fields you supply are changed.
+
+```
+Method: PATCH
+Path: /api/mailbox/drafts/{draftId}
+URL Parameters:
+  - draftId (string, required)
+Body (JSON):
+  {
+    "mailboxAddress": "string",
+    "subject": "string",
+    "body": "string",
+    "to": "string"
+  }
+Response: { draftId, subject, draftUrl }
+```
+
+**Operation 6: SendMessage**
 ```
 Method: POST
 Path: /api/mailbox/messages/send
@@ -1633,7 +1698,7 @@ Body (JSON):
 Response: { status }
 ```
 
-**Operation 6: SendDraftMessage**
+**Operation 7: SendDraftMessage**
 ```
 Method: POST
 Path: /api/mailbox/drafts/{draftId}/send
@@ -1724,7 +1789,7 @@ guide) live in [`SharedMailboxSkills/`](../../SharedMailboxSkills) - see
 
 ### Step 6.2: Add Skill Actions
 
-Add five actions:
+Add six actions:
 
 **Action 1: FetchMessage**
 ```
@@ -1747,19 +1812,44 @@ Output:
 ```
 
 **Action 3: CreateDraft**
+
+Creates the reply draft directly in the shared mailbox's own Drafts folder -
+never in the calling user's personal mailbox.
+
 ```
 Input:
   - mailboxAddress (text)
   - messageId (text)
   - subject (text)
   - body (text)
+  - replyAll (boolean, optional)
 
 Output:
   - draftId (text)
+  - subject (text)
   - draftUrl (text)
 ```
 
-**Action 4: SendMessage**
+**Action 4: UpdateDraft**
+
+Edits an existing shared-mailbox draft (e.g. one created by CreateDraft)
+before it is sent. Only the fields you supply are changed.
+
+```
+Input:
+  - mailboxAddress (text)
+  - draftId (text)
+  - subject (text, optional)
+  - body (text, optional)
+  - to (text, optional)
+
+Output:
+  - draftId (text)
+  - subject (text)
+  - draftUrl (text)
+```
+
+**Action 5: SendMessage**
 ```
 Input:
   - mailboxAddress (text)
@@ -1771,7 +1861,7 @@ Output:
   - status (text)
 ```
 
-**Action 5: SendDraftMessage**
+**Action 6: SendDraftMessage**
 ```
 Input:
   - mailboxAddress (text)
@@ -1797,7 +1887,11 @@ ClassifyMessage:
 
 CreateDraft:
   HTTP POST → https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/drafts
-  Body: { "messageId", "subject", "body", "classifications" }
+  Body: { "mailboxAddress", "messageId", "subject", "body", "replyAll" }
+
+UpdateDraft:
+  HTTP PATCH → https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/drafts/{draftId}
+  Body: { "mailboxAddress", "subject", "body", "to" }
 
 SendMessage:
   HTTP POST → https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/messages/send

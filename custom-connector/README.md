@@ -11,8 +11,8 @@ Platform custom connector, used by the standard Copilot Studio harness to call t
 ## Contents
 
 - `openapi.yaml` - OpenAPI (Swagger 2.0) definition of the backend operations:
-  six actions (`GetMessages`, `GetMessage`, `ClassifyMessage`, `CreateDraft`, `SendMessage`,
-  `SendDraftMessage`) and one polling trigger (`NewMessageReceived`, see Step 5). Import
+  seven actions (`GetMessages`, `GetMessage`, `ClassifyMessage`, `CreateDraft`, `UpdateDraft`,
+  `SendMessage`, `SendDraftMessage`) and one polling trigger (`NewMessageReceived`, see Step 5). Import
   this file directly when creating the connector.
 
 ## Step 1: Navigate to Power Platform Connectors
