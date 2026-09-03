@@ -11,6 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.13] - 2026-09-03
+
+### What's New
+- `docs/wiki/phase-1-mailbox-setup.md` Section 4.6: added a new "Understanding the Combined Security Model (Worked Example)" subsection with a concrete example (generic tenant/mailbox/user addresses) walking through why a user can operate the backend and draft mail in the shared mailbox, and clarifying that Exchange shared-mailbox membership/delegation is irrelevant to this API's authorization chain - only Easy Auth (tenant restriction), the email allowlist, and the app's own application access policy matter.
+
+### What's Fixed
+- None.
+
+### What's Modified
+- None (documentation addition only).
+
+### Breaking Changes
+- None.
+
+---
+
 ## [0.4.11] - 2026-09-04
 
 ### What's Fixed
