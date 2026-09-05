@@ -49,7 +49,7 @@ This project provides:
 | Phase 1: Full Connector Operation Testing Guide | ✅ Complete | v0.4.28 |
 | Phase 1: README & Wiki Documentation Fixes | ✅ Complete | v0.4.29 |
 | Phase 2: Dataverse Classification Tables (Rule + Audit) | ✅ Complete | v0.5.0 |
-| Phase 2: Copilot Studio Prompt Tool Classification | 🔄 In Progress | v0.5.1 (planned) |
+| Phase 2: Copilot Studio Prompt Tool Examples & Smoke Test | ✅ Complete | v0.5.1 |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
 ## Quick Start (Phase 1: v0.4.23)
@@ -390,12 +390,10 @@ All code samples include copyright headers. See individual files for details.
 
 ---
 
-## 🔄 IN PROGRESS
-
-### v0.5.1 (planned): Phase 2 - Copilot Studio Prompt Tool Classification
-- 🔄 Copilot Studio Prompt tool (Generative AI action) classifies messages against active Classification Rule rows, with or without a wrapping Flow
-- 🔄 Write classification results to the Classification Audit table via the Dataverse connector
-- 📋 Future: swap the Prompt tool's model for a Foundry-hosted model (e.g. BART-MNLI zero-shot classification)
+### v0.5.1: Phase 2 - Copilot Studio Prompt Tool Examples & Smoke Test
+- ✨ `docs/wiki/phase-2-classification-table.md`: documented two ready-to-paste Copilot Studio Prompt tool examples - `ClassifyMessage` (message + active rule list in, structured classification JSON out) and `DraftEmailBody` (classification result + original message in, a single 3-section HTML draft body out: a removable internal routing block, a drafted reply in the original message's language marked for review/redaction, and the quoted original message).
+- ✨ Added a step-by-step Smoke Test (Section 7.1) covering the full path: deploy tables -> idempotency re-run -> seed/re-seed data -> build both Prompt tools -> test classification (match and no-match cases) -> test HTML draft generation (including a non-English language check) -> wire into `CreateDraft` -> verify an audit row is written.
+- 🔧 Renumbered `docs/wiki/phase-2-classification-table.md` sections to fit the new Prompt Tool Examples section (Section 4) and expanded Testing (Section 7); added related Troubleshooting entries.
 
 ---
 
@@ -444,4 +442,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.5.0 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.5.1 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)

@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.1] - 2026-09-05
+
+### What's New
+- `docs/wiki/phase-2-classification-table.md`, new Section 4 "Prompt Tool Examples": a `ClassifyMessage` Copilot Studio Prompt tool example (message + active rule list in, structured classification JSON out) and a `DraftEmailBody` Prompt tool example (classification result + original message in, a single 3-section HTML draft body out).
+- New Section 7.1 "Smoke Test": a step-by-step end-to-end validation covering deploy -> idempotency -> seed -> both Prompt tools (match/no-match/language checks) -> `CreateDraft` wiring -> audit write-back.
+
+### What's Modified
+- `docs/wiki/phase-2-classification-table.md`: renumbered sections 4-8 to 5-9 to accommodate the new Prompt Tool Examples section; added two Troubleshooting entries for the new Prompt tools.
+
+### Breaking Changes
+- None.
+
+---
+
 ## [0.5.0] - 2026-09-05
 
 ### What's New

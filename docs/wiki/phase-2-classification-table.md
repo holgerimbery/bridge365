@@ -83,7 +83,168 @@ This can optionally be wrapped in a Power Automate flow instead of a Topic if a 
 
 ---
 
-## 4. Copilot Studio Integration (Planned)
+## 4. Prompt Tool Examples
+
+Two Copilot Studio **Prompt tools** (Generative AI actions) implement the flow end to end. Both are configured the same way: create a Prompt tool, paste the **Instructions** text below, define the **Input** variables, and set the **Output** to structured JSON (or plain text for the HTML tool) matching the schema shown.
+
+### 4.1 Example: `ClassifyMessage` Prompt Tool
+
+**Inputs:**
+
+| Name | Type | Source |
+|---|---|---|
+| `EmailSubject` | String | The message being classified |
+| `EmailBody` | String | The message being classified |
+| `ClassificationRules` | String (JSON array) | Active rows from the Classification Rule table (`classname`, `classexamples`, `classtarget`, `classtargetemail`), fetched via the Dataverse connector "List rows" action, filtered to `isactive eq true` |
+
+**Instructions (paste into the Prompt tool):**
+
+```text
+You are a message-routing classifier for a shared mailbox. You are given an
+email (Subject, Body) and a list of candidate classification rules, each
+with a class name, example phrases, a target department, and a target email.
+
+Compare the email against every rule's example phrases and decide which
+rule(s) plausibly apply - there can be zero, one, or several matches.
+
+Respond with ONLY a JSON object in this exact shape, no other text:
+
+{
+  "classifications": [
+    { "className": "<rule className>", "classTarget": "<rule classTarget>",
+      "classTargetEmail": "<rule classTargetEmail>", "score": <0.0-1.0>,
+      "reason": "<short reason this rule matched>" }
+  ],
+  "needsHumanRoutingDecision": <true if zero or more than one match, else false>,
+  "confidence": <the highest score above, or 0 if no matches>
+}
+
+Email Subject: {{EmailSubject}}
+Email Body: {{EmailBody}}
+Classification Rules: {{ClassificationRules}}
+```
+
+**Example input/output:**
+
+```json
+// Input
+{
+  "EmailSubject": "Question about invoice 4711",
+  "EmailBody": "Hi, the amount on invoice 4711 looks wrong. Can you check?",
+  "ClassificationRules": "[{\"className\":\"Invoice Question\",\"classExamples\":\"invoice\\nbilling\\namount\\nreceipt\",\"classTarget\":\"Finance Department\",\"classTargetEmail\":\"finance@company.com\"},{\"className\":\"Technical Support\",\"classExamples\":\"cannot sign in\\nerror\\nAADSTS\\naccess denied\",\"classTarget\":\"IT Support\",\"classTargetEmail\":\"itsupport@company.com\"}]"
+}
+
+// Output
+{
+  "classifications": [
+    { "className": "Invoice Question", "classTarget": "Finance Department",
+      "classTargetEmail": "finance@company.com", "score": 0.92,
+      "reason": "Mentions an invoice number and a disputed amount" }
+  ],
+  "needsHumanRoutingDecision": false,
+  "confidence": 0.92
+}
+```
+
+The calling Topic writes this result (plus `provider: "copilot-prompt"` and a `modelVersion`) to the Classification Audit table via the Dataverse connector.
+
+### 4.2 Example: `DraftEmailBody` Prompt Tool
+
+Generates the full HTML body for the reply draft, combining the classification result, a proposed response, and the original message - so a human reviewer sees everything in one place before sending.
+
+**Inputs:**
+
+| Name | Type | Source |
+|---|---|---|
+| `OriginalFrom` | String | Original message sender |
+| `OriginalTo` | String | Original message recipient (the shared mailbox) |
+| `OriginalSubject` | String | Original message subject |
+| `OriginalBody` | String | Original message body |
+| `Classifications` | String (JSON array) | Output of the `ClassifyMessage` Prompt tool (Section 4.1) - may contain zero, one, or several entries |
+
+**Instructions (paste into the Prompt tool):**
+
+```text
+You draft the HTML body for a shared-mailbox reply email. You are given the
+original message (From, To, Subject, Body) and its classification result(s).
+
+Produce ONE complete HTML document (inline styles only, no external CSS/JS,
+no markdown, no commentary outside the HTML) containing exactly these three
+sections, in this order:
+
+1. INTERNAL ROUTING BLOCK - wrap it in these exact HTML comment markers:
+   <!-- ROUTING-BLOCK:START - please remove before sending -->
+   ... and ...
+   <!-- ROUTING-BLOCK:END -->
+   Inside, render a table listing EVERY entry from Classifications: its
+   class name, target department, and target department email. If
+   Classifications is empty, state "No classification matched - manual
+   routing required" instead of a table.
+
+2. DRAFTED RESPONSE - wrap it in these exact HTML comment markers:
+   <!-- DRAFT-RESPONSE:START - please modify/redact before sending -->
+   ... and ...
+   <!-- DRAFT-RESPONSE:END -->
+   Write a professional, concise reply that addresses the sender's request,
+   IN THE SAME LANGUAGE as OriginalBody (detect the language yourself; do
+   not translate it). Do not invent facts that are not present in the
+   original message. Sign off generically (no personal name).
+
+3. ORIGINAL MESSAGE - quote it for reference in a plain HTML blockquote,
+   showing From, To, Subject, and Body exactly as given. No removal marker
+   needed here - this section is reference context, not a draft artifact.
+
+Original From: {{OriginalFrom}}
+Original To: {{OriginalTo}}
+Original Subject: {{OriginalSubject}}
+Original Body: {{OriginalBody}}
+Classifications: {{Classifications}}
+```
+
+**Example output** (English original; a German original would produce a German drafted response in section 2, unchanged sections 1 and 3 structure):
+
+```html
+<!-- ROUTING-BLOCK:START - please remove before sending -->
+<table style="border-collapse:collapse;font-family:sans-serif;font-size:13px;">
+  <tr style="background:#f2f2f2;">
+    <th style="border:1px solid #ccc;padding:4px 8px;">Class Name</th>
+    <th style="border:1px solid #ccc;padding:4px 8px;">Target Department</th>
+    <th style="border:1px solid #ccc;padding:4px 8px;">Target Email</th>
+  </tr>
+  <tr>
+    <td style="border:1px solid #ccc;padding:4px 8px;">Invoice Question</td>
+    <td style="border:1px solid #ccc;padding:4px 8px;">Finance Department</td>
+    <td style="border:1px solid #ccc;padding:4px 8px;">finance@company.com</td>
+  </tr>
+</table>
+<!-- ROUTING-BLOCK:END -->
+
+<!-- DRAFT-RESPONSE:START - please modify/redact before sending -->
+<p>Hello,</p>
+<p>Thank you for reaching out about invoice 4711. We are reviewing the amount
+you flagged and will confirm the correct total shortly. If you have the
+original purchase order to hand, please share it so we can cross-check
+faster.</p>
+<p>Kind regards,<br/>Finance Department</p>
+<!-- DRAFT-RESPONSE:END -->
+
+<hr/>
+<p style="color:#666;font-size:12px;"><strong>Original Message</strong></p>
+<p style="color:#666;font-size:12px;">
+  From: sender@external.com<br/>
+  To: shared@company.com<br/>
+  Subject: Question about invoice 4711
+</p>
+<blockquote style="color:#666;font-size:12px;border-left:2px solid #ccc;padding-left:8px;">
+  Hi, the amount on invoice 4711 looks wrong. Can you check?
+</blockquote>
+```
+
+Pass the resulting HTML string as the `body` (with `contentType: "html"`) to the existing `CreateDraft` connector operation (`docs/wiki/phase-1-mailbox-setup.md`, Section 5) to create the reviewable draft reply.
+
+---
+
+## 5. Copilot Studio Integration (Planned)
 
 Once the Prompt tool flow above is built, add a `ClassifyMessage` custom connector operation (or reuse the existing backend if a server-side implementation is preferred) so classification can also be invoked outside the Prompt tool - the response shape is shared:
 
@@ -107,9 +268,9 @@ Once the Prompt tool flow above is built, add a `ClassifyMessage` custom connect
 
 ---
 
-## 5. Setup Instructions
+## 6. Setup Instructions
 
-### 5.1 Prerequisites
+### 6.1 Prerequisites
 
 The Azure AD app registration used by `backend-service`/`custom-connector` (see `docs/wiki/phase-1-mailbox-setup.md`, Section 3) must be added as an **Application User** in the target Dataverse environment, with a security role granting Customization permissions (e.g. **System Customizer**):
 
@@ -123,7 +284,7 @@ DATAVERSE_ENVIRONMENT_URL=https://org.crm.dynamics.com
 DATAVERSE_PUBLISHER_PREFIX=b365
 ```
 
-### 5.2 Deploy the Tables
+### 6.2 Deploy the Tables
 
 ```powershell
 .\dataverse\scripts\deploy-dataverse-tables.ps1
@@ -131,7 +292,7 @@ DATAVERSE_PUBLISHER_PREFIX=b365
 
 Idempotent - creates the Classification Rule and Classification Audit tables (and the lookup relationship between them) if missing, and skips anything that already exists. Reads `DATAVERSE_ENVIRONMENT_URL`/`TENANT_ID`/`CLIENT_ID`/`CLIENT_SECRET`/`DATAVERSE_PUBLISHER_PREFIX` from `.env`, or pass them as parameters.
 
-### 5.3 Seed Sample Classifications
+### 6.3 Seed Sample Classifications
 
 ```powershell
 .\dataverse\scripts\seed-sample-classifications.ps1
@@ -141,37 +302,57 @@ Upserts the built-in sample rules (or pass `-ClassificationsJson` with your own)
 
 ---
 
-## 6. Testing
+## 7. Testing
 
-### Test the Deployment Scripts
+### 7.1 Smoke Test (run before merging/relying on this phase)
+
+A minimal end-to-end pass confirming the tables, seed data, and both Prompt tools work together:
+
+1. **Deploy tables.** Run `.\dataverse\scripts\deploy-dataverse-tables.ps1`. Expect it to print both table logical names (`<prefix>_classificationrule`, `<prefix>_classificationaudit`) and their collection names, with no errors.
+2. **Idempotency check.** Re-run the same command. Expect every table/column/relationship to be reported as "already exists - skipping" - confirms the script is safe to re-run (e.g. after adding a new column to a schema file later).
+3. **Seed data.** Run `.\dataverse\scripts\seed-sample-classifications.ps1`. In the Power Apps maker portal (make.powerapps.com -> your environment -> Tables -> Classification Rule -> Data), confirm 3 rows exist (Invoice Question, Technical Support, Contract Inquiry) with `isactive = Yes`.
+4. **Re-run seed.** Run the seed script a second time. Confirm the row count stays at 3 (rows are updated, not duplicated).
+5. **Build the Prompt tools.** In Copilot Studio, create the two Prompt tools from Section 4.1/4.2, pasting the Instructions text and defining the Input/Output as documented.
+6. **Test `ClassifyMessage` manually** (Prompt tool's own Test pane): use the Section 4.1 example input. Confirm the output JSON matches the expected shape and correctly matches "Invoice Question".
+7. **Test a no-match case**: send an unrelated subject/body (e.g. "Happy birthday!") with the same `ClassificationRules`. Confirm `classifications` is empty and `needsHumanRoutingDecision` is `true`.
+8. **Test `DraftEmailBody` manually**: feed it the Section 4.1 example output plus a sample original message. Confirm the returned HTML contains all three sections, both `<!-- ROUTING-BLOCK:START -->`/`<!-- DRAFT-RESPONSE:START -->` marker pairs, and that the drafted response is in the same language as the supplied `OriginalBody` (test once in English, once in German, to confirm no unwanted translation).
+9. **Wire into `CreateDraft`** (optional but recommended before considering Phase 2 done): pass the generated HTML as `body`/`contentType: "html"` to the existing `CreateDraft` connector operation against a real test mailbox, and open the created draft in Outlook to visually confirm the three sections render correctly and the routing block is clearly marked for removal.
+10. **Audit write-back**: after a classification, use the Dataverse connector (or a direct Web API call) to create a Classification Audit row; confirm it appears in the maker portal with the correct `provider`, `confidence`, and (if applicable) `classificationruleid` lookup populated.
+
+If steps 1-4 fail, see Troubleshooting (Section 8) before attempting steps 5-10.
+
+### 7.2 Test the Deployment Scripts
 
 1. Run `deploy-dataverse-tables.ps1` - verify it prints both table logical names and collection (entity set) names with no errors.
 2. Re-run it a second time - verify it reports every table/column/relationship as "already exists - skipping" (idempotency check).
 3. Run `seed-sample-classifications.ps1` - verify the sample rows appear in the Classification Rule table (Power Apps maker portal -> Tables -> Classification Rule -> Data).
 
-### Test the Prompt Tool (once built in Copilot Studio)
+### 7.3 Test the Prompt Tools (once built in Copilot Studio)
 
-1. Open the topic/tool that fetches rules and calls the Prompt tool.
+1. Open the topic/tool that fetches rules and calls the `ClassifyMessage` Prompt tool.
 2. Send a test message body matching one of the seeded rules (e.g. "I have a question about my invoice").
 3. Verify the returned classification matches the expected rule, and a row is written to the Classification Audit table.
+4. Feed that result into the `DraftEmailBody` Prompt tool and verify the resulting HTML has all three required sections (Section 4.2).
 
 ---
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 | Issue | Resolution |
 |---|---|
-| **401/403 from `deploy-dataverse-tables.ps1`** | The app registration is not registered as an Application User in the Dataverse environment, or lacks a Customization-capable security role (Section 5.1) |
+| **401/403 from `deploy-dataverse-tables.ps1`** | The app registration is not registered as an Application User in the Dataverse environment, or lacks a Customization-capable security role (Section 6.1) |
 | **`EntityDefinitions` create fails with a name-conflict error** | The publisher prefix + logical name is already in use by another solution/table - choose a different `DATAVERSE_PUBLISHER_PREFIX` |
 | **No classifications returned by the Prompt tool** | Verify the Classification Rule table has active (`isactive = true`) rows and the Prompt tool's grounding context includes them |
 | **Wrong department routed** | Review rule priorities and example phrases in the Classification Rule table |
 | **Audit table not updated** | Check the Dataverse connector's connection in Copilot Studio and confirm write permissions on the Classification Audit table |
+| **`DraftEmailBody` output isn't valid HTML / missing a marker** | Re-check the Instructions text was pasted verbatim (the exact comment marker strings matter if you post-process the HTML to strip the routing block programmatically) |
+| **Drafted response is in the wrong language** | Confirm `OriginalBody` (not a translated/summarized version) is passed verbatim as input - the model detects language from that field only |
 
 ---
 
-## 8. Next Steps
+## 9. Next Steps
 
-- Build the Copilot Studio Prompt tool + Topic (Section 3)
+- Build the Copilot Studio Prompt tools + Topic (Section 4)
 - Evaluate swapping in a Foundry-hosted BART-MNLI (or similar) model once the Prompt tool baseline is working
 - Proceed to Phase 3: Draft Creation with routing-block generation
 
