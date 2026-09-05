@@ -44,6 +44,7 @@ Status summary and full version-by-version history for the Bridge365 project. Se
 | Phase 2: Public-Repo Security Hardening | ✅ Complete | v0.5.2 |
 | Phase 2: Connector Requirements Clarification (Prompt Tool vs. Foundry Swap-in) | ✅ Complete | v0.5.3 |
 | Documentation: Slim Down README (moved Status Summary & Detailed Status to docs/status.md) | ✅ Complete | v0.5.4 |
+| Bug Fix: Dataverse Deploy/Seed Script URL Scheme & Token-Error Hardening | ✅ Complete | v0.5.5 |
 | Documentation: Phase 2 Status Label Correction (README) | ✅ Complete | v0.5.6 |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
@@ -279,6 +280,10 @@ Status summary and full version-by-version history for the Bridge365 project. Se
 ### v0.5.4: Documentation - Slim Down README
 - 🔧 Moved the Status Summary table and Detailed Status changelog section out of README.md into a new dedicated docs/status.md file; README.md now keeps only Overview, Quick Start, Architecture, Documentation, Project Structure, Support & Contribution, License, Copyright, and a short Current Version pointer.
 - 🔧 Removed the (Phase 1: v0.4.23) version suffix from the ## Quick Start heading.
+
+### v0.5.5: Bug Fix - Dataverse Deploy/Seed Script URL Scheme & Token-Error Hardening
+- 🔧 `dataverse/scripts/deploy-dataverse-tables.ps1` and `dataverse/scripts/seed-sample-classifications.ps1` now auto-normalize `$DataverseUrl` to add a missing `https://` scheme (with a warning), fixing a production bug where a scheme-less `DATAVERSE_ENVIRONMENT_URL` in `.env` produced an invalid OAuth2 token `scope`, rejected by Entra ID with `AADSTS1002012`.
+- 🔧 Both scripts now surface `$_.ErrorDetails.Message` (the real AADSTS error detail) on token-acquisition failure instead of only a generic "400 (Bad Request)" message; `seed-sample-classifications.ps1` previously had no try/catch around its token call at all.
 
 ---
 

@@ -10,13 +10,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ---
-
 ## [0.5.6] - 2026-09-05
 
 ### What's Modified
 - `README.md`: corrected 3 stale Phase 2 status labels left over from when classification work was still in progress. The "Next Phase" note now reads "Phase 1 and Phase 2 (classification) are complete. Proceed to Phase 3: Draft Creation & Routing (planned)." instead of pointing at Phase 2 as the next/in-progress step; the Phase 2 documentation link status changed from 🔄 In Progress to ✅ Complete; the Project Structure tree comment for phase-2-classification-table.md changed from # Phase 2 (in progress) to # Phase 2 (complete), matching the Phase 1 comment style.
 - `README.md`: bumped the `Current Version` footer pointer to v0.5.6.
 - `docs/status.md`: added the Status Summary row and Detailed Status entry for this release.
+
+### Breaking Changes
+- None.
+
+---
+
+## [0.5.5] - 2026-09-05
+
+### What's Fixed
+- `dataverse/scripts/deploy-dataverse-tables.ps1`, `dataverse/scripts/seed-sample-classifications.ps1`: `$DataverseUrl` (from `-DataverseUrl` or `DATAVERSE_ENVIRONMENT_URL` in `.env`) is now auto-normalized to include the `https://` scheme when missing (e.g. `orgbf5918f4.crm.dynamics.com` becomes `https://orgbf5918f4.crm.dynamics.com`), with a warning so the user is aware. Previously, a scheme-less URL produced an invalid OAuth2 `scope` (`"$DataverseUrl/.default"`), which Entra ID rejected with `AADSTS1002012`.
+- `dataverse/scripts/deploy-dataverse-tables.ps1`: the token-acquisition `catch` block now also prints `$_.ErrorDetails.Message` (the AADSTS error code/description from Entra ID's JSON error body) alongside the generic exception message, instead of only showing a generic "400 (Bad Request)".
+- `dataverse/scripts/seed-sample-classifications.ps1`: the token-acquisition call had no `try`/`catch` at all; it now matches `deploy-dataverse-tables.ps1`'s pattern, catching failures and surfacing `$_.ErrorDetails.Message` before exiting.
 
 ### Breaking Changes
 - None.
