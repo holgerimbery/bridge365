@@ -75,7 +75,7 @@ Dataverse table storing every classification result, for compliance and troubles
 
 1. A Topic (or the agent's own orchestration, no Flow required) fetches the active rows from the Classification Rule table via the built-in Dataverse connector.
 2. The Prompt tool receives the message text plus the fetched class list (name + examples) as grounding context, and returns a structured classification (JSON output schema: `classifications[]`, `needsHumanRoutingDecision`, `confidence`).
-3. The result is written to the Classification Audit table via the Dataverse connector (or the `ClassifyMessage`/audit-write connector operation, once added - Section 4).
+3. The result is written to the Classification Audit table via the built-in Dataverse connector.
 
 This can optionally be wrapped in a Power Automate flow instead of a Topic if a scheduled/triggered (rather than conversational) classification path is needed - the Dataverse tables and Prompt tool step are the same either way.
 
@@ -244,9 +244,12 @@ Pass the resulting HTML string as the `body` (with `contentType: "html"`) to the
 
 ---
 
-## 5. Copilot Studio Integration (Planned)
+## 5. Connector Requirements by Classification Path
 
-Once the Prompt tool flow above is built, add a `ClassifyMessage` custom connector operation (or reuse the existing backend if a server-side implementation is preferred) so classification can also be invoked outside the Prompt tool - the response shape is shared:
+The two classification paths described above have different connector needs:
+
+- **Current/default path (Prompt tool, Section 4.1):** requires no custom connector operation. The Topic (or Flow) reads the Classification Rule table and writes the Classification Audit table using the built-in Dataverse connector only, and the Prompt tool itself runs natively inside Copilot Studio - everything happens in-platform, with no server-side call to build or maintain.
+- **Future Foundry-hosted path (Section 3, "Planned/future swap-in"):** if/when the built-in Studio model is swapped for a model hosted on Azure AI Foundry, a `ClassifyMessage` custom connector operation becomes necessary so the Prompt tool/Topic can invoke that server-side model call. The response shape returned by that connector operation matches the Prompt tool's JSON output today, so the Dataverse schema and audit trail do not change - only the `provider`/`modelVersion` values and the backing model call:
 
 ```json
 {
