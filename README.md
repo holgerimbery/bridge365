@@ -135,4 +135,4 @@ All code samples include copyright headers. See individual files for details.
 
 ---
 
-**Current Version:** v0.5.4 | [View Changelog](CHANGELOG.md) | [View Status & Roadmap](docs/status.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.5.5 | [View Changelog](CHANGELOG.md) | [View Status & Roadmap](docs/status.md) | [View Implementation Plan](docs/implementation-plan.md)
