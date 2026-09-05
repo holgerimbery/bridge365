@@ -11,6 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.23] - 2026-09-05
+
+### What's Fixed
+- **Testing the custom connector in Power Platform failed with `AADSTS90009: Application ... is requesting a token for itself. This scenario is supported only if resource is specified using the GUID based App Identifier`** - the connector's `apiProperties.template.json` set `AzureActiveDirectoryResourceId`/`resourceUri` to the App ID URI (`api://<app-client-id>`), but since the connector's own registered app is *also* the token's resource (a self-referencing token request), Azure AD requires the bare Client ID GUID there instead of the App ID URI string.
+
+### What's Modified
+- `custom-connector/apiProperties.template.json`: `AzureActiveDirectoryResourceId` and `resourceUri` now use the bare `__CLIENT_ID__` GUID instead of `api://__CLIENT_ID__`.
+- `custom-connector/README.md`: Step 3's manual portal-wizard **Resource URL** field updated to the bare Client ID GUID, with an explanation of the self-referencing-token restriction.
+- `backend-service/scripts/enable-backend-auth.ps1`: `--aad-allowed-token-audiences` now allowlists **both** `api://<clientId>` (for az CLI/manual delegated-token testing, a different client requesting our API as the resource) and the bare `<clientId>` (for the custom connector's self-referencing token request).
+- Applied live: Easy Auth on `as-shared-mailbox-classifier` now accepts both audiences (`az webapp auth update --aad-allowed-token-audiences "api://<clientId>" "<clientId>"`, followed by a restart).
+
+### Breaking Changes
+- None. Existing deployments should re-run `enable-backend-auth.ps1` once (safe/idempotent) to pick up the additional allowed audience, and re-run `deploy-connector.ps1` (or manually update the connector's Security tab Resource URL) to pick up the corrected `apiProperties.template.json`.
+
+---
+
 ## [0.4.22] - 2026-09-05
 
 ### What's Fixed

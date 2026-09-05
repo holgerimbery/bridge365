@@ -42,10 +42,11 @@ This project provides:
 | Phase 1: Custom Connector CLI Deployment | ✅ Complete | v0.4.20 |
 | Phase 1: Delegated Auth Token Fix (Scope/Audience/Version) | ✅ Complete | v0.4.21 |
 | Phase 1: Custom Connector Deploy Script Fix | ✅ Complete | v0.4.22 |
+| Phase 1: Custom Connector Resource GUID Fix | ✅ Complete | v0.4.23 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
-## Quick Start (Phase 1: v0.4.22)
+## Quick Start (Phase 1: v0.4.23)
 
 ### Prerequisites
 
@@ -353,6 +354,12 @@ All code samples include copyright headers. See individual files for details.
 - 🔧 The script now auto-converts `openapi.yaml` to a generated, gitignored `openapi.generated.json` (via new `custom-connector/scripts/_yaml_to_json.py`, using `pyyaml`) before invoking `paconn`, so `openapi.yaml` remains the single source of truth for both the portal-import and command-line paths.
 - 🔧 Updated `pip install paconn` to `pip install paconn pyyaml` in `custom-connector/README.md`.
 
+### v0.4.23: Custom Connector Resource GUID Fix
+- 🐛 Fixed testing the custom connector in Power Platform failing with `AADSTS90009: Application ... is requesting a token for itself` - since the connector's own app registration is also the token's resource (self-referencing), Azure AD requires the bare Client ID GUID, not the App ID URI (`api://<app-client-id>`), which `apiProperties.template.json` had been using.
+- 🔧 `custom-connector/apiProperties.template.json`: `AzureActiveDirectoryResourceId`/`resourceUri` changed to the bare Client ID GUID.
+- 🔧 `custom-connector/README.md` Step 3: manual portal-wizard **Resource URL** field updated to the bare GUID, with an explanation.
+- 🔧 `backend-service/scripts/enable-backend-auth.ps1`: `--aad-allowed-token-audiences` now allowlists both `api://<clientId>` (CLI/manual testing) and the bare `<clientId>` (connector).
+
 ---
 
 ## 🔄 IN PROGRESS
@@ -422,4 +429,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.4.22 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.4.23 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
