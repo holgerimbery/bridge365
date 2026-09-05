@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.26] - 2026-09-05
+
+### What's Modified
+- `docs/wiki/phase-1-mailbox-setup.md`: `CreateDraft` operation docs now call out that `messageId` must be a real Inbox message id (from `GetMessages`/`GetMessage`), not a draft or sent item, and explains the exact Graph error you get if you use the wrong one - documenting the real pitfall hit and fixed in v0.4.25.
+
+### Breaking Changes
+- None.
+
+---
+
 ## [0.4.25] - 2026-09-05
 
 ### What's Fixed

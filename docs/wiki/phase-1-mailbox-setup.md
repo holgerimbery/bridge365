@@ -2169,6 +2169,12 @@ Creates the reply draft directly in the **shared mailbox's own Drafts folder**
 (via Graph `createReply`/`createReplyAll`) - never in the calling user's
 personal mailbox. The app-only Graph client always targets `mailboxAddress`.
 
+> **`messageId` must be a real Inbox message id** - use an `id` from a
+> `GetMessages` (or `GetMessage`) response for the same `mailboxAddress`.
+> Graph's `createReply`/`createReplyAll` only work on received Inbox mail;
+> passing the id of a draft or a sent item fails with
+> `400: "The reference item does not support the requested operation."`
+
 ```
 Method: POST
 Path: /api/mailbox/drafts
