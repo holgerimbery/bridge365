@@ -11,6 +11,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.4] - 2026-09-05
+
+### What's Modified
+- `README.md`: removed the `(Phase 1: v0.4.23)` version suffix from the `## Quick Start` heading.
+- `README.md`: moved the `## Status Summary` table and the entire `# Detailed Status` changelog-narrative section out of `README.md` into a new dedicated `docs/status.md` file. `README.md` now keeps only Overview, Quick Start, Architecture, Documentation, Project Structure, Support & Contribution, License, Copyright, and a short Current Version pointer to `CHANGELOG.md` and `docs/status.md`.
+- `docs/status.md` (new file): contains the full Status Summary table and Detailed Status (IMPLEMENTED/ROADMAP/BACKLOG) history, preserved verbatim from `README.md`.
+
+### Breaking Changes
+- Anchor links to `README.md#status-summary` / `README.md#detailed-status` now point to `docs/status.md` instead (no such external links existed anywhere else in this repo at the time of this change).
+
+---
+
 ## [0.5.2] - 2026-09-05
 
 ### What's Modified
