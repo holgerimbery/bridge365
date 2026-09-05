@@ -1,0 +1,33 @@
+{
+  "properties": {
+    "connectionParameters": {
+      "token": {
+        "type": "oauthSetting",
+        "oAuthSettings": {
+          "identityProvider": "aad",
+          "clientId": "__CLIENT_ID__",
+          "scopes": [],
+          "redirectMode": "GlobalPerConnector",
+          "properties": {
+            "AzureActiveDirectoryResourceId": "api://__CLIENT_ID__",
+            "IsFirstParty": "False"
+          },
+          "customParameters": {
+            "tenantId": {
+              "value": "__TENANT_ID__"
+            },
+            "loginUri": {
+              "value": "https://login.microsoftonline.com"
+            },
+            "resourceUri": {
+              "value": "api://__CLIENT_ID__"
+            }
+          }
+        }
+      }
+    },
+    "iconBrandColor": "#0078D4",
+    "capabilities": [],
+    "policyTemplateInstances": []
+  }
+}

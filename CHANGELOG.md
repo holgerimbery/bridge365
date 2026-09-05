@@ -11,6 +11,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.20] - 2026-09-05
+
+### What's New
+- `custom-connector/scripts/deploy-connector.ps1`: new script to create or update the `SharedMailboxConnector` custom connector directly from the command line via the `paconn` CLI, using `custom-connector/openapi.yaml` and the new `custom-connector/apiProperties.template.json` - no Power Platform portal wizard required.
+- `custom-connector/apiProperties.template.json`: new connector metadata/auth template (Azure AD, `identityProvider: aad`, Application ID URI-based resource) consumed by `deploy-connector.ps1`.
+- `docs/wiki/phase-1-mailbox-setup.md` (new Step 5.0) and `custom-connector/README.md`: documented the command-line deployment path as an alternative to the manual portal steps.
+- `.env.example`: added `POWER_PLATFORM_ENVIRONMENT_ID` and `CUSTOM_CONNECTOR_ID` for the new script.
+
+### What's Fixed
+- None.
+
+### What's Modified
+- `.gitignore`: added `custom-connector/apiProperties.json`, the tenant/client-specific file `deploy-connector.ps1` generates from the template at deploy time - never committed.
+
+### Breaking Changes
+- None. The portal-based setup (Steps 5.1-5.6) is unchanged and remains fully supported; the CLI path is purely additive.
+
+---
+
 ## [0.4.19] - 2026-09-05
 
 ### What's New

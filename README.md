@@ -39,10 +39,11 @@ This project provides:
 | Phase 1: SendDraftMessage JSON Body Fix | ✅ Complete | v0.4.17 |
 | Phase 1: Wiki Consent-Verification and Real Success-Path Testing | ✅ Complete | v0.4.18 |
 | Phase 1: Custom Connector Delegated Auth Fix | ✅ Complete | v0.4.19 |
+| Phase 1: Custom Connector CLI Deployment | ✅ Complete | v0.4.20 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
-## Quick Start (Phase 1: v0.4.19)
+## Quick Start (Phase 1: v0.4.20)
 
 ### Prerequisites
 
@@ -333,6 +334,11 @@ All code samples include copyright headers. See individual files for details.
 - 🔧 Switched `custom-connector/openapi.yaml` to OAuth `flow: accessCode` (Authorization Code) so each of the three allowlisted users signs in individually.
 - 🔧 Documented the required **Resource URL** field and an Application ID URI prerequisite in `docs/wiki/phase-1-mailbox-setup.md` (Step 5.4) and `custom-connector/README.md` (Step 3).
 
+### v0.4.20: Custom Connector Command-Line Deployment
+- ✨ Added `custom-connector/scripts/deploy-connector.ps1` and `custom-connector/apiProperties.template.json` - creates or updates the `SharedMailboxConnector` connector directly from the command line via the `paconn` CLI, no Power Platform portal wizard required.
+- 🔧 Documented the CLI path as Step 5.0 in `docs/wiki/phase-1-mailbox-setup.md` and in `custom-connector/README.md`, alongside the existing portal-based Steps 5.1-5.6.
+- 🔧 Added `POWER_PLATFORM_ENVIRONMENT_ID` and `CUSTOM_CONNECTOR_ID` to `.env.example` for the new script.
+
 ---
 
 ## 🔄 IN PROGRESS
@@ -402,4 +408,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.4.19 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.4.20 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)

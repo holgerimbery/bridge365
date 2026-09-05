@@ -1897,6 +1897,55 @@ live in [`custom-connector/`](../../custom-connector) - see
 [`custom-connector/README.md`](../../custom-connector/README.md) and
 [`custom-connector/openapi.yaml`](../../custom-connector/openapi.yaml).
 
+Steps 5.1-5.5 below use the Power Platform portal wizard. If you prefer a
+scriptable, repeatable setup, skip ahead to
+[Step 5.0: Command-Line Alternative](#step-50-command-line-alternative-deploy-via-paconn-cli)
+instead - it covers the same create/configure/test flow via the `paconn` CLI.
+
+### Step 5.0: Command-Line Alternative (Deploy via paconn CLI)
+
+**Script:** [`deploy-connector.ps1`](../../custom-connector/scripts/deploy-connector.ps1)
+
+Creates or updates the `SharedMailboxConnector` connector directly from
+`custom-connector/openapi.yaml` and `custom-connector/apiProperties.template.json`,
+without using the portal wizard at all. Requires Python 3.5+ and the
+[`paconn` CLI](https://learn.microsoft.com/connectors/custom-connectors/paconn-cli):
+
+```powershell
+pip install paconn
+paconn login   # one-time interactive device-code sign-in
+```
+
+`paconn` has no service-principal support, so `paconn login` must be run
+interactively at least once per machine.
+
+**Prerequisite - set an Application ID URI (Resource URL)** on the app
+registration, needed so the connector's Azure AD auth has a resource to
+request a token for (safe to re-run):
+
+```powershell
+az ad app update --id "<app-client-id>" --identifier-uris "api://<app-client-id>"
+```
+
+Run the deployment script:
+
+```powershell
+.\custom-connector\scripts\deploy-connector.ps1 `
+    -EnvironmentId "<power-platform-environment-guid>" `
+    -TenantId "<tenant-id>" `
+    -ClientId "<app-client-id>" `
+    -ClientSecret "<app-client-secret>"
+```
+
+**Expected output:** `Connector created. Copy the connector ID printed above
+into .env as CUSTOM_CONNECTOR_ID so future runs update it instead of creating
+a duplicate.` Save that ID (e.g. in `.env` as `CUSTOM_CONNECTOR_ID`); passing
+`-ConnectorId <id>` (or setting it in `.env`) on later runs updates the same
+connector instead of creating a new one each time.
+
+Then continue at [Step 5.5: Test Custom Connector](#step-55-test-custom-connector)
+to verify it - the script only creates/updates the connector, it does not test it.
+
 ### Step 5.1: Navigate to Power Platform Connectors
 
 1. Open **[Power Platform Admin Center](https://admin.powerplatform.com)**
