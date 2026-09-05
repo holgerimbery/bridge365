@@ -42,6 +42,7 @@ Status summary and full version-by-version history for the Bridge365 project. Se
 | Phase 2: Dataverse Classification Tables (Rule + Audit) | ✅ Complete | v0.5.0 |
 | Phase 2: Copilot Studio Prompt Tool Examples & Smoke Test | ✅ Complete | v0.5.1 |
 | Phase 2: Public-Repo Security Hardening | ✅ Complete | v0.5.2 |
+| Phase 2: Connector Requirements Clarification (Prompt Tool vs. Foundry Swap-in) | ✅ Complete | v0.5.3 |
 | Documentation: Slim Down README (moved Status Summary & Detailed Status to docs/status.md) | ✅ Complete | v0.5.4 |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
@@ -270,10 +271,14 @@ Status summary and full version-by-version history for the Bridge365 project. Se
 - 🔧 `.env.example`, `custom-connector/README.md`, `docs/wiki/phase-1-mailbox-setup.md`: replaced the literal deployed App Service name/hostname with a generic `your-app-name`/`your-app-name.azurewebsites.net` placeholder, consistent with the rest of the repo's example conventions.
 - 🔍 Audited the full repository for secrets, credentials, real GUIDs/tenant IDs, and real email addresses before going public - no client secrets, passwords, private keys, or other sensitive data found; all remaining GUIDs are either the well-known public Microsoft Graph API App ID constant or non-secret example/scope identifiers.
 
+### v0.5.3: Phase 2 - Connector Requirements Clarification
+- 🔧 `docs/wiki/phase-2-classification-table.md`: Section 3 simplified so the audit write is described as Dataverse-connector-only, with no stray reference to a not-yet-existing connector operation.
+- 🔧 Section 5 retitled from "Copilot Studio Integration (Planned)" to "Connector Requirements by Classification Path" and rewritten to make clear that the current/default classification path (a Copilot Studio Prompt tool, Section 4.1, plus the built-in Dataverse connector) requires no custom connector operation at all - everything runs natively inside Copilot Studio. A `ClassifyMessage` custom connector operation only becomes necessary if/when the future Foundry-hosted model swap-in (Section 3) is implemented, to invoke that server-side model call.
 
 ### v0.5.4: Documentation - Slim Down README
 - 🔧 Moved the Status Summary table and Detailed Status changelog section out of README.md into a new dedicated docs/status.md file; README.md now keeps only Overview, Quick Start, Architecture, Documentation, Project Structure, Support & Contribution, License, Copyright, and a short Current Version pointer.
 - 🔧 Removed the (Phase 1: v0.4.23) version suffix from the ## Quick Start heading.
+
 ---
 
 ## 📋 ROADMAP
