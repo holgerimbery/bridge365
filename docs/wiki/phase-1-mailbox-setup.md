@@ -615,15 +615,11 @@ Run it:
 The Python backend application source lives in [`backend-service/app.py`](../../backend-service/app.py),
 with dependencies in [`backend-service/requirements.txt`](../../backend-service/requirements.txt).
 
-Deploying with a raw `git push azure main` (an earlier version of this guide) is fragile on Linux App
-Service for Python apps: it requires typing App Service's own publishing credentials (not your Entra
-sign-in) into a Git credential prompt, and if `WEBSITE_RUN_FROM_PACKAGE` is ever set it silently
-disables the Oryx build step, leaving `requirements.txt` uninstalled and the app crash-looping forever
-on `ModuleNotFoundError` (visible as an endless "Starting the site..." message with no error). Use this
-script instead - it deploys via the already-authenticated `az` CLI session (no separate Git credentials
-at all), removes any conflicting `WEBSITE_RUN_FROM_PACKAGE` setting, sets an explicit startup command,
-retries transient Kudu 502s, and polls `/health` afterward so you get a clear pass/fail result instead
-of an ambiguous hang.
+This script deploys via the already-authenticated `az` CLI session, so no separate Git credentials are
+ever required. It also removes any conflicting `WEBSITE_RUN_FROM_PACKAGE` setting (which would
+otherwise silently disable the Oryx build step and leave `requirements.txt` uninstalled), sets an
+explicit startup command, retries transient Kudu 502s, and polls `/health` afterward so you get a clear
+pass/fail result instead of an ambiguous hang.
 
 ```powershell
 # (c) 2026 Holger Imbery (contact@holgerimbery.blog)
@@ -2209,7 +2205,7 @@ Create a Copilot Studio topic that demonstrates both harnesses:
 | **Executable skill times out** | Increase timeout in skill definition. Verify backend is responding to HTTP calls |
 | **Deployment script errors: "Azure CLI is logged into tenant '...', but TENANT_ID specifies '...'"** | Your local `az login` session is pointed at a different tenant than `.env`'s `TENANT_ID`. Run `az login --tenant <TENANT_ID>` (add `az account set --subscription <id>` too if you have access to multiple subscriptions), then retry the script |
 | **Deployment script errors: "Failed to switch to subscription '...'"** | `.env`'s `AZURE_SUBSCRIPTION_ID` doesn't match a subscription your logged-in account can access. Run `az account list -o table` to see available subscriptions and fix `AZURE_SUBSCRIPTION_ID` in `.env` |
-| **Script prints "✓ ... created" but the resource doesn't exist in Azure** | Update to the latest scripts (v0.4.10+) - earlier versions didn't check `$LASTEXITCODE` after `az` commands and could print false-positive success messages when the underlying Azure CLI call failed (e.g. quota errors) |
+| **Script prints "✓ ... created" but the resource doesn't exist in Azure** | Check the `az` CLI output printed above that line for the actual error (e.g. a quota error) - the script validates `$LASTEXITCODE` and should also print an explicit `Write-Error`; re-run after resolving the underlying Azure CLI error |
 
 ---
 
