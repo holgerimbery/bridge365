@@ -340,7 +340,7 @@ def send_draft_message(draft_id):
             return jsonify({"error": "mailboxAddress parameter required"}), 400
 
         # Call Microsoft Graph API to send the draft message as-is
-        check_graph_response(graph_client.post(f"/users/{mailbox}/messages/{draft_id}/send"))
+        check_graph_response(graph_client.post(f"/users/{mailbox}/messages/{draft_id}/send", json={}))
 
         return jsonify({"status": "sent", "draftId": draft_id}), 200
     except GraphError as e:

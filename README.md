@@ -36,10 +36,11 @@ This project provides:
 | Phase 1: Fail-safe Backend Deployment Script | ✅ Complete | v0.4.14 |
 | Phase 1: Wiki Wording Cleanup (no version-history references) | ✅ Complete | v0.4.15 |
 | Phase 1: Graph API Error Handling Fix | ✅ Complete | v0.4.16 |
+| Phase 1: SendDraftMessage JSON Body Fix | ✅ Complete | v0.4.17 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
-## Quick Start (Phase 1: v0.4.16)
+## Quick Start (Phase 1: v0.4.17)
 
 ### Prerequisites
 
@@ -316,6 +317,10 @@ All code samples include copyright headers. See individual files for details.
 - 🔧 Added a `GraphError` exception plus `graph_json()`/`check_graph_response()` helpers; every Graph-calling endpoint now returns Graph's own error status/message on failure instead of a misleading `200` or an unhandled `500`/`502`.
 - ⚠️ Breaking: CreateDraft, UpdateDraft, SendMessage, and SendDraftMessage now return Graph's real error status (typically `404`) for a message/draft ID Graph can't find, instead of the previous (incorrect) always-`200` response.
 
+### v0.4.17: SendDraftMessage JSON Body Fix
+- 🐛 Fixed `backend-service/app.py`: `send_draft_message()` called `graph_client.post()` without an explicit JSON body, which raised an internal `TypeError` in `msgraph-core==0.2.2` and surfaced as an opaque `500` regardless of the draft ID's validity - masking the real outcome. Confirmed as a client-side bug, not a permissions issue, since it persisted even after Graph `Mail.Read`/`Mail.ReadWrite`/`Mail.Send` application permissions were correctly consented.
+- 🔧 `send_draft_message()` now passes `json={}` explicitly, matching `create_draft()`'s existing pattern; Graph's real status code (`400`/`404`) now surfaces via the v0.4.16 `GraphError` handling instead of a generic `500`.
+
 ---
 
 ## 🔄 IN PROGRESS
@@ -385,4 +390,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.4.16 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.4.17 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
