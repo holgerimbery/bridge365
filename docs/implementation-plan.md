@@ -8,7 +8,7 @@
 
 ## Overview
 
-This document outlines the phased implementation of the shared mailbox email classification and drafting module for Microsoft Power Platform environments. Implementation prioritizes **Copilot Studio standard harness** with **GitHub Copilot harness integration in parallel** for all phases.
+This document outlines the phased implementation of the shared mailbox email classification and drafting module for Microsoft Power Platform environments. Implementation is built around a **Copilot Studio custom connector** for all phases.
 
 Source guidance: See `docs/shared-mailbox-classification-master-guide.md`.
 
@@ -18,23 +18,14 @@ Source guidance: See `docs/shared-mailbox-classification-master-guide.md`.
 
 ```mermaid
 graph TD
-    A["Phase 0: Foundation<br/>(v0.1.0)"] --> B["Phase 1: Shared Mailbox Skill<br/>+ Connector (v0.2.0)"]
+    A["Phase 0: Foundation<br/>(v0.1.0)"] --> B["Phase 1: Shared Mailbox<br/>Custom Connector (v0.2.0)"]
     B --> C["Phase 2: Classification via Table<br/>(v0.3.0)"]
     C --> D["Phase 3: Draft Creation<br/>(v0.4.0)"]
     D --> E["Phase 4: Override/Change<br/>Classification (v0.5.0)"]
     E --> F["Phase 5: MCP Server<br/>Integration (v0.6.0)"]
     F --> G["Phase 6: BART Classifier<br/>(v0.7.0)"]
     G --> H["v1.0.0: Release Candidate"]
-    
-    B -.-> B1["GitHub Copilot Skill"]
-    C -.-> C1["GitHub Copilot Skill"]
-    D -.-> D1["GitHub Copilot Skill"]
-    E -.-> E1["GitHub Copilot Skill"]
-    F -.-> F1["GitHub Copilot MCP"]
-    G -.-> G1["GitHub Copilot MCP"]
 ```
-
-**Legend:** Solid lines = Copilot Studio standard harness (primary). Dotted lines = GitHub Copilot harness (parallel implementation).
 
 ---
 
@@ -61,11 +52,9 @@ graph TD
 
 ---
 
-### Phase 1: Shared Mailbox Skill + Custom Connector (v0.2.0)
+### Phase 1: Shared Mailbox Custom Connector (v0.2.0)
 
-**Objective:** Build the core shared mailbox service, Copilot Studio skill, and custom connector.
-
-**Harnesses:** Copilot Studio standard (primary) + GitHub Copilot executable skill (parallel)
+**Objective:** Build the core shared mailbox service and Copilot Studio custom connector.
 
 **Deliverables:**
 
@@ -75,40 +64,31 @@ graph TD
 - Webhook/subscription handling
 - Configuration for shared mailbox address and permissions
 
-**Copilot Studio Standard Harness (primary):**
-- Skill scaffolding and registration
-- Skill actions for message retrieval and draft management
+**Copilot Studio Custom Connector:**
 - Custom connector OpenAPI spec (endpoints for mailbox operations)
+- Connector actions for message retrieval and draft management
 - Authentication (workload identity / Entra)
 - Connector operations stubs (to be filled in later phases)
 
-**GitHub Copilot Harness (parallel):**
-- Executable skill CLI commands for mailbox access
-- `SKILL.md` documentation with usage examples
-- Authentication integration
-
 **Wiki & Documentation:**
 - `docs/wiki/phase-1-mailbox-setup.md` — human-readable Copilot Studio setup guide
-- `custom-connector/openapi.yaml`, `SharedMailboxSkills/skills.json` - Connector and skill definitions
-- `backend-service/`, `custom-connector/`, `SharedMailboxSkills/` - Deployable artifacts and setup guides
+- `custom-connector/openapi.yaml` - Connector definition
+- `backend-service/`, `custom-connector/` - Deployable artifacts and setup guides
 - Mermaid diagrams for message fetching flow
 
 **Success Criteria:**
-- Skill can authenticate and fetch messages from shared mailbox
+- Connector can authenticate and fetch messages from shared mailbox
 - Connector operations are registered in OpenAPI spec
-- Both harnesses can retrieve a test message
 - Wiki includes step-by-step Copilot Studio setup
 - PowerShell scripts automate connector registration
 
-**Major PR:** "Feature: Shared mailbox skill and custom connector (Phase 1)"
+**Major PR:** "Feature: Shared mailbox custom connector (Phase 1)"
 
 ---
 
 ### Phase 2: Classification via Table (v0.3.0)
 
 **Objective:** Integrate classification table, implement rule-based classifier, and route messages.
-
-**Harnesses:** Copilot Studio standard (primary) + GitHub Copilot skill (parallel)
 
 **Deliverables:**
 
@@ -118,14 +98,9 @@ graph TD
 - Classification output schema (messageId, classifications[], needsHumanRoutingDecision, provider, modelVersion)
 - Validation against table rows
 
-**Copilot Studio Standard Harness:**
-- Skill action: `classify_message` returns all plausible classifications
-- Connector operation: `ClassifyMessage`
+**Copilot Studio Custom Connector:**
+- Connector operation: `ClassifyMessage` returns all plausible classifications
 - Store classification results in Dataverse audit table
-
-**GitHub Copilot Harness:**
-- CLI command: `classify-message --message-id '<id>'`
-- Output matches Copilot Studio schema
 
 **Wiki & Documentation:**
 - `docs/wiki/phase-2-classification-table.md` — table setup and rule configuration
@@ -137,7 +112,6 @@ graph TD
 - Classification table created in Dataverse with sample data
 - Rule-based classifier returns all matching classes
 - Multi-class results are handled correctly
-- Both harnesses return identical classification output
 - PowerShell scripts automate table setup
 
 **Major PR:** "Feature: Classification via table and rule-based classifier (Phase 2)"
@@ -147,8 +121,6 @@ graph TD
 ### Phase 3: Draft Creation (v0.4.0)
 
 **Objective:** Generate reply drafts with routing block and optional knowledge integration.
-
-**Harnesses:** Copilot Studio standard (primary) + GitHub Copilot skill (parallel)
 
 **Deliverables:**
 
@@ -160,15 +132,9 @@ graph TD
 - Customer-facing answer composition
 - Complete draft body: routing block + answer + original email below
 
-**Copilot Studio Standard Harness:**
-- Skill action: `create_response_draft` takes messageId, classifications, optional knowledge passages
-- Skill action: `remove_routing_block` for cleanup after review
+**Copilot Studio Custom Connector:**
 - Connector operations: `CreateResponseDraft`, `RemoveRoutingBlock`
 - Prepare-send guard that rejects drafts with routing block present
-
-**GitHub Copilot Harness:**
-- CLI commands: `create-response-draft`, `remove-routing-block`
-- Same output and validation
 
 **Wiki & Documentation:**
 - `docs/wiki/phase-3-draft-creation.md` — draft generation workflow and approval flow
@@ -180,7 +146,6 @@ graph TD
 - Routing block is marked with `data-internal-routing-block="true"`
 - Original email is sanitized and included below the proposed answer
 - Prepare-send rejects drafts while block is present
-- Both harnesses create identical drafts
 
 **Major PR:** "Feature: Draft creation with routing block and knowledge grounding (Phase 3)"
 
@@ -190,8 +155,6 @@ graph TD
 
 **Objective:** Allow reviewers to accept, reject, or override automated classifications before sending.
 
-**Harnesses:** Copilot Studio standard (primary) + GitHub Copilot skill (parallel)
-
 **Deliverables:**
 
 **Override Workflow:**
@@ -200,14 +163,9 @@ graph TD
 - Rebuild routing block after override
 - Invalidate prior prepare-send approval on override
 
-**Copilot Studio Standard Harness:**
-- Skill action: `get_classification_record` (fetch processing record and all proposed classifications)
-- Skill action: `set_classification_override` (accept/reject/change classifications)
-- Skill action: `rebuild_routing_block` (regenerate block from final classifications)
+**Copilot Studio Custom Connector:**
+- Connector operations: `GetClassificationRecord`, `SetClassificationOverride`, `RebuildRoutingBlock`
 - Model-driven app form (optional) for classification review UI
-
-**GitHub Copilot Harness:**
-- CLI commands: `get-classification-record`, `set-classification-override`, `rebuild-routing-block`
 
 **Wiki & Documentation:**
 - `docs/wiki/phase-4-override-workflow.md` — override and approval workflow
@@ -227,9 +185,7 @@ graph TD
 
 ### Phase 5: MCP Server Integration (v0.6.0)
 
-**Objective:** Add MCP server layer for standardized tool invocation across harnesses.
-
-**Harnesses:** Copilot Studio standard + GitHub Copilot (both via MCP)
+**Objective:** Add MCP server layer for standardized tool invocation.
 
 **Deliverables:**
 
@@ -246,22 +202,17 @@ graph TD
 - Tool schemas with input validation
 - Error handling and retry logic
 
-**Copilot Studio Standard Harness:**
-- MCP integration (connect skill to MCP server)
+**Copilot Studio Custom Connector:**
+- MCP integration (connect connector actions to MCP server)
 - Agents can invoke MCP tools directly
-
-**GitHub Copilot Harness:**
-- MCP client configuration
-- CLI commands invoke MCP tools
 
 **Wiki & Documentation:**
 - `docs/wiki/phase-5-mcp-integration.md` — MCP server architecture and tool schemas
 - `docs/wiki/scripts/start-mcp-server.ps1` — Start MCP server for local testing
-- Mermaid diagram: tool call flow (harness → MCP server → backend service)
+- Mermaid diagram: tool call flow (connector → MCP server → backend service)
 
 **Success Criteria:**
 - MCP server starts and exposes all tools
-- Both harnesses can invoke tools via MCP
 - Tool schemas are complete and validated
 - Error responses are informative
 
@@ -273,8 +224,6 @@ graph TD
 
 **Objective:** Add machine learning classifier option (Foundry BART or Azure ML).
 
-**Harnesses:** Copilot Studio standard + GitHub Copilot (via MCP)
-
 **Deliverables:**
 
 **BART Classifier:**
@@ -284,9 +233,9 @@ graph TD
 - Multi-label score processing and threshold calibration
 - Fallback to rules if BART endpoint fails
 
-**Copilot Studio / GitHub Copilot:**
+**Copilot Studio Custom Connector:**
 - MCP tool `classify_incoming_email` auto-selects provider based on config
-- No harness-level changes needed; provider is transparent
+- No connector-level changes needed; provider is transparent
 
 **Wiki & Documentation:**
 - `docs/wiki/phase-6-bart-classifier.md` — BART model training, deployment, and evaluation

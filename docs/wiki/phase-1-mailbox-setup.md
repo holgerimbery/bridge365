@@ -1,10 +1,8 @@
-# Phase 1: Shared Mailbox Skill & Custom Connector Setup
+# Phase 1: Shared Mailbox Custom Connector Setup
 
-**Objective:** Build the core shared mailbox service with custom connector (standard harness) and executable skills (GitHub Copilot harness).
+**Objective:** Build the core shared mailbox service with a custom connector for Copilot Studio.
 
-**Harnesses:** 
-- **Standard Harness:** Custom Connector only (calls backend service)
-- **GitHub Copilot Harness:** Executable Skills in Copilot Studio (also calls backend service)
+**Harness:** Custom Connector only (calls backend service)
 
 ---
 
@@ -22,12 +20,9 @@
 
 ## 2. Architecture (Copilot Studio Cloud Execution)
 
-### Two Parallel Harnesses in Copilot Studio
+Copilot Studio calls the custom connector, which calls the same Azure-hosted backend:
 
-Both harnesses execute within Copilot Studio cloud environment, calling the same backend:
-
-- **Standard Harness:** Custom connector (no skills needed) → Backend service
-- **GitHub Copilot Harness:** Executable skills in Copilot Studio → Same backend service
+- **Custom Connector:** `SharedMailboxConnector` → Backend service
 - **Backend Service:** Azure-hosted, handles mailbox access via Microsoft Graph API
 
 No local execution. Everything is cloud-based in Copilot Studio.
@@ -39,16 +34,9 @@ graph TB
     subgraph CopilotStudio["Copilot Studio Cloud Environment"]
         direction TB
         
-        subgraph StandardHarness["Standard Harness"]
-            CONN["Custom Connector<br/>SharedMailboxConnector"]
-        end
-        
-        subgraph GitHubHarness["GitHub Copilot Harness"]
-            EXSKILL["Executable Skills<br/>FetchMessage<br/>ClassifyMessage<br/>CreateDraft"]
-        end
+        CONN["Custom Connector<br/>SharedMailboxConnector"]
         
         CONN -->|HTTP REST| BACKEND
-        EXSKILL -->|HTTP REST| BACKEND
     end
     
     subgraph Backend["Backend Service<br/>(Azure-hosted)"]
@@ -57,8 +45,6 @@ graph TB
     end
     
     style CopilotStudio fill:#FF9800,color:#fff
-    style StandardHarness fill:#FFC107,color:#333
-    style GitHubHarness fill:#2196F3,color:#fff
     style Backend fill:#4CAF50,color:#fff
 ```
 
@@ -2033,7 +2019,7 @@ Do not proceed to Phase 2+ production rollout until every row in this table is v
 
 ---
 
-## 5. Custom Connector Setup (Standard Harness)
+## 5. Custom Connector Setup
 
 All artifacts for this section (the OpenAPI definition and a standalone setup guide)
 live in [`custom-connector/`](../../custom-connector) - see
@@ -2317,183 +2303,13 @@ per-end-user credentials.
 
 ---
 
-## 6. GitHub Copilot Harness (Parallel - Executable Skills)
-
-All artifacts for this section (the skill/action definition and a standalone setup
-guide) live in [`SharedMailboxSkills/`](../../SharedMailboxSkills) - see
-[`SharedMailboxSkills/README.md`](../../SharedMailboxSkills/README.md) and
-[`SharedMailboxSkills/skills.json`](../../SharedMailboxSkills/skills.json).
-
-### Step 6.1: Create Executable Skills in Copilot Studio
-
-1. Open **Copilot Studio**
-2. Click your **agent**
-3. Click **Skills** (left sidebar)
-4. Click **Create new skill**
-5. Name: `SharedMailboxSkills`
-6. Description: `Shared mailbox classification and draft management`
-
-### Step 6.2: Add Skill Actions
-
-Add six actions:
-
-**Action 1: FetchMessage**
-```
-Input: 
-  - mailboxAddress (text)
-  - messageId (text)
-
-Output:
-  - message (object)
-```
-
-**Action 2: ClassifyMessage**
-```
-Input:
-  - mailboxAddress (text)
-  - messageId (text)
-
-Output:
-  - classifications (array)
-```
-
-**Action 3: CreateDraft**
-
-Creates the reply draft directly in the shared mailbox's own Drafts folder -
-never in the calling user's personal mailbox.
-
-```
-Input:
-  - mailboxAddress (text)
-  - messageId (text)
-  - subject (text)
-  - body (text)
-  - replyAll (boolean, optional)
-
-Output:
-  - draftId (text)
-  - subject (text)
-  - draftUrl (text)
-```
-
-**Action 4: UpdateDraft**
-
-Edits an existing shared-mailbox draft (e.g. one created by CreateDraft)
-before it is sent. Only the fields you supply are changed.
-
-```
-Input:
-  - mailboxAddress (text)
-  - draftId (text)
-  - subject (text, optional)
-  - body (text, optional)
-  - to (text, optional)
-
-Output:
-  - draftId (text)
-  - subject (text)
-  - draftUrl (text)
-```
-
-**Action 5: SendMessage**
-```
-Input:
-  - mailboxAddress (text)
-  - to (text)
-  - subject (text)
-  - body (text)
-
-Output:
-  - status (text)
-```
-
-**Action 6: SendDraftMessage**
-```
-Input:
-  - mailboxAddress (text)
-  - draftId (text)
-
-Output:
-  - status (text)
-  - draftId (text)
-```
-
-### Step 6.3: Implement Actions (Call Backend)
-
-For each action, add an HTTP call to your backend:
-
-```
-FetchMessage:
-  HTTP GET → https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/messages/{messageId}?mailboxAddress={mailboxAddress}
-  Headers: Authorization: Bearer <token>
-
-ClassifyMessage:
-  HTTP POST → https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/classify
-  Body: { "messageId": "{messageId}" }
-
-CreateDraft:
-  HTTP POST → https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/drafts
-  Body: { "mailboxAddress", "messageId", "subject", "body", "replyAll" }
-
-UpdateDraft:
-  HTTP PATCH → https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/drafts/{draftId}
-  Body: { "mailboxAddress", "subject", "body", "to" }
-
-SendMessage:
-  HTTP POST → https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/messages/send
-  Body: { "mailboxAddress", "to", "subject", "body" }
-
-SendDraftMessage:
-  HTTP POST → https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/drafts/{draftId}/send
-  Body: { "mailboxAddress" }
-```
-
-### Step 6.4: Test Executable Skills
-
-In your Copilot Studio agent:
-
-1. Add a **Topic** that uses the **SharedMailboxSkills**
-2. Add a step: Call **FetchMessage** skill
-3. Set inputs: mailboxAddress = `shared@company.com`, messageId = `<known-id>`
-4. **Test** the agent
-
-**Expected output:**
-```
-Message retrieved:
-  Subject: Invoice for August
-  From: sender@external.com
-  Received: 2026-09-02 10:30 AM
-```
-
-### Step 6.5: Trigger the Agent Autonomously with a Copilot Studio Workflow
-
-To run the GitHub Copilot harness without a chat user - the moment a new email
-lands in the shared mailbox - use Copilot Studio's native **Workflows** feature
-instead of any external automation. A Workflow starts from a **trigger**
-(a connector event, such as "When a new email arrives" or the custom connector's
-`NewMessageReceived` trigger) and hands the work to an **Agent node** equipped
-with the `SharedMailboxSkills` actions (`FetchMessage`, `ClassifyMessage`,
-`CreateDraft`, and optionally `SendMessage`/`SendDraftMessage`) as tools.
-Full setup steps, including the trigger options and
-sample agent instructions, are documented in
-`SharedMailboxSkills/README.md` (Step 5: Trigger the Agent Autonomously with a
-Copilot Studio Workflow).
-
----
-
 ## 7. Integration Test: End-to-End
 
-Create a Copilot Studio topic that demonstrates both harnesses:
+Create a Copilot Studio topic that demonstrates the custom connector:
 
-1. **Standard Harness (Custom Connector):**
+1. **Custom Connector:**
    - Call custom connector GetMessages
    - Display results
-
-2. **GitHub Copilot Harness (Executable Skills):**
-   - Call FetchMessage skill
-   - Verify output matches connector
-
-3. **Verify consistency:** Both should return identical message data
 
 ---
 
@@ -2505,7 +2321,6 @@ Create a Copilot Studio topic that demonstrates both harnesses:
 | **Backend URL returns 404** | App Service is running but code isn't deployed. Push code via git or use zip deploy |
 | **401 Unauthorized from backend** | Verify app registration credentials in environment variables |
 | **Custom connector test fails** | Check backend /health endpoint is responding. Verify Azure AD authentication is configured |
-| **Executable skill times out** | Increase timeout in skill definition. Verify backend is responding to HTTP calls |
 | **Deployment script errors: "Azure CLI is logged into tenant '...', but TENANT_ID specifies '...'"** | Your local `az login` session is pointed at a different tenant than `.env`'s `TENANT_ID`. Run `az login --tenant <TENANT_ID>` (add `az account set --subscription <id>` too if you have access to multiple subscriptions), then retry the script |
 | **Deployment script errors: "Failed to switch to subscription '...'"** | `.env`'s `AZURE_SUBSCRIPTION_ID` doesn't match a subscription your logged-in account can access. Run `az account list -o table` to see available subscriptions and fix `AZURE_SUBSCRIPTION_ID` in `.env` |
 | **Script prints "✓ ... created" but the resource doesn't exist in Azure** | Check the `az` CLI output printed above that line for the actual error (e.g. a quota error) - the script validates `$LASTEXITCODE` and should also print an explicit `Write-Error`; re-run after resolving the underlying Azure CLI error |

@@ -6,8 +6,7 @@ A comprehensive solution for automatically classifying and routing emails in sha
 
 This project provides:
 
-- **Standard Harness:** Custom Connector for Power Platform integration, including an autonomous-agent polling trigger
-- **GitHub Copilot Harness:** Executable Skills in Copilot Studio
+- **Custom Connector:** Power Platform integration, including an autonomous-agent polling trigger
 - **Backend Service:** Azure-hosted Python application with Microsoft Graph API integration
 - **Classification Engine:** Rule-based and AI-powered message routing
 - **Audit Trail:** Dataverse-based logging and compliance tracking
@@ -46,6 +45,7 @@ This project provides:
 | Phase 1: OpenAPI Host Templating (Public-Repo Hardening) | ✅ Complete | v0.4.24 |
 | Phase 1: GetMessages Inbox-Only Scope Fix | ✅ Complete | v0.4.25 |
 | Phase 1: CreateDraft Wiki Documentation (Inbox-Only messageId) | ✅ Complete | v0.4.26 |
+| Phase 1: Remove SharedMailboxSkills (Connector-Only) | ✅ Complete | v0.4.27 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
@@ -83,14 +83,12 @@ This project provides:
 ```mermaid
 graph TB
     subgraph CopilotStudio["Copilot Studio Cloud"]
-        CONN["Custom Connector<br/>(Standard Harness)"]
+        CONN["Custom Connector"]
         TRIG["Autonomous Agent Trigger<br/>NewMessageReceived (polling)"]
-        EXSKILL["Executable Skills<br/>(GitHub Copilot Harness)"]
     end
 
     TRIG -.->|powers| CONN
     CONN -->|HTTP REST| BACKEND
-    EXSKILL -->|HTTP REST| BACKEND
 
     subgraph Azure["Azure Backend"]
         BACKEND["Service Endpoint<br/>Python Flask App"]
@@ -137,12 +135,9 @@ bridge365/
 │   ├── app.py                          # Backend application (incl. /poll trigger endpoint)
 │   ├── requirements.txt                # Python dependencies
 │   └── scripts/                        # Deployment & security-hardening scripts
-├── custom-connector/                   # Standard harness (Power Platform connector)
+├── custom-connector/                   # Power Platform custom connector
 │   ├── README.md                       # Setup guide, incl. autonomous agent trigger
 │   └── openapi.yaml                    # Connector OpenAPI definition (actions + polling trigger)
-├── SharedMailboxSkills/                # GitHub Copilot harness (executable skills)
-│   ├── README.md                       # Setup guide
-│   └── skills.json                     # Skill/action definitions
 └── docs/
     ├── implementation-plan.md          # Full roadmap and phases
     ├── shared-mailbox-classification-master-guide.md  # Reference guide
@@ -363,6 +358,11 @@ All code samples include copyright headers. See individual files for details.
 - 🔧 `custom-connector/README.md` Step 3: manual portal-wizard **Resource URL** field updated to the bare GUID, with an explanation.
 - 🔧 `backend-service/scripts/enable-backend-auth.ps1`: `--aad-allowed-token-audiences` now allowlists both `api://<clientId>` (CLI/manual testing) and the bare `<clientId>` (connector).
 
+### v0.4.27: Remove SharedMailboxSkills (Connector-Only)
+- ⚠️ Breaking: Removed the `SharedMailboxSkills/` folder (the "GitHub Copilot harness" - executable skills with a static bearer token) entirely. Any Copilot Studio agent that added `SharedMailboxSkills` actions as Tools must switch to the `custom-connector` instead.
+- 🔧 The custom connector's action set is a strict superset of the removed skill's (it also uniquely supports the `NewMessageReceived` polling trigger), so Copilot Studio agents lose no capability - only the alternate, unauthenticated static-token setup path is gone.
+- 🔧 Purged all `SharedMailboxSkills`/"GitHub Copilot harness" references from forward-looking docs: `docs/implementation-plan.md`, `docs/wiki/phase-1-mailbox-setup.md` (including its architecture mermaid diagram and dedicated setup section), `docs/wiki/index.md`, `docs/wiki/phase-2-classification-table.md`, `docs/shared-mailbox-classification-master-guide.md`, and `.github/scripts/sync-wiki.py`. Historical `CHANGELOG.md`/README entries describing the skill while it existed are left untouched.
+
 ---
 
 ## 🔄 IN PROGRESS
@@ -432,4 +432,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.4.26 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.4.27 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)

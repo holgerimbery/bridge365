@@ -2,7 +2,7 @@
 
 **Objective:** Integrate classification table, implement rule-based classifier, and route messages.
 
-**Harnesses:** Copilot Studio standard harness (primary) + GitHub Copilot skill (parallel).
+**Harness:** Copilot Studio custom connector.
 
 ---
 
