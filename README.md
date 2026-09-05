@@ -40,10 +40,11 @@ This project provides:
 | Phase 1: Wiki Consent-Verification and Real Success-Path Testing | ✅ Complete | v0.4.18 |
 | Phase 1: Custom Connector Delegated Auth Fix | ✅ Complete | v0.4.19 |
 | Phase 1: Custom Connector CLI Deployment | ✅ Complete | v0.4.20 |
+| Phase 1: Delegated Auth Token Fix (Scope/Audience/Version) | ✅ Complete | v0.4.21 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
-## Quick Start (Phase 1: v0.4.20)
+## Quick Start (Phase 1: v0.4.21)
 
 ### Prerequisites
 
@@ -339,6 +340,13 @@ All code samples include copyright headers. See individual files for details.
 - 🔧 Documented the CLI path as Step 5.0 in `docs/wiki/phase-1-mailbox-setup.md` and in `custom-connector/README.md`, alongside the existing portal-based Steps 5.1-5.6.
 - 🔧 Added `POWER_PLATFORM_ENVIRONMENT_ID` and `CUSTOM_CONNECTOR_ID` to `.env.example` for the new script.
 
+### v0.4.21: Delegated Auth Token Fix + PowerShell Testing Guide
+- 🐛 Fixed the app registration never actually exposing the `user_impersonation` OAuth2 scope declared in `openapi.yaml` (v0.4.19) - any delegated token request (custom connector or manual testing) failed with `AADSTS650057`/`AADSTS65001` since there was nothing to consent to.
+- 🐛 Fixed v2-format access tokens being silently rejected by Easy Auth Classic, which expects v1-issuer tokens - now forced via `requestedAccessTokenVersion: 1` on the app registration.
+- 🐛 Fixed valid v1 tokens scoped to the Application ID URI (`api://<app-client-id>`) still getting `401 Unauthorized` - Easy Auth's default accepted audience is the bare Client ID, not the App ID URI; fixed with `--aad-allowed-token-audiences`.
+- 🔧 `backend-service/scripts/enable-backend-auth.ps1` now performs all three fixes automatically (`Enable-DelegatedApiScope` + updated `az webapp auth update`); add `-SkipDelegatedScopeSetup` to skip the scope step on repeat runs.
+- ✨ Added `docs/wiki/phase-1-mailbox-setup.md` Step 4.6.7 - a full PowerShell recipe for smoke-testing authenticated endpoints (acquire a delegated token, call the API with a bearer header) plus a troubleshooting guide.
+
 ---
 
 ## 🔄 IN PROGRESS
@@ -408,4 +416,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.4.20 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.4.21 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)

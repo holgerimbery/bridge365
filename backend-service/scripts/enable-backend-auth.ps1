@@ -9,7 +9,8 @@ param(
     [string]$AppServiceName,
     [string]$TenantId,
     [string]$ClientId,
-    [string]$SubscriptionId
+    [string]$SubscriptionId,
+    [switch]$SkipDelegatedScopeSetup
 )
 
 # Load from .env if parameters not provided
@@ -55,6 +56,58 @@ function Confirm-AzureContext {
     }
 }
 
+# Exposes a delegated "user_impersonation" OAuth2 scope on the app
+# registration and forces v1-format access tokens, so tokens requested for
+# api://<ClientId> (e.g. via `az login --scope` or the custom connector's
+# delegated OAuth flow) are actually issued and accepted - without this,
+# Azure AD rejects token requests with AADSTS650057 (no scope to request),
+# and even after a token is issued, Easy Auth's classic v1 config rejects
+# it (issuer mismatch or an un-allowlisted audience, both 401).
+function Enable-DelegatedApiScope {
+    param(
+        [string]$ClientId
+    )
+
+    $ObjectId = az ad app show --id $ClientId --query id -o tsv
+    if ($LASTEXITCODE -ne 0 -or -not $ObjectId) {
+        Write-Error "Failed to look up the app registration object ID for client ID '$ClientId'."
+        exit 1
+    }
+
+    $ScopeId = "a7e26fb7-ec5a-4179-81c3-daa4d26300b4"
+    $Body = @{
+        identifierUris = @("api://$ClientId")
+        api = @{
+            requestedAccessTokenVersion = 1
+            oauth2PermissionScopes = @(
+                @{
+                    adminConsentDescription  = "Allow the app to access the shared mailbox classifier on behalf of the signed-in user."
+                    adminConsentDisplayName  = "Access shared mailbox classifier"
+                    id                       = $ScopeId
+                    isEnabled                = $true
+                    type                     = "User"
+                    userConsentDescription   = "Allow the app to access the shared mailbox classifier on your behalf."
+                    userConsentDisplayName   = "Access shared mailbox classifier"
+                    value                    = "user_impersonation"
+                }
+            )
+        }
+    } | ConvertTo-Json -Depth 6
+
+    $TempFile = New-TemporaryFile
+    Set-Content -Path $TempFile -Value $Body -Encoding utf8
+
+    az rest --method PATCH --uri "https://graph.microsoft.com/v1.0/applications/$ObjectId" --headers "Content-Type=application/json" --body "@$TempFile"
+    $ExitCode = $LASTEXITCODE
+    Remove-Item $TempFile -ErrorAction SilentlyContinue
+
+    if ($ExitCode -ne 0) {
+        Write-Error "Failed to expose the delegated 'user_impersonation' scope on app '$ClientId'. See az CLI output above."
+        exit 1
+    }
+    Write-Host "Delegated scope 'user_impersonation' exposed on api://$ClientId (v1 access tokens)" -ForegroundColor Green
+}
+
 $env_file = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) ".env"
 if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
@@ -74,13 +127,18 @@ if (-not $ResourceGroup -or -not $AppServiceName -or -not $TenantId -or -not $Cl
 
 Confirm-AzureContext -ExpectedTenantId $TenantId -ExpectedSubscriptionId $SubscriptionId
 
+if (-not $SkipDelegatedScopeSetup) {
+    Enable-DelegatedApiScope -ClientId $ClientId
+}
+
 az webapp auth update `
     --resource-group $ResourceGroup `
     --name $AppServiceName `
     --enabled true `
     --action LoginWithAzureActiveDirectory `
     --aad-client-id $ClientId `
-    --aad-token-issuer-url "https://sts.windows.net/$TenantId/"
+    --aad-token-issuer-url "https://sts.windows.net/$TenantId/" `
+    --aad-allowed-token-audiences "api://$ClientId"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed to enable Entra authentication for '$AppServiceName'. See az CLI output above for details."

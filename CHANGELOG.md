@@ -11,6 +11,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.21] - 2026-09-05
+
+### What's New
+- `backend-service/scripts/enable-backend-auth.ps1`: now also exposes a delegated `user_impersonation` OAuth2 scope on the app registration (`Enable-DelegatedApiScope`), forces v1-format access tokens (`requestedAccessTokenVersion: 1`), and allowlists `api://<app-client-id>` as an accepted Easy Auth token audience (`--aad-allowed-token-audiences`) - all three are required before any delegated token request (custom connector or manual testing) succeeds. Add `-SkipDelegatedScopeSetup` to skip the scope step on repeat runs if already configured another way.
+- `docs/wiki/phase-1-mailbox-setup.md`: new Step 4.6.7 "Testing Authenticated Endpoints via PowerShell" - a full recipe (get a delegated token via `az login --scope` + `az account get-access-token`, call the API with an `Authorization: Bearer` header) plus a troubleshooting guide for `AADSTS65001`/`AADSTS650057`/`401` errors, including a token-claims decoder snippet.
+
+### What's Fixed
+- **Delegated OAuth2 scope was never actually exposed on the app registration** - `custom-connector/openapi.yaml` declared a `user_impersonation` scope (v0.4.19) and the docs described setting an Application ID URI, but nothing configured the actual `oauth2PermissionScopes` on the Entra ID app registration, so any delegated token request failed with `AADSTS650057` ("resource not listed in requested permissions") or `AADSTS65001` (consent required with nothing to consent to).
+- **Access tokens issued in v2 format were rejected by Easy Auth** - Easy Auth Classic (`--aad-token-issuer-url "https://sts.windows.net/<tenant>/"`) expects v1-format tokens, but tokens requested via `az account get-access-token`/MSAL default to v2 format unless `requestedAccessTokenVersion: 1` is set on the app registration, causing a silent issuer mismatch (`401 Unauthorized`, no reason logged by Easy Auth).
+- **Valid v1 tokens scoped to the Application ID URI were still rejected** - Easy Auth's default accepted audience is the bare Client ID, not the App ID URI (`api://<app-client-id>`) used as the token's `aud` claim, causing `401 Unauthorized` even with a correctly-issued, correctly-signed token; fixed by explicitly allowlisting the App ID URI via `--aad-allowed-token-audiences`.
+
+### What's Modified
+- `custom-connector/README.md` and `docs/wiki/phase-1-mailbox-setup.md` (Step 5.0, Step 5.4): prerequisite sections updated to run `enable-backend-auth.ps1` (which now performs the full scope/token-version/audience setup) instead of the previous, incomplete `az ad app update --identifier-uris` command alone.
+
+### Breaking Changes
+- None. Existing deployments where `enable-backend-auth.ps1` already ran under v0.4.19 need to re-run it once (safe/idempotent) to pick up the new scope/audience configuration before delegated auth (custom connector or manual token testing) will work.
+
+---
+
 ## [0.4.20] - 2026-09-05
 
 ### What's New
