@@ -50,6 +50,7 @@ This project provides:
 | Phase 1: README & Wiki Documentation Fixes | ✅ Complete | v0.4.29 |
 | Phase 2: Dataverse Classification Tables (Rule + Audit) | ✅ Complete | v0.5.0 |
 | Phase 2: Copilot Studio Prompt Tool Examples & Smoke Test | ✅ Complete | v0.5.1 |
+| Phase 2: Public-Repo Security Hardening | ✅ Complete | v0.5.2 |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
 ## Quick Start (Phase 1: v0.4.23)
@@ -395,6 +396,11 @@ All code samples include copyright headers. See individual files for details.
 - ✨ Added a step-by-step Smoke Test (Section 7.1) covering the full path: deploy tables -> idempotency re-run -> seed/re-seed data -> build both Prompt tools -> test classification (match and no-match cases) -> test HTML draft generation (including a non-English language check) -> wire into `CreateDraft` -> verify an audit row is written.
 - 🔧 Renumbered `docs/wiki/phase-2-classification-table.md` sections to fit the new Prompt Tool Examples section (Section 4) and expanded Testing (Section 7); added related Troubleshooting entries.
 
+### v0.5.2: Phase 2 - Public-Repo Security Hardening
+- 🔧 `docs/shared-mailbox-classification-master-guide.md`: replaced the non-placeholder example domain with the repo's standard `company.com` placeholder (15 occurrences) so no real-looking domain remains before the repository is made public.
+- 🔧 `.env.example`, `custom-connector/README.md`, `docs/wiki/phase-1-mailbox-setup.md`: replaced the literal deployed App Service name/hostname with a generic `your-app-name`/`your-app-name.azurewebsites.net` placeholder, consistent with the rest of the repo's example conventions.
+- 🔍 Audited the full repository for secrets, credentials, real GUIDs/tenant IDs, and real email addresses before going public - no client secrets, passwords, private keys, or other sensitive data found; all remaining GUIDs are either the well-known public Microsoft Graph API App ID constant or non-secret example/scope identifiers.
+
 ---
 
 ## 📋 ROADMAP
@@ -442,4 +448,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.5.1 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.5.2 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)

@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.2] - 2026-09-05
+
+### What's Modified
+- `docs/shared-mailbox-classification-master-guide.md`: replaced the non-placeholder example domain with the repo's standard `company.com` placeholder (15 occurrences).
+- `.env.example`, `custom-connector/README.md`, `docs/wiki/phase-1-mailbox-setup.md`: replaced the literal deployed App Service name/hostname with a generic `your-app-name`/`your-app-name.azurewebsites.net` placeholder.
+
+### What's Fixed
+- Public-repo readiness: full audit for secrets, credentials, real GUIDs/tenant IDs, and real email addresses - no client secrets, passwords, private keys, or sensitive data found beyond the two items above, which are now sanitized.
+
+### Breaking Changes
+- None.
+
+---
+
 ## [0.5.1] - 2026-09-05
 
 ### What's New
