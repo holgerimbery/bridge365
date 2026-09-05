@@ -131,6 +131,12 @@ if (-not $SkipDelegatedScopeSetup) {
     Enable-DelegatedApiScope -ClientId $ClientId
 }
 
+# Both audiences are allowlisted: "api://<clientId>" for tokens obtained by a
+# *different* client requesting our API as the resource (az CLI, manual
+# testing), and the bare "<clientId>" for the Power Platform custom connector,
+# which requests a token where our own app is both the OAuth client AND the
+# resource - Azure AD requires the bare GUID (not the App ID URI) for that
+# self-referencing case (AADSTS90009 otherwise).
 az webapp auth update `
     --resource-group $ResourceGroup `
     --name $AppServiceName `
@@ -138,7 +144,7 @@ az webapp auth update `
     --action LoginWithAzureActiveDirectory `
     --aad-client-id $ClientId `
     --aad-token-issuer-url "https://sts.windows.net/$TenantId/" `
-    --aad-allowed-token-audiences "api://$ClientId"
+    --aad-allowed-token-audiences "api://$ClientId" "$ClientId"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed to enable Entra authentication for '$AppServiceName'. See az CLI output above for details."

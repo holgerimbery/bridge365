@@ -100,7 +100,13 @@ Then configure the connector:
 3. **Tenant ID:** Your Azure tenant ID
 4. **Client ID:** Your app registration Client ID
 5. **Client secret:** Stored in Azure Key Vault (reference: `@Microsoft.KeyVault(SecretUri=...)`)
-6. **Resource URL:** `api://<app-client-id>` (must match the Application ID URI set above)
+6. **Resource URL:** `<app-client-id>` (the bare Client ID GUID - **not**
+   `api://<app-client-id>`. Using the App ID URI here fails with
+   `AADSTS90009: Application ... is requesting a token for itself. This
+   scenario is supported only if resource is specified using the GUID based
+   App Identifier`, since the connector's own registered app is also the
+   token's audience - a self-referencing token request, which Azure AD only
+   allows via the bare GUID, not the App ID URI string.)
 
 Each allowlisted user is prompted to sign in with their own Entra ID account
 the first time they use the connector.

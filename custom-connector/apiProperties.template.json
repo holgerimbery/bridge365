@@ -9,7 +9,7 @@
           "scopes": [],
           "redirectMode": "GlobalPerConnector",
           "properties": {
-            "AzureActiveDirectoryResourceId": "api://__CLIENT_ID__",
+            "AzureActiveDirectoryResourceId": "__CLIENT_ID__",
             "IsFirstParty": "False"
           },
           "customParameters": {
@@ -20,7 +20,7 @@
               "value": "https://login.microsoftonline.com"
             },
             "resourceUri": {
-              "value": "api://__CLIENT_ID__"
+              "value": "__CLIENT_ID__"
             }
           }
         }
