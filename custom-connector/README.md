@@ -42,11 +42,29 @@ Platform custom connector, used by the standard Copilot Studio harness to call t
 
 ## Step 3: Configure Authentication
 
+The backend enforces delegated Easy Auth plus a per-user email allowlist (see
+`docs/wiki/phase-1-mailbox-setup.md`, Step 4.6), so the connector must sign in
+as the calling user (not app-only client-credentials) - this is why
+`openapi.yaml` uses OAuth `flow: accessCode`, not `application`.
+
+**Prerequisite - set an Application ID URI (Resource URL)** on the app
+registration if it does not already have one (safe to re-run):
+
+```powershell
+az ad app update --id "<app-client-id>" --identifier-uris "api://<app-client-id>"
+```
+
+Then configure the connector:
+
 1. Click **Security** tab
 2. **Authentication type:** Azure AD
 3. **Tenant ID:** Your Azure tenant ID
 4. **Client ID:** Your app registration Client ID
 5. **Client secret:** Stored in Azure Key Vault (reference: `@Microsoft.KeyVault(SecretUri=...)`)
+6. **Resource URL:** `api://<app-client-id>` (must match the Application ID URI set above)
+
+Each allowlisted user is prompted to sign in with their own Entra ID account
+the first time they use the connector.
 
 ## Step 4: Test the Custom Connector
 

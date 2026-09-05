@@ -38,10 +38,11 @@ This project provides:
 | Phase 1: Graph API Error Handling Fix | ✅ Complete | v0.4.16 |
 | Phase 1: SendDraftMessage JSON Body Fix | ✅ Complete | v0.4.17 |
 | Phase 1: Wiki Consent-Verification and Real Success-Path Testing | ✅ Complete | v0.4.18 |
+| Phase 1: Custom Connector Delegated Auth Fix | ✅ Complete | v0.4.19 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
-## Quick Start (Phase 1: v0.4.18)
+## Quick Start (Phase 1: v0.4.19)
 
 ### Prerequisites
 
@@ -327,6 +328,11 @@ All code samples include copyright headers. See individual files for details.
 - 🔧 Added Step 4.5.1, "Validate the Real Send/Draft Success Path" - walks through sending a real message to the shared mailbox, capturing its real `messageId`, and using it to exercise CreateDraft/UpdateDraft/SendDraftMessage against real Graph data, since Step 4.5's smoke test intentionally only uses fake IDs and reports `400`/`404`.
 - 🔧 Added two troubleshooting table rows: `403` despite portal-reported consent, and opaque `500` from a Graph POST/PATCH call missing a JSON body.
 
+### v0.4.19: Custom Connector Delegated Auth Fix
+- 🐛 Fixed `custom-connector/openapi.yaml`: the `azure_ad` security definition used OAuth `flow: application` (client-credentials, app-only), incompatible with the delegated Easy Auth + per-user email allowlist from Step 4.6 hardening - with no signed-in user, the backend's allowlist check could never match, so every connector call would have been rejected with `403`.
+- 🔧 Switched `custom-connector/openapi.yaml` to OAuth `flow: accessCode` (Authorization Code) so each of the three allowlisted users signs in individually.
+- 🔧 Documented the required **Resource URL** field and an Application ID URI prerequisite in `docs/wiki/phase-1-mailbox-setup.md` (Step 5.4) and `custom-connector/README.md` (Step 3).
+
 ---
 
 ## 🔄 IN PROGRESS
@@ -396,4 +402,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.4.18 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.4.19 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)

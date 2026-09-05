@@ -2028,11 +2028,31 @@ Response: { status, draftId }
 
 ### Step 5.4: Configure Authentication
 
+Since [Step 4.6](#46-security-hardening-required-before-production-use) enables
+delegated Easy Auth with a per-user email allowlist, the connector must
+authenticate as the **signed-in user** (not app-only client-credentials), so
+their email reaches the backend's `X-MS-CLIENT-PRINCIPAL-NAME` allowlist check.
+This is why `custom-connector/openapi.yaml` uses OAuth `flow: accessCode`
+(Authorization Code), not `application`.
+
+**Prerequisite - set an Application ID URI (Resource URL)** on the app
+registration if it does not already have one (safe to re-run):
+
+```powershell
+az ad app update --id "<app-client-id>" --identifier-uris "api://<app-client-id>"
+```
+
+Then configure the connector:
+
 1. Click **Security** tab
 2. **Authentication type:** Azure AD
 3. **Tenant ID:** Your Azure tenant ID
 4. **Client ID:** Your app registration Client ID
 5. **Client secret:** Stored in Azure Key Vault (reference: `@Microsoft.KeyVault(SecretUri=...)`)
+6. **Resource URL:** `api://<app-client-id>` (must match the Application ID URI set above)
+
+The first time each of the three allowlisted users uses the connector, they
+are prompted to sign in with their own Entra ID account.
 
 ### Step 5.5: Test Custom Connector
 
