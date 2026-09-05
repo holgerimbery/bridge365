@@ -11,6 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.15] - 2026-09-05
+
+### What's New
+- None.
+
+### What's Fixed
+- `docs/wiki/phase-1-mailbox-setup.md` Step 4.4 and the troubleshooting table referenced an "earlier version of this guide" and "v0.4.10+" - the wiki is a how-to guide for readers, not a changelog, and should never reference prior versions of itself or the scripts. Reworded both sections to describe only the current, correct behavior.
+
+### What's Modified
+- `docs/wiki/phase-1-mailbox-setup.md`: two sections reworded to remove version/history references while keeping the same technical guidance.
+
+### Breaking Changes
+- None.
+
+---
+
 ## [0.4.14] - 2026-09-05
 
 ### What's New
