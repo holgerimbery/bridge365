@@ -46,6 +46,7 @@ This project provides:
 | Phase 1: GetMessages Inbox-Only Scope Fix | ✅ Complete | v0.4.25 |
 | Phase 1: CreateDraft Wiki Documentation (Inbox-Only messageId) | ✅ Complete | v0.4.26 |
 | Phase 1: Remove SharedMailboxSkills (Connector-Only) | ✅ Complete | v0.4.27 |
+| Phase 1: Full Connector Operation Testing Guide | ✅ Complete | v0.4.28 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
@@ -363,6 +364,10 @@ All code samples include copyright headers. See individual files for details.
 - 🔧 The custom connector's action set is a strict superset of the removed skill's (it also uniquely supports the `NewMessageReceived` polling trigger), so Copilot Studio agents lose no capability - only the alternate, unauthenticated static-token setup path is gone.
 - 🔧 Purged all `SharedMailboxSkills`/"GitHub Copilot harness" references from forward-looking docs: `docs/implementation-plan.md`, `docs/wiki/phase-1-mailbox-setup.md` (including its architecture mermaid diagram and dedicated setup section), `docs/wiki/index.md`, `docs/wiki/phase-2-classification-table.md`, `docs/shared-mailbox-classification-master-guide.md`, and `.github/scripts/sync-wiki.py`. Historical `CHANGELOG.md`/README entries describing the skill while it existed are left untouched.
 
+### v0.4.28: Full Connector Operation Testing Guide
+- ✨ `docs/wiki/phase-1-mailbox-setup.md` Step 5.5 now walks through testing all seven connector operations (`GetMessages`, `GetMessage`, `ClassifyMessage`, `CreateDraft`, `UpdateDraft`, `SendMessage`, `SendDraftMessage`) via the Power Platform Test tab, with exact webform field values, expected output, and how ids chain between operations.
+- 🔧 Documented the required one-time **New connection** (sign in with an allowlisted user) before any operation can be tested, and flagged that `SendMessage`/`SendDraftMessage` deliver real email.
+
 ---
 
 ## 🔄 IN PROGRESS
@@ -432,4 +437,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.4.27 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.4.28 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)

@@ -2253,12 +2253,26 @@ are prompted to sign in with their own Entra ID account.
 
 ### Step 5.5: Test Custom Connector
 
-1. Click **Test** (top-right)
-2. Choose **GetMessages** operation
-3. Enter:
+The **Test** tab in the connector designer (top-right) requires a live
+**connection** first: click **New connection**, sign in with one of the
+allowlisted Entra ID users (see [Step 4.6](#46-security-hardening-required-before-production-use)),
+then come back to **Test** and pick it from the **Connection** dropdown before
+testing any operation below.
+
+If you get **401 Unauthorized** on any operation, verify:
+- The signed-in user's email is in `ALLOWED_EMAIL_ADDRESSES` on the App Service
+- Client ID/secret and Tenant ID on the **Security** tab match the app registration
+- API permissions are granted and admin consent is given
+
+Test the operations in this order - each later operation reuses an id
+returned by an earlier one:
+
+#### 1. GetMessages
+
+1. Choose **GetMessages**, enter:
    - mailboxAddress: `shared@company.com`
    - top: `5`
-4. Click **Test operation**
+2. Click **Test operation**
 
 **Expected output:**
 ```json
@@ -2279,10 +2293,113 @@ are prompted to sign in with their own Entra ID account.
 }
 ```
 
-If you get **401 Unauthorized**, verify:
-- App registration credentials are correct
-- Client ID and secret match
-- API permissions are granted and admin consent is given
+Copy one `id` from the response - call it `<inboxMessageId>` below. It must
+come from a real Inbox message (GetMessages/GetMessage), never from a draft
+or sent item.
+
+#### 2. GetMessage
+
+1. Choose **GetMessage**, enter:
+   - messageId: `<inboxMessageId>`
+   - mailboxAddress: `shared@company.com`
+2. Click **Test operation**
+
+**Expected output:** the same single message object (id, subject, from,
+receivedDateTime, bodyPreview) as one entry from GetMessages.
+
+#### 3. ClassifyMessage
+
+1. Choose **ClassifyMessage**, enter (body):
+   - messageId: `<inboxMessageId>`
+2. Click **Test operation**
+
+**Expected output:**
+```json
+{
+  "classifications": [
+    {"className": "Invoice Question", "confidence": 0.92, "targetEmail": "finance@company.com"}
+  ]
+}
+```
+
+This is a fixed placeholder response until Phase 2 wires up the real
+Dataverse-backed rule classifier - any `messageId` returns the same result,
+so this operation mainly confirms the connector can reach `/api/mailbox/classify`.
+
+#### 4. CreateDraft
+
+> **`messageId` must be `<inboxMessageId>` from Step 1/2** - Graph's
+> `createReply`/`createReplyAll` only work on received Inbox mail. Reusing a
+> draft or sent item's id fails with
+> `400: "The reference item does not support the requested operation."`
+
+1. Choose **CreateDraft**, enter (body):
+   - mailboxAddress: `shared@company.com`
+   - messageId: `<inboxMessageId>`
+   - subject: `Test reply`
+   - body: `This is a test draft reply.`
+   - replyAll: `false`
+2. Click **Test operation**
+
+**Expected output:**
+```json
+{
+  "draftId": "AAMkADhhZGFmND...",
+  "subject": "Test reply",
+  "draftUrl": "https://outlook.office.com/mail/deeplink/..."
+}
+```
+
+Copy `draftId` - call it `<draftId>` below.
+
+#### 5. UpdateDraft
+
+1. Choose **UpdateDraft**, enter:
+   - draftId: `<draftId>`
+   - mailboxAddress: `shared@company.com`
+   - subject: `Test reply (edited)`
+   - body: `Updated draft body before sending.`
+2. Click **Test operation**
+
+**Expected output:** same shape as CreateDraft, with the updated `subject`.
+You only need to supply the fields you want changed - `subject`, `body`,
+and `to` are all optional, but at least one is required.
+
+#### 6. SendMessage
+
+> This sends a **real email** from the shared mailbox. Use a real inbox you
+> control (e.g. the same `shared@company.com` or your own address) as `to`
+> so you don't spam anyone.
+
+1. Choose **SendMessage**, enter:
+   - mailboxAddress: `shared@company.com`
+   - to: `shared@company.com`
+   - subject: `Connector SendMessage test`
+   - body: `This is a test message sent directly (not a reply).`
+2. Click **Test operation**
+
+**Expected output:**
+```json
+{ "status": "sent" }
+```
+
+#### 7. SendDraftMessage
+
+> This also sends **real email** - use a `draftId` you're OK with delivering
+> (e.g. the one from Step 4/5 above).
+
+1. Choose **SendDraftMessage**, enter:
+   - draftId: `<draftId>`
+   - mailboxAddress: `shared@company.com`
+2. Click **Test operation**
+
+**Expected output:**
+```json
+{ "status": "sent", "draftId": "AAMkADhhZGFmND..." }
+```
+
+If a `sendDraftMessage` call 404s, the draft was already sent or deleted -
+create a fresh draft with CreateDraft and retry.
 
 ### Step 5.6: Use as an Autonomous Agent Trigger (Optional)
 
