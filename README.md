@@ -48,7 +48,8 @@ This project provides:
 | Phase 1: Remove SharedMailboxSkills (Connector-Only) | ✅ Complete | v0.4.27 |
 | Phase 1: Full Connector Operation Testing Guide | ✅ Complete | v0.4.28 |
 | Phase 1: README & Wiki Documentation Fixes | ✅ Complete | v0.4.29 |
-| Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
+| Phase 2: Dataverse Classification Tables (Rule + Audit) | ✅ Complete | v0.5.0 |
+| Phase 2: Copilot Studio Prompt Tool Classification | 🔄 In Progress | v0.5.1 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
 ## Quick Start (Phase 1: v0.4.23)
@@ -121,8 +122,8 @@ All scripts include copyright headers.
 - `backend-service/scripts/configure-app-service.ps1` - Set environment variables
 - `backend-service/scripts/test-backend.ps1` - Test backend endpoints (health, messages, classify, drafts, poll)
 - `backend-service/scripts/enable-backend-auth.ps1`, `configure-allowlist.ps1`, `secure-client-secret.ps1`, `restrict-network-access.ps1`, `review-backend-logs.ps1` - Security hardening
-- `docs/wiki/scripts/setup-classification-table.ps1` - Create Dataverse table
-- `docs/wiki/scripts/create-sample-classifications.ps1` - Load sample data
+- `dataverse/scripts/deploy-dataverse-tables.ps1` - Create/update the Phase 2 Dataverse tables from `dataverse/schemas/*.schema.json`
+- `dataverse/scripts/seed-sample-classifications.ps1` - Load sample classification rules
 
 ## Project Structure
 
@@ -138,7 +139,12 @@ bridge365/
 │   └── scripts/                        # Deployment & security-hardening scripts
 ├── custom-connector/                   # Power Platform custom connector
 │   ├── README.md                       # Setup guide, incl. autonomous agent trigger
-│   └── openapi.yaml                    # Connector OpenAPI definition (actions + polling trigger)
+│   ├── openapi.template.yaml           # Committed connector OpenAPI template (actions + polling trigger)
+│   └── openapi.yaml                    # Generated, gitignored (real backend host)
+├── dataverse/                          # Phase 2 Dataverse classification tables
+│   ├── README.md                       # Setup guide
+│   ├── schemas/                        # Table column templates (JSON)
+│   └── scripts/                        # deploy-dataverse-tables.ps1, seed-sample-classifications.ps1
 └── docs/
     ├── implementation-plan.md          # Full roadmap and phases
     ├── shared-mailbox-classification-master-guide.md  # Reference guide
@@ -146,7 +152,7 @@ bridge365/
         ├── index.md                    # Wiki home
         ├── phase-1-mailbox-setup.md    # Phase 1 (complete with testing)
         ├── phase-2-classification-table.md  # Phase 2 (in progress)
-        └── scripts/                    # Shared app-registration & Phase 2 scripts
+        └── scripts/                    # Shared app-registration scripts
 ```
 
 ## Support & Contribution
@@ -373,27 +379,23 @@ All code samples include copyright headers. See individual files for details.
 - 🐛 `custom-connector/README.md`: restored the missing `# Custom Connector Setup` title, which had been overwritten by a stray duplicate of the Step 5 agent-instructions quote since v0.4.1.
 - 🐛 `README.md`: removed the stale "Set Up Executable Skills (Step 6)" Quick Start bullet, renumbered "Run Integration Tests" to Step 6, and corrected the Phase 1 doc link text to match the wiki's actual title.
 
+### v0.5.0: Phase 2 - Dataverse Classification Tables
+- ✨ New `dataverse/` folder: `schemas/classification-rule.schema.json` and `schemas/classification-audit.schema.json` define the two Phase 2 tables as reusable JSON templates (columns, types, required flags, and a lookup relationship from Audit to Rule).
+- ✨ New `dataverse/scripts/deploy-dataverse-tables.ps1`: idempotent Dataverse Web API deployment - creates both tables, their columns, and the lookup relationship between them from the JSON templates, skipping anything that already exists. No manual maker-portal steps required.
+- ✨ New `dataverse/scripts/seed-sample-classifications.ps1`: upserts sample classification rules (Invoice Question, Technical Support, Contract Inquiry) via the Web API, matched/updated by `className` to stay idempotent.
+- ✨ New `dataverse/README.md` documents the prerequisite (Azure AD app registration added as a Dataverse Application User with a Customization-capable role) and usage.
+- 🔧 Rewrote `docs/wiki/phase-2-classification-table.md` to describe the finalized table schemas, reference the new templates/scripts, and document the classification approach: a Copilot Studio Prompt tool (not a separate backend classifier), with a documented future option to swap in a Foundry-hosted model (e.g. BART-MNLI).
+- 🔧 Removed the dead "GitHub Copilot Skill" section and the old Python rule-based classifier sketch from the Phase 2 wiki page (superseded by the Prompt tool approach and the connector-only architecture from v0.4.27).
+- 🔧 Added `DATAVERSE_ENVIRONMENT_URL`/`DATAVERSE_PUBLISHER_PREFIX` to `.env.example`; updated `README.md`/`docs/implementation-plan.md`/`docs/wiki/index.md` cross-references from the old stub scripts (`docs/wiki/scripts/setup-classification-table.ps1`, `create-sample-classifications.ps1`, now removed) to the new `dataverse/scripts/` versions.
+
 ---
 
 ## 🔄 IN PROGRESS
 
-### v0.5.0 (planned): Phase 2 - Classification via Dataverse Table
-- 🔄 Dataverse classification table schema
-  - 🔄 Column definitions (className, classExamples, classTarget, etc.)
-  - 🔄 Sample classification data (Invoice, Support, Contract, etc.)
-- 🔄 Rule-based classifier implementation
-  - 🔄 Keyword matching logic
-  - 🔄 Confidence scoring
-  - 🔄 Target routing configuration
-- 🔄 Classification audit table
-  - 🔄 Decision tracking
-  - 🔄 Timestamp and provider logging
-- 🔄 Copilot Studio skill actions
-  - 🔄 ClassifyMessage action with Dataverse lookup
-  - 🔄 Result aggregation and confidence calculation
-- 🔄 Backend endpoint integration
-  - 🔄 Dataverse SDK authentication
-  - 🔄 Classification query and caching
+### v0.5.1 (planned): Phase 2 - Copilot Studio Prompt Tool Classification
+- 🔄 Copilot Studio Prompt tool (Generative AI action) classifies messages against active Classification Rule rows, with or without a wrapping Flow
+- 🔄 Write classification results to the Classification Audit table via the Dataverse connector
+- 📋 Future: swap the Prompt tool's model for a Foundry-hosted model (e.g. BART-MNLI zero-shot classification)
 
 ---
 
@@ -442,4 +444,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.4.29 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.5.0 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)

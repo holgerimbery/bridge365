@@ -26,8 +26,9 @@ This wiki documents the setup, implementation, and operation of the email classi
   its deployment and security-hardening PowerShell scripts (`backend-service/scripts/`)
 - [`custom-connector/`](../../custom-connector) - OpenAPI definition and setup guide for the
   Copilot Studio custom connector
+- [`dataverse/`](../../dataverse) - Phase 2 classification table schemas and deployment scripts
 - `docs/wiki/scripts/` - Shared app-registration scripts (`test-app-registration.ps1`,
-  `grant-mailbox-permissions.ps1`) and Phase 2 Dataverse scripts
+  `grant-mailbox-permissions.ps1`)
 
 ## Scripts
 
@@ -36,7 +37,7 @@ All PowerShell scripts include copyright headers.
 - `docs/wiki/scripts/test-app-registration.ps1`, `docs/wiki/scripts/grant-mailbox-permissions.ps1` - Phase 1 app registration and mailbox access policy 
 - `backend-service/scripts/create-app-service.ps1`, `configure-app-service.ps1`, `test-backend.ps1` - Phase 1 backend service deployment
 - `backend-service/scripts/enable-backend-auth.ps1`, `configure-allowlist.ps1`, `secure-client-secret.ps1`, `restrict-network-access.ps1`, `review-backend-logs.ps1` - Phase 1 security hardening
-- `docs/wiki/scripts/setup-classification-table.ps1`, `create-sample-classifications.ps1` - Phase 2 classification table setup
+- `dataverse/scripts/deploy-dataverse-tables.ps1`, `seed-sample-classifications.ps1` - Phase 2 classification table setup
 
 ## License & Copyright
 

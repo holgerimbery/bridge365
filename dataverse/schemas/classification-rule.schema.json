@@ -1,0 +1,67 @@
+{
+  "logicalName": "classificationrule",
+  "displayName": "Classification Rule",
+  "displayCollectionName": "Classification Rules",
+  "description": "Routing rules used to classify shared-mailbox messages: a class name, example phrases, and the department/email a matching message should be routed to.",
+  "primaryAttribute": {
+    "logicalName": "classname",
+    "displayName": "Class Name",
+    "description": "Human-readable classification, e.g. \"Invoice Question\".",
+    "maxLength": 200
+  },
+  "attributes": [
+    {
+      "logicalName": "classexamples",
+      "displayName": "Class Examples",
+      "description": "Sample phrases/keywords used as classification context (one per line).",
+      "type": "Memo",
+      "maxLength": 4000,
+      "required": true
+    },
+    {
+      "logicalName": "classtarget",
+      "displayName": "Target Department",
+      "description": "Responsible department name, e.g. \"Finance Department\".",
+      "type": "String",
+      "maxLength": 200,
+      "required": true
+    },
+    {
+      "logicalName": "classtargetemail",
+      "displayName": "Target Email",
+      "description": "Routing email address for the target department.",
+      "type": "String",
+      "format": "Email",
+      "maxLength": 200,
+      "required": true
+    },
+    {
+      "logicalName": "isactive",
+      "displayName": "Active",
+      "description": "Enable/disable this rule without deleting it.",
+      "type": "Boolean",
+      "required": true,
+      "trueLabel": "Active",
+      "falseLabel": "Inactive",
+      "defaultValue": true
+    },
+    {
+      "logicalName": "priority",
+      "displayName": "Priority",
+      "description": "Tie-breaker when multiple rules match; higher wins.",
+      "type": "Integer",
+      "required": false,
+      "minValue": 0,
+      "maxValue": 1000,
+      "defaultValue": 0
+    },
+    {
+      "logicalName": "modellabel",
+      "displayName": "Model Label",
+      "description": "Stable machine-readable label, e.g. \"invoice_question\" (for future ML/Foundry model mapping).",
+      "type": "String",
+      "maxLength": 100,
+      "required": false
+    }
+  ]
+}

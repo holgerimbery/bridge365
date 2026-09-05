@@ -1,0 +1,66 @@
+{
+  "logicalName": "classificationaudit",
+  "displayName": "Classification Audit",
+  "displayCollectionName": "Classification Audits",
+  "description": "Audit log of every classification result produced for a shared-mailbox message, for compliance and troubleshooting.",
+  "primaryAttribute": {
+    "logicalName": "messageid",
+    "displayName": "Message Id",
+    "description": "Microsoft Graph message id that was classified.",
+    "maxLength": 300
+  },
+  "attributes": [
+    {
+      "logicalName": "classificationresult",
+      "displayName": "Classification Result (JSON)",
+      "description": "Full classification response (array of classifications, scores, reasons) as JSON.",
+      "type": "Memo",
+      "maxLength": 100000,
+      "required": true
+    },
+    {
+      "logicalName": "provider",
+      "displayName": "Provider",
+      "description": "Classifier that produced this result, e.g. \"copilot-prompt\", \"rules\", \"bart-foundry\".",
+      "type": "String",
+      "maxLength": 100,
+      "required": true
+    },
+    {
+      "logicalName": "modelversion",
+      "displayName": "Model Version",
+      "description": "Classifier/model version identifier.",
+      "type": "String",
+      "maxLength": 50,
+      "required": false
+    },
+    {
+      "logicalName": "confidence",
+      "displayName": "Confidence",
+      "description": "Top classification confidence score (0.0-1.0).",
+      "type": "Decimal",
+      "required": false,
+      "minValue": 0,
+      "maxValue": 1,
+      "precision": 4
+    },
+    {
+      "logicalName": "needshumanreview",
+      "displayName": "Needs Human Review",
+      "description": "True when the classification was ambiguous/low-confidence and a human should confirm routing.",
+      "type": "Boolean",
+      "required": false,
+      "trueLabel": "Yes",
+      "falseLabel": "No",
+      "defaultValue": false
+    }
+  ],
+  "lookups": [
+    {
+      "logicalName": "classificationruleid",
+      "displayName": "Matched Rule",
+      "description": "Optional link to the Classification Rule that matched (when applicable).",
+      "referencedEntityLogicalName": "classificationrule"
+    }
+  ]
+}
