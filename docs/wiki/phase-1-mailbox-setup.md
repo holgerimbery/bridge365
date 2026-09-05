@@ -92,6 +92,37 @@ You **MUST** create an app registration because your backend service needs authe
 6. Click **Add permissions**
 7. Click **Grant admin consent for [Your Tenant]** (and confirm)
 
+#### Verify Admin Consent Was Actually Granted
+
+Clicking **Grant admin consent** in the portal does not always guarantee the consent was recorded - and Graph calls will fail with `403 Forbidden` if it was not, even though the portal lists the permissions as `Granted`. The portal status column is not a reliable substitute for actually checking. Do not trust `az ad app permission list-grants` either - it only shows delegated (OAuth2) grants and will misleadingly return `[]` for application permissions regardless of consent status.
+
+The authoritative check is the service principal's actual `appRoleAssignments`:
+
+```powershell
+# (c) 2026 Holger Imbery (contact@holgerimbery.blog)
+# Licensed under the project LICENSE file.
+# Confirms admin consent for application permissions was actually recorded,
+# not just requested. az ad app permission list-grants only shows delegated
+# grants and returns [] for application permissions even when unconsented -
+# this is the only reliable check.
+
+$AppId = "your-client-id"
+$SpObjectId = az ad sp show --id $AppId --query "id" -o tsv
+az rest --method GET --uri "https://graph.microsoft.com/v1.0/servicePrincipals/$SpObjectId/appRoleAssignments"
+```
+
+**Expected output:** one entry per application permission (`Mail.Read`, `Mail.Send`, `Mail.ReadWrite`), each with `"principalType": "ServicePrincipal"` and `"resourceDisplayName": "Microsoft Graph"`. An empty `"value": []` means consent was never actually applied, even if the portal shows a green checkmark.
+
+If `appRoleAssignments` is empty, force it via CLI (find the `appRoleId` for the missing permission in the [Microsoft Graph permissions reference](https://learn.microsoft.com/graph/permissions-reference)):
+
+```powershell
+az ad app permission add --id $AppId --api 00000003-0000-0000-c000-000000000000 --api-permissions <appRoleId>=Role
+az ad app permission grant --id $AppId --api 00000003-0000-0000-c000-000000000000
+az ad app permission admin-consent --id $AppId
+```
+
+After granting consent this way (or via the portal), **restart the App Service** once the backend is deployed (Step 4.4). Access tokens bake in granted roles at issuance time - a running backend process may hold a cached token issued before consent was granted, and will keep returning `403` until it acquires a fresh token.
+
 ### Step 3.3: Create Client Credentials
 
 1. Click **Certificates & secrets** (left sidebar)
@@ -1060,6 +1091,47 @@ Backend: https://shared-mailbox-classifier.azurewebsites.net
 
 Testing complete!
 ```
+
+---
+
+### Step 4.5.1: Validate the Real Send/Draft Success Path
+
+Step 4.5 above intentionally uses fake IDs (`test-message-id`, `test-draft-id`) so it can be run safely and repeatedly without touching real mail - expect `400`/`404` warnings there, not successes. To confirm CreateDraft, UpdateDraft, and SendDraftMessage actually work end-to-end, send a real message to the shared mailbox and use its real `messageId`:
+
+**1. Send a test message from the shared mailbox to itself:**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "$BackendUrl/api/mailbox/messages/send" `
+  -ContentType "application/json" `
+  -Body (@{
+    mailboxAddress = $MailboxAddress
+    to             = $MailboxAddress
+    subject        = "Test message for draft flow"
+    body           = "This is a test message sent to self."
+  } | ConvertTo-Json)
+```
+
+**2. Retrieve its real `messageId`** (may take a few seconds to land - rerun if not yet present):
+
+```powershell
+$messages = Invoke-RestMethod -Method Get -Uri "$BackendUrl/api/mailbox/messages?mailboxAddress=$MailboxAddress"
+$messages.value[0].id
+```
+
+**3. Create a real reply draft using that `messageId`:**
+
+```powershell
+Invoke-RestMethod -Method Post -Uri "$BackendUrl/api/mailbox/drafts" `
+  -ContentType "application/json" `
+  -Body (@{
+    mailboxAddress = $MailboxAddress
+    messageId      = "<PASTE-REAL-MESSAGE-ID-HERE>"
+    subject        = "RE: Test message for draft flow"
+    body           = "This is a real draft reply."
+  } | ConvertTo-Json)
+```
+
+**Expected output:** `200 OK` with a real `draftId` and `draftUrl` - not the `400`/`404` seen in Step 4.5's fake-ID tests. Use the returned `draftId` to exercise UpdateDraft (`PATCH /api/mailbox/drafts/<draftId>`) and SendDraftMessage (`POST /api/mailbox/drafts/<draftId>/send`) against a real draft to confirm the complete flow.
 
 ---
 
@@ -2206,6 +2278,8 @@ Create a Copilot Studio topic that demonstrates both harnesses:
 | **Deployment script errors: "Azure CLI is logged into tenant '...', but TENANT_ID specifies '...'"** | Your local `az login` session is pointed at a different tenant than `.env`'s `TENANT_ID`. Run `az login --tenant <TENANT_ID>` (add `az account set --subscription <id>` too if you have access to multiple subscriptions), then retry the script |
 | **Deployment script errors: "Failed to switch to subscription '...'"** | `.env`'s `AZURE_SUBSCRIPTION_ID` doesn't match a subscription your logged-in account can access. Run `az account list -o table` to see available subscriptions and fix `AZURE_SUBSCRIPTION_ID` in `.env` |
 | **Script prints "✓ ... created" but the resource doesn't exist in Azure** | Check the `az` CLI output printed above that line for the actual error (e.g. a quota error) - the script validates `$LASTEXITCODE` and should also print an explicit `Write-Error`; re-run after resolving the underlying Azure CLI error |
+| **Graph calls return 403 despite portal showing permissions as `Granted`** | Admin consent may not have actually been recorded. Check `appRoleAssignments` directly (see Step 3.2's Verify Admin Consent sub-step) - do not rely on `az ad app permission list-grants`, which returns `[]` for application permissions regardless of consent status. After granting consent via CLI or portal, restart the App Service so cached tokens are refreshed |
+| **500 Internal Server Error from a POST endpoint with no useful error detail** | `msgraph-core` raises an internal error if a POST/PATCH call to Graph omits a JSON body, even for bodyless actions. Confirm every Graph POST/PATCH in `app.py` passes an explicit `json=` argument (`json={}` if there is no payload) |
 
 ---
 

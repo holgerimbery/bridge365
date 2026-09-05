@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.18] - 2026-09-05
+
+### What's New
+- `docs/wiki/phase-1-mailbox-setup.md`: added a "Verify Admin Consent Was Actually Granted" sub-step under Step 3.2, showing how to check a service principal's `appRoleAssignments` directly - the only reliable way to confirm Microsoft Graph application-permission consent actually took effect, since the Entra portal's "Granted" status and `az ad app permission list-grants` (which only reports delegated grants) can both be misleading.
+- `docs/wiki/phase-1-mailbox-setup.md`: added Step 4.5.1, "Validate the Real Send/Draft Success Path" - Step 4.5's smoke test intentionally uses fake IDs and only ever produces `400`/`404` warnings; the new section walks through sending a real message to the shared mailbox, capturing its real `messageId`, and using it to exercise CreateDraft/UpdateDraft/SendDraftMessage against real Graph data.
+- `docs/wiki/phase-1-mailbox-setup.md`: added two troubleshooting table rows for `403 Forbidden` despite portal-reported consent, and opaque `500` responses from Graph POST/PATCH calls missing a JSON body.
+
+### What's Fixed
+- None.
+
+### What's Modified
+- None.
+
+### Breaking Changes
+- None. Documentation-only change; no code, API, or script behavior is affected.
+
+---
+
 ## [0.4.17] - 2026-09-05
 
 ### What's Fixed
