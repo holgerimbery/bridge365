@@ -6,3 +6,7 @@
 # OS files
 .DS_Store
 Thumbs.db
+
+# Generated custom connector properties (rendered from apiProperties.template.json
+# with real tenant/client IDs by custom-connector/scripts/deploy-connector.ps1)
+custom-connector/apiProperties.json

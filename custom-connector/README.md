@@ -14,6 +14,36 @@ Platform custom connector, used by the standard Copilot Studio harness to call t
   seven actions (`GetMessages`, `GetMessage`, `ClassifyMessage`, `CreateDraft`, `UpdateDraft`,
   `SendMessage`, `SendDraftMessage`) and one polling trigger (`NewMessageReceived`, see Step 5). Import
   this file directly when creating the connector.
+- `apiProperties.template.json` - connector metadata/auth template used by the
+  command-line deployment path below (`scripts/deploy-connector.ps1`).
+- `scripts/deploy-connector.ps1` - creates or updates the connector from the
+  command line via the `paconn` CLI, instead of the portal wizard in Steps 1-4.
+
+## Command-Line Alternative: Deploy via paconn CLI
+
+Steps 1-4 below describe the Power Platform portal wizard. You can instead
+create or update the connector entirely from the command line with the
+[`paconn` CLI](https://learn.microsoft.com/connectors/custom-connectors/paconn-cli),
+using this folder's `openapi.yaml` and `apiProperties.template.json` directly -
+no manual portal steps needed.
+
+```powershell
+pip install paconn
+paconn login   # one-time interactive device-code sign-in
+
+.\custom-connector\scripts\deploy-connector.ps1 `
+    -EnvironmentId "<power-platform-environment-guid>" `
+    -TenantId "<tenant-id>" `
+    -ClientId "<app-client-id>" `
+    -ClientSecret "<app-client-secret>"
+```
+
+The first run creates a new connector and prints its connector ID - save it
+(e.g. into `.env` as `CUSTOM_CONNECTOR_ID`) so subsequent runs update the same
+connector (pass `-ConnectorId`) instead of creating duplicates. All parameters
+can also be supplied via `.env` (see `.env.example`). The script requires an
+Application ID URI to already be set on the app registration - see the
+prerequisite command in Step 3 below.
 
 ## Step 1: Navigate to Power Platform Connectors
 
@@ -42,11 +72,29 @@ Platform custom connector, used by the standard Copilot Studio harness to call t
 
 ## Step 3: Configure Authentication
 
+The backend enforces delegated Easy Auth plus a per-user email allowlist (see
+`docs/wiki/phase-1-mailbox-setup.md`, Step 4.6), so the connector must sign in
+as the calling user (not app-only client-credentials) - this is why
+`openapi.yaml` uses OAuth `flow: accessCode`, not `application`.
+
+**Prerequisite - set an Application ID URI (Resource URL)** on the app
+registration if it does not already have one (safe to re-run):
+
+```powershell
+az ad app update --id "<app-client-id>" --identifier-uris "api://<app-client-id>"
+```
+
+Then configure the connector:
+
 1. Click **Security** tab
 2. **Authentication type:** Azure AD
 3. **Tenant ID:** Your Azure tenant ID
 4. **Client ID:** Your app registration Client ID
 5. **Client secret:** Stored in Azure Key Vault (reference: `@Microsoft.KeyVault(SecretUri=...)`)
+6. **Resource URL:** `api://<app-client-id>` (must match the Application ID URI set above)
+
+Each allowlisted user is prompted to sign in with their own Entra ID account
+the first time they use the connector.
 
 ## Step 4: Test the Custom Connector
 

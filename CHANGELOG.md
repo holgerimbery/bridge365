@@ -11,6 +11,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.20] - 2026-09-05
+
+### What's New
+- `custom-connector/scripts/deploy-connector.ps1`: new script to create or update the `SharedMailboxConnector` custom connector directly from the command line via the `paconn` CLI, using `custom-connector/openapi.yaml` and the new `custom-connector/apiProperties.template.json` - no Power Platform portal wizard required.
+- `custom-connector/apiProperties.template.json`: new connector metadata/auth template (Azure AD, `identityProvider: aad`, Application ID URI-based resource) consumed by `deploy-connector.ps1`.
+- `docs/wiki/phase-1-mailbox-setup.md` (new Step 5.0) and `custom-connector/README.md`: documented the command-line deployment path as an alternative to the manual portal steps.
+- `.env.example`: added `POWER_PLATFORM_ENVIRONMENT_ID` and `CUSTOM_CONNECTOR_ID` for the new script.
+
+### What's Fixed
+- None.
+
+### What's Modified
+- `.gitignore`: added `custom-connector/apiProperties.json`, the tenant/client-specific file `deploy-connector.ps1` generates from the template at deploy time - never committed.
+
+### Breaking Changes
+- None. The portal-based setup (Steps 5.1-5.6) is unchanged and remains fully supported; the CLI path is purely additive.
+
+---
+
+## [0.4.19] - 2026-09-05
+
+### What's New
+- `docs/wiki/phase-1-mailbox-setup.md` and `custom-connector/README.md`: added guidance for setting an Application ID URI (Resource URL) on the app registration, required by the custom connector's Azure AD authentication now that it uses a delegated OAuth flow.
+
+### What's Fixed
+- `custom-connector/openapi.yaml`: the `azure_ad` security definition used OAuth `flow: application` (client-credentials, app-only, no signed-in user). This is incompatible with the delegated Easy Auth + per-user email allowlist added in v0.4.x security hardening (Step 4.6): with no signed-in user, the backend's `X-MS-CLIENT-PRINCIPAL-NAME` allowlist check could never match one of the three allowed addresses, so every connector call would have been rejected with `403 Forbidden`. Confirmed via live testing of the production backend, where Easy Auth now correctly requires a signed-in user before the allowlist check even runs.
+
+### What's Modified
+- `custom-connector/openapi.yaml`: switched the `azure_ad` security definition to OAuth `flow: accessCode` (Authorization Code) with an explicit `authorizationUrl` and `user_impersonation` scope, so each of the three allowlisted users signs in individually and their email is available to the backend's allowlist check.
+- `docs/wiki/phase-1-mailbox-setup.md` (Step 5.4) and `custom-connector/README.md` (Step 3): documented the required **Resource URL** field for the connector's Azure AD security configuration (missing from the original instructions), and explained why the connector must use delegated, not app-only, authentication.
+
+### Breaking Changes
+- None. Sending/drafting mail still always uses the shared mailbox address supplied in `mailboxAddress` via the backend's own app-only Graph client - this change only affects who is authorized to call the backend through the custom connector, not which mailbox mail is sent from.
+
+---
+
 ## [0.4.18] - 2026-09-05
 
 ### What's New

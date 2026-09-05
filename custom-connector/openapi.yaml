@@ -19,9 +19,17 @@ produces:
 securityDefinitions:
   azure_ad:
     type: oauth2
-    flow: application
+    # Delegated (Authorization Code) flow: each caller signs in individually with
+    # their own Entra ID account, so the backend Easy Auth + email allowlist
+    # (see docs/wiki/phase-1-mailbox-setup.md Step 4.6) can identify who is
+    # calling via X-MS-CLIENT-PRINCIPAL-NAME. Do NOT use "application"
+    # (client-credentials) here - it has no signed-in user, so it can never
+    # satisfy the per-user email allowlist and every call would get 403.
+    flow: accessCode
+    authorizationUrl: https://login.microsoftonline.com/common/oauth2/v2.0/authorize
     tokenUrl: https://login.microsoftonline.com/common/oauth2/v2.0/token
-    scopes: {}
+    scopes:
+      user_impersonation: Access the shared mailbox backend as the signed-in user
 security:
   - azure_ad: []
 paths:
