@@ -11,6 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.17] - 2026-09-05
+
+### What's Fixed
+- `backend-service/app.py`: `send_draft_message()` (`POST /api/mailbox/drafts/<draft_id>/send`) called `graph_client.post()` without an explicit JSON body. `msgraph-core==0.2.2` raises an internal `TypeError` when no body is supplied to `post()`, which was being caught by the generic exception handler and returned as an opaque `500 Internal Server Error` regardless of whether the draft ID was valid - masking the actual outcome of the send attempt. Confirmed via live testing: this `500` persisted even after the app registration's Microsoft Graph `Mail.Read`/`Mail.ReadWrite`/`Mail.Send` application permissions were correctly consented, isolating it as a client-side bug rather than a permissions issue.
+
+### What's Modified
+- `backend-service/app.py`: `send_draft_message()` now passes `json={}` explicitly, matching the same pattern already used by `create_draft()`'s `createReply`/`createReplyAll` POST call. Graph's actual response status (e.g. `400` for a malformed draft ID, `404` for a real-but-missing one) now surfaces correctly through the existing `GraphError` handling from v0.4.16, instead of a generic `500`.
+
+### Breaking Changes
+- None. Callers already treating a non-2xx `SendDraftMessage` response as a failure are unaffected; only the specific status code returned for an invalid/missing draft ID changes (from an opaque `500` to Graph's actual `400`/`404`).
+
+---
+
 ## [0.4.15] - 2026-09-05
 
 ### What's New
