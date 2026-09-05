@@ -1,14 +1,16 @@
 # (c) 2026 Holger Imbery (contact@holgerimbery.blog)
 # Licensed under the project LICENSE file.
 # Creates or updates the SharedMailboxConnector Power Platform custom connector
-# from openapi.yaml + apiProperties.template.json via the paconn CLI, so the
-# connector can be deployed/updated from the command line instead of the
-# Power Platform portal wizard (see docs/wiki/phase-1-mailbox-setup.md, Section 5).
+# from openapi.template.yaml + apiProperties.template.json via the paconn CLI,
+# so the connector can be deployed/updated from the command line instead of
+# the Power Platform portal wizard (docs/wiki/phase-1-mailbox-setup.md,
+# Section 5). openapi.template.yaml is committed (no real hostname);
+# openapi.yaml (with your real backend host) is generated and gitignored.
 #
 # Requires: Python 3.5+ and `pip install paconn pyyaml`, and a one-time
 # interactive `paconn login` (device-code flow; no service-principal support
 # today). pyyaml is needed because paconn's --api-def only accepts JSON - this
-# script converts openapi.yaml to a generated (gitignored) JSON file for it.
+# script converts the generated openapi.yaml to a gitignored JSON file for it.
 #
 # First run (no -ConnectorId): creates a new connector and prints its ID -
 # save that ID (e.g. into .env as CUSTOM_CONNECTOR_ID) to update it later.
@@ -22,7 +24,8 @@ param(
     [string]$ConnectorId,
     [string]$ApiDefinition,
     [string]$ApiPropertiesTemplate,
-    [string]$IconPath
+    [string]$IconPath,
+    [string]$BackendHost
 )
 
 # Load from .env if parameters not provided
@@ -49,7 +52,20 @@ if (Test-Path $env_file) {
     if (-not $ConnectorId) { $ConnectorId = $env_vars['CUSTOM_CONNECTOR_ID'] }
 }
 
-if (-not $ApiDefinition) { $ApiDefinition = Join-Path $RepoRoot "custom-connector\openapi.yaml" }
+if (-not $ApiDefinition) {
+    $ApiDefinition = Join-Path $RepoRoot "custom-connector\openapi.yaml"
+    # openapi.yaml is gitignored (contains your real backend hostname) and
+    # generated from the committed openapi.template.yaml - regenerate it here
+    # so the deploy always reflects your current .env / -BackendHost value.
+    $GenerateScript = Join-Path $RepoRoot "custom-connector\scripts\generate-openapi.ps1"
+    $generateArgs = @()
+    if ($BackendHost) { $generateArgs += @('-BackendHost', $BackendHost) }
+    & $GenerateScript @generateArgs
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Failed to generate openapi.yaml. Provide -BackendHost, or set BACKEND_URL/APP_SERVICE_NAME in .env."
+        exit 1
+    }
+}
 if (-not $ApiPropertiesTemplate) { $ApiPropertiesTemplate = Join-Path $RepoRoot "custom-connector\apiProperties.template.json" }
 
 # Validate

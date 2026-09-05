@@ -10,22 +10,33 @@ Platform custom connector, used by the standard Copilot Studio harness to call t
 
 ## Contents
 
-- `openapi.yaml` - OpenAPI (Swagger 2.0) definition of the backend operations:
-  seven actions (`GetMessages`, `GetMessage`, `ClassifyMessage`, `CreateDraft`, `UpdateDraft`,
-  `SendMessage`, `SendDraftMessage`) and one polling trigger (`NewMessageReceived`, see Step 5). Import
-  this file directly when creating the connector.
+- `openapi.template.yaml` - **committed, safe-to-share** OpenAPI (Swagger 2.0)
+  template of the backend operations: seven actions (`GetMessages`, `GetMessage`,
+  `ClassifyMessage`, `CreateDraft`, `UpdateDraft`, `SendMessage`, `SendDraftMessage`)
+  and one polling trigger (`NewMessageReceived`, see Step 5). Its `host:` field is
+  a placeholder (`__BACKEND_HOST__`), not your real backend hostname.
+- `openapi.yaml` - **gitignored, generated** from `openapi.template.yaml` by
+  `scripts/generate-openapi.ps1` (or automatically by `deploy-connector.ps1`),
+  with your real backend hostname substituted in. Import *this* file when
+  creating the connector via the portal wizard (Step 2) - never commit it.
 - `apiProperties.template.json` - connector metadata/auth template used by the
   command-line deployment path below (`scripts/deploy-connector.ps1`).
+- `scripts/generate-openapi.ps1` - generates the real `openapi.yaml` from
+  `openapi.template.yaml` using `BACKEND_URL`/`APP_SERVICE_NAME` from `.env`
+  (or `-BackendHost`). Run this before the portal-wizard Step 2 below.
 - `scripts/deploy-connector.ps1` - creates or updates the connector from the
-  command line via the `paconn` CLI, instead of the portal wizard in Steps 1-4.
+  command line via the `paconn` CLI, instead of the portal wizard in Steps 1-4
+  (calls `generate-openapi.ps1` automatically).
 
 ## Command-Line Alternative: Deploy via paconn CLI
 
 Steps 1-4 below describe the Power Platform portal wizard. You can instead
 create or update the connector entirely from the command line with the
 [`paconn` CLI](https://learn.microsoft.com/connectors/custom-connectors/paconn-cli),
-using this folder's `openapi.yaml` and `apiProperties.template.json` directly -
-no manual portal steps needed.
+using this folder's `openapi.template.yaml` and `apiProperties.template.json` -
+no manual portal steps needed. `deploy-connector.ps1` generates the real,
+gitignored `openapi.yaml` for you from `BACKEND_URL`/`APP_SERVICE_NAME` in
+`.env` (or pass `-BackendHost` explicitly).
 
 ```powershell
 pip install paconn pyyaml
@@ -64,11 +75,16 @@ prerequisite command in Step 3 below.
 
 ## Step 2: Create the Connector
 
-1. Name: `SharedMailboxConnector`
-2. Import `openapi.yaml` from this folder (update the `host` field first if your
-   backend URL differs from `shared-mailbox-classifier.azurewebsites.net`)
-3. Leave all other fields default
-4. Click **Create**
+1. First, generate the real `openapi.yaml` (gitignored) from the committed
+   template - it fills in `host:` with your actual backend hostname:
+   ```powershell
+   .\custom-connector\scripts\generate-openapi.ps1
+   # or explicitly: .\custom-connector\scripts\generate-openapi.ps1 -BackendHost "<your-app>.azurewebsites.net"
+   ```
+2. Name: `SharedMailboxConnector`
+3. Import the generated `custom-connector\openapi.yaml`
+4. Leave all other fields default
+5. Click **Create**
 
 ## Step 3: Configure Authentication
 

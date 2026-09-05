@@ -11,6 +11,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.24] - 2026-09-05
+
+### What's New
+- `custom-connector/openapi.template.yaml` - committed, safe-to-share OpenAPI template with a placeholder `host: __BACKEND_HOST__` instead of a real hostname.
+- `custom-connector/scripts/generate-openapi.ps1` - generates the real, gitignored `custom-connector/openapi.yaml` from the template, substituting `__BACKEND_HOST__` with your actual backend host (from `.env`'s `BACKEND_URL`/`APP_SERVICE_NAME`, or `-BackendHost`).
+
+### What's Fixed
+- **`custom-connector/openapi.yaml` was tracked in git with a real (or stale) backend App Service hostname baked into its `host:` field** - since this repo is going public, no deployment-specific hostname should live in a committed file. It's now generated locally from the template and gitignored.
+
+### What's Modified
+- `custom-connector/scripts/deploy-connector.ps1`: now calls `generate-openapi.ps1` automatically before deploying (new optional `-BackendHost` parameter), so the CLI path always uses your current real hostname without it ever being committed.
+- `custom-connector/README.md`: Contents, Command-Line Alternative, and Step 2 sections updated to describe the template -> generate -> import workflow.
+- `.gitignore`: added `custom-connector/openapi.yaml` (generated); `custom-connector/openapi.template.yaml` remains tracked.
+- `CHANGELOG.md`: genericized a real App Service name mention in the v0.4.23 entry to "the backend App Service".
+- Audited full `git log --all -p` history for tenant ID, client ID, real email domain, environment/subscription GUIDs, and confirmed none were ever committed; `.env` (with secrets) has also never been committed.
+
+### Breaking Changes
+- `custom-connector/openapi.yaml` is no longer tracked in git (`git rm --cached`) and must be generated locally before importing it in the portal wizard or running `deploy-connector.ps1` (the latter now does this automatically). If you previously relied on the committed file, run `.\custom-connector\scripts\generate-openapi.ps1` once to recreate it.
+
+---
+
 ## [0.4.23] - 2026-09-05
 
 ### What's Fixed
@@ -20,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `custom-connector/apiProperties.template.json`: `AzureActiveDirectoryResourceId` and `resourceUri` now use the bare `__CLIENT_ID__` GUID instead of `api://__CLIENT_ID__`.
 - `custom-connector/README.md`: Step 3's manual portal-wizard **Resource URL** field updated to the bare Client ID GUID, with an explanation of the self-referencing-token restriction.
 - `backend-service/scripts/enable-backend-auth.ps1`: `--aad-allowed-token-audiences` now allowlists **both** `api://<clientId>` (for az CLI/manual delegated-token testing, a different client requesting our API as the resource) and the bare `<clientId>` (for the custom connector's self-referencing token request).
-- Applied live: Easy Auth on `as-shared-mailbox-classifier` now accepts both audiences (`az webapp auth update --aad-allowed-token-audiences "api://<clientId>" "<clientId>"`, followed by a restart).
+- Applied live: Easy Auth on the backend App Service now accepts both audiences (`az webapp auth update --aad-allowed-token-audiences "api://<clientId>" "<clientId>"`, followed by a restart).
 
 ### Breaking Changes
 - None. Existing deployments should re-run `enable-backend-auth.ps1` once (safe/idempotent) to pick up the additional allowed audience, and re-run `deploy-connector.ps1` (or manually update the connector's Security tab Resource URL) to pick up the corrected `apiProperties.template.json`.
