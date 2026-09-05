@@ -11,6 +11,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.5] - 2026-09-05
+
+### What's Fixed
+- `dataverse/scripts/deploy-dataverse-tables.ps1`, `dataverse/scripts/seed-sample-classifications.ps1`: `$DataverseUrl` (from `-DataverseUrl` or `DATAVERSE_ENVIRONMENT_URL` in `.env`) is now auto-normalized to include the `https://` scheme when missing (e.g. `orgbf5918f4.crm.dynamics.com` becomes `https://orgbf5918f4.crm.dynamics.com`), with a warning so the user is aware. Previously, a scheme-less URL produced an invalid OAuth2 `scope` (`"$DataverseUrl/.default"`), which Entra ID rejected with `AADSTS1002012`.
+- `dataverse/scripts/deploy-dataverse-tables.ps1`: the token-acquisition `catch` block now also prints `$_.ErrorDetails.Message` (the AADSTS error code/description from Entra ID's JSON error body) alongside the generic exception message, instead of only showing a generic "400 (Bad Request)".
+- `dataverse/scripts/seed-sample-classifications.ps1`: the token-acquisition call had no `try`/`catch` at all; it now matches `deploy-dataverse-tables.ps1`'s pattern, catching failures and surfacing `$_.ErrorDetails.Message` before exiting.
+
+### Breaking Changes
+- None.
+
+---
+
 ## [0.5.4] - 2026-09-05
 
 ### What's Modified

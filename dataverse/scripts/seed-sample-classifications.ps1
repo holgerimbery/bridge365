@@ -56,6 +56,10 @@ if (-not $DataverseUrl -or -not $TenantId -or -not $ClientId -or -not $ClientSec
     exit 1
 }
 $DataverseUrl = $DataverseUrl.TrimEnd('/')
+if ($DataverseUrl -notmatch '^https?://') {
+    $DataverseUrl = "https://$DataverseUrl"
+    Write-Host "DataverseUrl had no scheme - assuming https:// (now: $DataverseUrl)" -ForegroundColor Yellow
+}
 
 if (-not $ClassificationsJson) {
     $ClassificationsJson = @"
@@ -103,9 +107,18 @@ $tokenBody = @{
     client_secret = $ClientSecret
     scope         = "$DataverseUrl/.default"
 }
-$tokenResponse = Invoke-RestMethod -Method Post `
-    -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" `
-    -ContentType "application/x-www-form-urlencoded" -Body $tokenBody
+try {
+    $tokenResponse = Invoke-RestMethod -Method Post `
+        -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" `
+        -ContentType "application/x-www-form-urlencoded" -Body $tokenBody
+} catch {
+    if ($_.ErrorDetails.Message) {
+        Write-Error "Failed to acquire token: $($_.Exception.Message)`nEntra ID error detail: $($_.ErrorDetails.Message)"
+    } else {
+        Write-Error "Failed to acquire token: $($_.Exception.Message)"
+    }
+    exit 1
+}
 $Headers = @{
     Authorization      = "Bearer $($tokenResponse.access_token)"
     "OData-MaxVersion" = "4.0"

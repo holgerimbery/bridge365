@@ -70,6 +70,10 @@ if (-not $DataverseUrl -or -not $TenantId -or -not $ClientId -or -not $ClientSec
     exit 1
 }
 $DataverseUrl = $DataverseUrl.TrimEnd('/')
+if ($DataverseUrl -notmatch '^https?://') {
+    $DataverseUrl = "https://$DataverseUrl"
+    Write-Host "DataverseUrl had no scheme - assuming https:// (now: $DataverseUrl)" -ForegroundColor Yellow
+}
 
 if (-not $SchemaFiles) {
     $SchemaFiles = Get-ChildItem (Join-Path $PSScriptRoot "..\schemas") -Filter "*.schema.json" | Sort-Object Name | ForEach-Object { $_.FullName }
@@ -92,7 +96,11 @@ try {
         -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" `
         -ContentType "application/x-www-form-urlencoded" -Body $tokenBody
 } catch {
-    Write-Error "Failed to acquire token: $($_.Exception.Message)"
+    if ($_.ErrorDetails.Message) {
+        Write-Error "Failed to acquire token: $($_.Exception.Message)`nEntra ID error detail: $($_.ErrorDetails.Message)"
+    } else {
+        Write-Error "Failed to acquire token: $($_.Exception.Message)"
+    }
     exit 1
 }
 $AccessToken = $tokenResponse.access_token
