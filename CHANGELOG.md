@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ---
+## [0.5.7] - 2026-09-05
+
+### What's Added
+- README.md: new "### Authentication Flow" subsection (with a Mermaid sequenceDiagram) right after the Architecture diagram, documenting the connector-to-backend security model end-to-end: the custom connector's delegated OAuth2 Authorization Code flow against Entra ID, Azure App Service Easy Auth validating the sign-in and injecting `X-MS-CLIENT-PRINCIPAL-NAME`, and `app.py`'s `enforce_email_allowlist` authorization check (403 if the caller is not on `ALLOWED_EMAIL_ADDRESSES`). Explains the defense-in-depth split between authentication (Entra ID + Easy Auth) and authorization (email allowlist, plus the optional IP-restriction layer).
+- README.md: bumped the `Current Version` footer pointer to v0.5.7.
+- `docs/status.md`: added the Status Summary row and Detailed Status entry for this release.
+
+### Breaking Changes
+- None.
+
+---
 ## [0.5.6] - 2026-09-05
 
 ### What's Modified

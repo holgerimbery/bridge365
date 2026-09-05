@@ -61,6 +61,34 @@ graph TB
     style Azure fill:#4CAF50,color:#fff
 ```
 
+### Authentication Flow
+
+Authentication (proving *who* is calling) is handled entirely by Microsoft Entra ID and Azure App Service's built-in authentication ("Easy Auth") using a standard OAuth2 delegated Authorization Code flow - there is no custom token-validation code in the backend. Authorization (deciding *whether that caller is allowed* to use the API) is a separate, lightweight email allowlist check in `app.py`, and an optional network-level IP restriction adds a third, independent layer. This is defense in depth: no single control is a single point of failure.
+
+```mermaid
+sequenceDiagram
+    participant User as User (signed-in)
+    participant Conn as Custom Connector
+    participant Entra as Entra ID
+    participant Easy as Easy Auth (App Service)
+    participant Flask as Flask Backend
+
+    User->>Conn: Invoke action in Copilot Studio
+    Conn->>Entra: Redirect for sign-in/consent (OAuth2 accessCode flow)
+    Entra-->>Conn: Authorization code, then access token (user_impersonation)
+    Conn->>Easy: API call with access token in Authorization header
+    Easy->>Entra: Validate token
+    Entra-->>Easy: Token valid
+    Easy->>Flask: Forward request plus X-MS-CLIENT-PRINCIPAL-NAME header
+
+    alt Caller email on ALLOWED_EMAIL_ADDRESSES
+        Flask->>Flask: enforce_email_allowlist() passes
+        Flask-->>Conn: 200 OK (continues to Graph API / Dataverse)
+    else Caller email not allowlisted
+        Flask-->>Conn: 403 Forbidden
+    end
+```
+
 ## Documentation
 
 **Phase-by-Phase Guides:**
@@ -135,4 +163,4 @@ All code samples include copyright headers. See individual files for details.
 
 ---
 
-**Current Version:** v0.5.6 | [View Changelog](CHANGELOG.md) | [View Status & Roadmap](docs/status.md)
+**Current Version:** v0.5.7 | [View Changelog](CHANGELOG.md) | [View Status & Roadmap](docs/status.md)

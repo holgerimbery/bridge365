@@ -45,6 +45,7 @@ Status summary and full version-by-version history for the Bridge365 project. Se
 | Phase 2: Connector Requirements Clarification (Prompt Tool vs. Foundry Swap-in) | ✅ Complete | v0.5.3 |
 | Documentation: Slim Down README (moved Status Summary & Detailed Status to docs/status.md) | ✅ Complete | v0.5.4 |
 | Bug Fix: Dataverse Deploy/Seed Script URL Scheme & Token-Error Hardening | ✅ Complete | v0.5.5 |
+| Documentation: Authentication Flow Sequence Diagram | ✅ Complete | v0.5.7 |
 | Documentation: Phase 2 Status Label Correction (README) | ✅ Complete | v0.5.6 |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
@@ -296,6 +297,13 @@ Status summary and full version-by-version history for the Bridge365 project. Se
 
 ---
 
+### v0.5.7: Documentation - Authentication Flow Sequence Diagram
+- ➕ README.md: added a new "### Authentication Flow" subsection right after the Architecture diagram, with a Mermaid sequenceDiagram walking through the full connector-to-backend request path: the custom connector's delegated OAuth2 Authorization Code flow against Entra ID, Azure App Service Easy Auth validating the sign-in and injecting X-MS-CLIENT-PRINCIPAL-NAME, and app.py's enforce_email_allowlist authorization check (403 branch if the caller is not on ALLOWED_EMAIL_ADDRESSES), continuing on to Graph API / Dataverse on success.
+- ➕ README.md: added 2-3 sentences of prose explaining the defense-in-depth split - authentication (identity) is handled entirely by Entra ID + Easy Auth with no custom token-validation code, while authorization (who is allowed to call) is a separate lightweight email allowlist layer in app.py, plus an optional network-level IP restriction (restrict-network-access.ps1) as a third layer.
+- 🔧 README.md: bumped the Current Version footer pointer to v0.5.7.
+
+---
+
 ## 📋 ROADMAP
 
 ### v0.6.0: Phase 3 - Draft Creation & Routing
@@ -343,4 +351,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.5.6 | [View README](../README.md) | [View Changelog](../CHANGELOG.md)
+**Current Version:** v0.5.7 | [View README](../README.md) | [View Changelog](../CHANGELOG.md)
