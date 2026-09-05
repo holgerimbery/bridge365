@@ -41,8 +41,8 @@ paconn login   # one-time interactive device-code sign-in
 The first run creates a new connector and prints its connector ID - save it
 (e.g. into `.env` as `CUSTOM_CONNECTOR_ID`) so subsequent runs update the same
 connector (pass `-ConnectorId`) instead of creating duplicates. All parameters
-can also be supplied via `.env` (see `.env.example`). The script requires an
-Application ID URI to already be set on the app registration - see the
+can also be supplied via `.env` (see `.env.example`). The script requires the
+app registration's delegated OAuth2 scope to already be exposed - see the
 prerequisite command in Step 3 below.
 
 ## Step 1: Navigate to Power Platform Connectors
@@ -77,11 +77,20 @@ The backend enforces delegated Easy Auth plus a per-user email allowlist (see
 as the calling user (not app-only client-credentials) - this is why
 `openapi.yaml` uses OAuth `flow: accessCode`, not `application`.
 
-**Prerequisite - set an Application ID URI (Resource URL)** on the app
-registration if it does not already have one (safe to re-run):
+**Prerequisite - expose the delegated OAuth2 scope** used by the connector's
+Azure AD auth (Application ID URI, `user_impersonation` scope, v1 access
+tokens, and an allowlisted token audience). If you already ran
+`enable-backend-auth.ps1` (see `docs/wiki/phase-1-mailbox-setup.md`, Step
+4.6.1), this is already done - it runs the same setup automatically.
+Otherwise, run it now (safe to re-run):
 
 ```powershell
-az ad app update --id "<app-client-id>" --identifier-uris "api://<app-client-id>"
+.\backend-service\scripts\enable-backend-auth.ps1 `
+    -ResourceGroup "rg-shared-mailbox" `
+    -AppServiceName "shared-mailbox-classifier" `
+    -TenantId "<tenant-id>" `
+    -ClientId "<app-client-id>" `
+    -SubscriptionId "<subscription-id>"
 ```
 
 Then configure the connector:

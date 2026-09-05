@@ -1164,7 +1164,8 @@ param(
     [string]$AppServiceName,
     [string]$TenantId,
     [string]$ClientId,
-    [string]$SubscriptionId
+    [string]$SubscriptionId,
+    [switch]$SkipDelegatedScopeSetup
 )
 
 # Load from .env if parameters not provided
@@ -1210,6 +1211,58 @@ function Confirm-AzureContext {
     }
 }
 
+# Exposes a delegated "user_impersonation" OAuth2 scope on the app
+# registration and forces v1-format access tokens, so tokens requested for
+# api://<ClientId> (e.g. via `az login --scope` or the custom connector's
+# delegated OAuth flow) are actually issued and accepted - without this,
+# Azure AD rejects token requests with AADSTS650057 (no scope to request),
+# and even after a token is issued, Easy Auth's classic v1 config rejects
+# it (issuer mismatch or an un-allowlisted audience, both 401).
+function Enable-DelegatedApiScope {
+    param(
+        [string]$ClientId
+    )
+
+    $ObjectId = az ad app show --id $ClientId --query id -o tsv
+    if ($LASTEXITCODE -ne 0 -or -not $ObjectId) {
+        Write-Error "Failed to look up the app registration object ID for client ID '$ClientId'."
+        exit 1
+    }
+
+    $ScopeId = "a7e26fb7-ec5a-4179-81c3-daa4d26300b4"
+    $Body = @{
+        identifierUris = @("api://$ClientId")
+        api = @{
+            requestedAccessTokenVersion = 1
+            oauth2PermissionScopes = @(
+                @{
+                    adminConsentDescription  = "Allow the app to access the shared mailbox classifier on behalf of the signed-in user."
+                    adminConsentDisplayName  = "Access shared mailbox classifier"
+                    id                       = $ScopeId
+                    isEnabled                = $true
+                    type                     = "User"
+                    userConsentDescription   = "Allow the app to access the shared mailbox classifier on your behalf."
+                    userConsentDisplayName   = "Access shared mailbox classifier"
+                    value                    = "user_impersonation"
+                }
+            )
+        }
+    } | ConvertTo-Json -Depth 6
+
+    $TempFile = New-TemporaryFile
+    Set-Content -Path $TempFile -Value $Body -Encoding utf8
+
+    az rest --method PATCH --uri "https://graph.microsoft.com/v1.0/applications/$ObjectId" --headers "Content-Type=application/json" --body "@$TempFile"
+    $ExitCode = $LASTEXITCODE
+    Remove-Item $TempFile -ErrorAction SilentlyContinue
+
+    if ($ExitCode -ne 0) {
+        Write-Error "Failed to expose the delegated 'user_impersonation' scope on app '$ClientId'. See az CLI output above."
+        exit 1
+    }
+    Write-Host "Delegated scope 'user_impersonation' exposed on api://$ClientId (v1 access tokens)" -ForegroundColor Green
+}
+
 $env_file = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) ".env"
 if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
@@ -1229,13 +1282,18 @@ if (-not $ResourceGroup -or -not $AppServiceName -or -not $TenantId -or -not $Cl
 
 Confirm-AzureContext -ExpectedTenantId $TenantId -ExpectedSubscriptionId $SubscriptionId
 
+if (-not $SkipDelegatedScopeSetup) {
+    Enable-DelegatedApiScope -ClientId $ClientId
+}
+
 az webapp auth update `
     --resource-group $ResourceGroup `
     --name $AppServiceName `
     --enabled true `
     --action LoginWithAzureActiveDirectory `
     --aad-client-id $ClientId `
-    --aad-token-issuer-url "https://sts.windows.net/$TenantId/"
+    --aad-token-issuer-url "https://sts.windows.net/$TenantId/" `
+    --aad-allowed-token-audiences "api://$ClientId"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed to enable Entra authentication for '$AppServiceName'. See az CLI output above for details."
@@ -1259,8 +1317,20 @@ Run it:
 
 **Expected output:**
 ```
+Delegated scope 'user_impersonation' exposed on api://<app-client-id> (v1 access tokens)
 Entra authentication enabled for shared-mailbox-classifier
 ```
+
+This single script now does three things: (1) exposes a delegated
+`user_impersonation` OAuth2 scope on the app registration and forces
+v1-format access tokens (`requestedAccessTokenVersion: 1`) - both required
+before anyone can request a token for `api://<app-client-id>`, (2) enables
+Easy Auth, and (3) allowlists `api://<app-client-id>` as an accepted token
+audience (`--aad-allowed-token-audiences`) - without this, a valid v1 token
+scoped to the App ID URI is still rejected with `401` because Easy Auth's
+default accepted audience is the bare Client ID, not the App ID URI. Pass
+`-SkipDelegatedScopeSetup` to skip step (1) on repeat runs if you have
+already configured the scope another way (e.g. via the portal).
 
 **Test it:**
 
@@ -1269,7 +1339,16 @@ Entra authentication enabled for shared-mailbox-classifier
 Invoke-RestMethod -Uri "https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/messages" -Method Get
 ```
 
-**Expected result:** the call fails with `401 Unauthorized` (or a redirect to sign-in). If it still succeeds without a token, authentication is not correctly enabled — repeat this step before continuing.
+**Expected result:** the call fails with a redirect to an interactive
+Microsoft sign-in page (often containing an embedded `AADSTS50058` "silent
+sign-in failed" error in the HTML) rather than a clean `401`. That HTML
+challenge page is expected - `Invoke-RestMethod` has no browser and cannot
+complete it, so seeing it (instead of the JSON response) is proof
+authentication is working, not a bug. If the call still returns real JSON
+without any token, authentication is not correctly enabled - repeat this
+step before continuing. To actually call authenticated endpoints from
+PowerShell (e.g. for smoke-testing), see
+[Step 4.6.7: Testing Authenticated Endpoints via PowerShell](#step-467-testing-authenticated-endpoints-via-powershell).
 
 ### Step 4.6.2: Restrict Callers with an Email Allowlist
 
@@ -1875,6 +1954,70 @@ Run it (then trigger a few test requests in another window):
 
 **Expected output:** log lines showing request metadata (method, path, status code, correlation ID) with **no** visible tokens, secrets, or full email bodies. Press `Ctrl+C` to stop tailing.
 
+### Step 4.6.7: Testing Authenticated Endpoints via PowerShell
+
+Once [Step 4.6.1](#step-461-enforce-jwt-authentication-on-backend-endpoints)
+is enabled, a plain `Invoke-RestMethod` call has no way to complete Easy
+Auth's interactive sign-in redirect (it's not a browser) - it will always
+get back the sign-in challenge HTML instead of a JSON response or a clean
+error. To manually smoke-test an authenticated endpoint from PowerShell,
+acquire a real delegated access token first and attach it as a bearer
+token. This requires being signed in to `az` as one of the allowlisted
+users, and requires [Step 4.6.1](#step-461-enforce-jwt-authentication-on-backend-endpoints)
+to have already run (so the delegated `user_impersonation` scope exists).
+
+**1. Sign in as an allowlisted user, requesting the delegated scope:**
+
+```powershell
+az login --tenant "<tenant-id>" --scope "api://<app-client-id>/user_impersonation"
+```
+
+The first time any given user runs this, Azure AD shows a one-time consent
+prompt for the "Access shared mailbox classifier" permission - this is
+expected and only needs to be approved once per user.
+
+**2. Get an access token scoped to the API:**
+
+```powershell
+$token = az account get-access-token --resource "api://<app-client-id>" --query accessToken -o tsv
+```
+
+**3. Call the API with the token:**
+
+```powershell
+Invoke-RestMethod -Uri "https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/messages?mailboxAddress=shared@company.com" `
+    -Headers @{ Authorization = "Bearer $token" }
+```
+
+**Expected result:** a normal JSON response (the same as any other
+authenticated call), instead of the sign-in HTML page from Step 4.6.1's
+unauthenticated test.
+
+**Troubleshooting:**
+- **`AADSTS65001` (consent required) or `AADSTS650057` (invalid resource):**
+  the delegated scope isn't exposed yet - re-run
+  [Step 4.6.1's](#step-461-enforce-jwt-authentication-on-backend-endpoints)
+  `enable-backend-auth.ps1` script (it runs `Enable-DelegatedApiScope`
+  automatically unless `-SkipDelegatedScopeSetup` was passed).
+- **`401 Unauthorized` from the backend after getting a token:** decode the
+  token's claims to check `aud` and `iss` match what Easy Auth expects:
+  ```powershell
+  $parts = $token.Split('.')
+  $payload = $parts[1].Replace('-','+').Replace('_','/')
+  switch ($payload.Length % 4) { 2 { $payload += '==' } 3 { $payload += '=' } }
+  ([System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($payload)) | ConvertFrom-Json) |
+      Select-Object aud, iss, ver | Format-List
+  ```
+  `iss` must be `https://sts.windows.net/<tenant-id>/` (a v1 token, `ver: 1.0`)
+  and `aud` must be `api://<app-client-id>` - if `aud` doesn't match, confirm
+  `--aad-allowed-token-audiences` was applied (Step 4.6.1 sets this
+  automatically); if `iss` is a `v2.0` URL instead, `requestedAccessTokenVersion`
+  wasn't applied - re-run Step 4.6.1's script.
+- Remember this manual bearer-token flow is only for smoke-testing from a
+  script. The custom connector (Section 5) and Copilot Studio complete the
+  same interactive sign-in through a real browser automatically - end users
+  never need to do any of this by hand.
+
 ### Security Hardening Checklist Summary
 
 | # | Control | Verified By |
@@ -1919,12 +2062,20 @@ paconn login   # one-time interactive device-code sign-in
 `paconn` has no service-principal support, so `paconn login` must be run
 interactively at least once per machine.
 
-**Prerequisite - set an Application ID URI (Resource URL)** on the app
-registration, needed so the connector's Azure AD auth has a resource to
-request a token for (safe to re-run):
+**Prerequisite - expose the delegated OAuth2 scope** used by the
+connector's Azure AD auth (Application ID URI, `user_impersonation` scope,
+v1 access tokens, and an allowlisted token audience). If you already ran
+[Step 4.6.1](#step-461-enforce-jwt-authentication-on-backend-endpoints)'s
+`enable-backend-auth.ps1`, this is already done - it runs the same setup
+automatically. Otherwise, run it now (safe to re-run):
 
 ```powershell
-az ad app update --id "<app-client-id>" --identifier-uris "api://<app-client-id>"
+.\backend-service\scripts\enable-backend-auth.ps1 `
+    -ResourceGroup "rg-shared-mailbox" `
+    -AppServiceName "shared-mailbox-classifier" `
+    -TenantId "<tenant-id>" `
+    -ClientId "<app-client-id>" `
+    -SubscriptionId "<subscription-id>"
 ```
 
 Run the deployment script:
@@ -2084,12 +2235,12 @@ their email reaches the backend's `X-MS-CLIENT-PRINCIPAL-NAME` allowlist check.
 This is why `custom-connector/openapi.yaml` uses OAuth `flow: accessCode`
 (Authorization Code), not `application`.
 
-**Prerequisite - set an Application ID URI (Resource URL)** on the app
-registration if it does not already have one (safe to re-run):
-
-```powershell
-az ad app update --id "<app-client-id>" --identifier-uris "api://<app-client-id>"
-```
+**Prerequisite - expose the delegated OAuth2 scope** used by the
+connector's Azure AD auth (Application ID URI, `user_impersonation` scope,
+v1 access tokens, and an allowlisted token audience) - see the
+[Step 5.0](#step-50-command-line-alternative-deploy-via-paconn-cli)
+prerequisite above for the command (running `enable-backend-auth.ps1` is
+safe to re-run and covers this).
 
 Then configure the connector:
 
