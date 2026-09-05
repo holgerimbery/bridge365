@@ -3,7 +3,7 @@
 **Example shared mailbox:** `service@instruo365.de`  
 **Authentication:** application or workload identity  
 **Safety default:** create drafts only, never automatically send  
-**Applies to:** Copilot Studio standard harness and GitHub Copilot harness
+**Applies to:** Copilot Studio (custom connector)
 
 ---
 
@@ -260,19 +260,15 @@ That operation must remove only the wrapper carrying `data-internal-routing-bloc
 
 ---
 
-# 6. Harness mapping: tool versus skill
+# 6. Integration path mapping
 
 ```mermaid
 flowchart TD
-    H{Harness} -->|Copilot Studio standard harness| CS{Integration path}
-    H -->|GitHub Copilot harness| GH{Integration path}
-    CS -->|MCP server| CSMCP[Classification, knowledge, draft, and cleanup are MCP tools.<br/>Agent instructions define sequence.]
-    CS -->|Custom connector| CSCC[Capabilities are connector operations/tools.<br/>Event trigger or agent flow starts workflow.]
-    GH -->|Executable in skill| GHEX[Capabilities are executable commands.<br/>SKILL.md governs selection and safety.]
-    GH -->|MCP server| GHMCP[Capabilities are MCP tools.<br/>SKILL.md governs sequence and review.]
+    H{Integration path} -->|MCP server| CSMCP[Classification, knowledge, draft, and cleanup are MCP tools.<br/>Agent instructions define sequence.]
+    H -->|Custom connector| CSCC[Capabilities are connector operations/tools.<br/>Event trigger or agent flow starts workflow.]
 ```
 
-### Copilot Studio standard harness plus MCP
+### Copilot Studio plus MCP
 
 Implement as MCP tools:
 
@@ -283,7 +279,7 @@ create_grounded_response_draft
 remove_internal_routing_block
 ```
 
-### Copilot Studio standard harness plus custom connector
+### Copilot Studio plus custom connector
 
 Implement as connector tools:
 
@@ -293,21 +289,6 @@ RetrieveAnswerKnowledge
 CreateGroundedResponseDraft
 RemoveInternalRoutingBlock
 ```
-
-### GitHub Copilot harness plus executable skill
-
-Implement commands:
-
-```text
-classify-email
-retrieve-knowledge
-create-response-draft
-remove-routing-block
-```
-
-### GitHub Copilot harness plus MCP
-
-Use the same MCP tools as the Copilot Studio MCP path and add workflow instructions in `SKILL.md`.
 
 ---
 
@@ -765,13 +746,13 @@ Do not use a static endpoint key when managed identity and Entra authentication 
 
 # 14. Link BART into each orchestration path
 
-## 14.1 Copilot Studio standard harness with MCP
+## 14.1 Copilot Studio with MCP
 
 BART is an internal classification provider behind the MCP tool. The agent should never call the model endpoint directly.
 
 ```mermaid
 flowchart LR
-    CS[Copilot Studio standard harness] --> MCP[classify_incoming_email tool]
+    CS[Copilot Studio] --> MCP[classify_incoming_email tool]
     MCP --> SELECT[Classification provider factory]
     SELECT --> BART[Foundry BART endpoint]
     BART --> MAP[Validate labels against classification table]
@@ -789,7 +770,7 @@ Steps:
 6. MCP `remove_internal_routing_block` removes the marked block after explicit review.
 7. Existing `prepare-send` refuses approval while the block remains.
 
-## 14.2 Copilot Studio standard harness with custom connector
+## 14.2 Copilot Studio with custom connector
 
 ```mermaid
 flowchart LR
@@ -820,41 +801,6 @@ paths:
 ```
 
 The REST API uses the same provider factory. Changing from rules to BART is an environment configuration change, not a connector schema change.
-
-## 14.3 GitHub Copilot harness with executable skill
-
-```mermaid
-flowchart LR
-    GH[GitHub Copilot harness] --> SKILL[SKILL.md]
-    SKILL --> CLI[classify-email command]
-    CLI --> PROVIDER[Provider factory]
-    PROVIDER --> BART[Foundry BART endpoint]
-    CLI --> DRAFT[create-response-draft command]
-```
-
-Commands:
-
-```bash
-shared-mailbox-drafts classify-email --message-id '<id>'
-shared-mailbox-drafts create-response-draft --message-id '<id>'
-shared-mailbox-drafts remove-routing-block --message-id '<draft-id>'
-```
-
-`SKILL.md` addition:
-
-```markdown
-## Incoming email classification and drafting
-
-Use `classify-email` to classify a received email. The executable selects its configured provider, which may be a Foundry-hosted BART model. Always list every returned className, classTarget, and classTargetEmail.
-
-Use `create-response-draft` to create a reply draft. The resulting draft must include the removable routing block. Never send the draft automatically.
-
-After a human reviews the routing information, use `remove-routing-block` only when explicitly requested. Retrieve the cleaned draft again, then use the normal prepare-send and approval workflow.
-```
-
-## 14.4 GitHub Copilot harness with MCP
-
-Use the same MCP tools as section 14.1. GitHub Copilot does not need model endpoint credentials. The MCP workload identity owns Foundry access.
 
 ---
 

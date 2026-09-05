@@ -6,7 +6,7 @@ This wiki documents the setup, implementation, and operation of the email classi
 
 ## Phases
 
-- [Phase 1: Shared Mailbox Skill & Connector](phase-1-mailbox-setup.md) - includes [Security Hardening](phase-1-mailbox-setup.md#46-security-hardening-required-before-production-use) checklist
+- [Phase 1: Shared Mailbox Custom Connector Setup](phase-1-mailbox-setup.md) - includes [Security Hardening](phase-1-mailbox-setup.md#46-security-hardening-required-before-production-use) checklist
 - [Phase 2: Classification via Table](phase-2-classification-table.md)
 - [Phase 3: Draft Creation](phase-3-draft-creation.md)
 - [Phase 4: Override/Change Classification](phase-4-override-workflow.md)
@@ -17,7 +17,7 @@ This wiki documents the setup, implementation, and operation of the email classi
 
 1. Review the [Phase 1 setup guide](phase-1-mailbox-setup.md)
 2. Deploy the [backend service](../../backend-service), then set up the
-   [custom connector](../../custom-connector) and/or [SharedMailboxSkills](../../SharedMailboxSkills)
+   [custom connector](../../custom-connector)
 3. Test with the provided sample workflows
 
 ## Project Structure
@@ -25,9 +25,7 @@ This wiki documents the setup, implementation, and operation of the email classi
 - [`backend-service/`](../../backend-service) - Flask backend (`app.py`, `requirements.txt`) plus
   its deployment and security-hardening PowerShell scripts (`backend-service/scripts/`)
 - [`custom-connector/`](../../custom-connector) - OpenAPI definition and setup guide for the
-  standard Copilot Studio harness
-- [`SharedMailboxSkills/`](../../SharedMailboxSkills) - Skill/action definition and setup guide for
-  the GitHub Copilot harness (parallel executable skills)
+  Copilot Studio custom connector
 - `docs/wiki/scripts/` - Shared app-registration scripts (`test-app-registration.ps1`,
   `grant-mailbox-permissions.ps1`) and Phase 2 Dataverse scripts
 
@@ -35,7 +33,7 @@ This wiki documents the setup, implementation, and operation of the email classi
 
 All PowerShell scripts include copyright headers.
 
-- `docs/wiki/scripts/test-app-registration.ps1`, `docs/wiki/scripts/grant-mailbox-permissions.ps1` - Phase 1 app registration and mailbox access policy (shared by all harnesses)
+- `docs/wiki/scripts/test-app-registration.ps1`, `docs/wiki/scripts/grant-mailbox-permissions.ps1` - Phase 1 app registration and mailbox access policy 
 - `backend-service/scripts/create-app-service.ps1`, `configure-app-service.ps1`, `test-backend.ps1` - Phase 1 backend service deployment
 - `backend-service/scripts/enable-backend-auth.ps1`, `configure-allowlist.ps1`, `secure-client-secret.ps1`, `restrict-network-access.ps1`, `review-backend-logs.ps1` - Phase 1 security hardening
 - `docs/wiki/scripts/setup-classification-table.ps1`, `create-sample-classifications.ps1` - Phase 2 classification table setup

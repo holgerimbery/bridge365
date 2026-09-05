@@ -9,7 +9,7 @@ repo. This script:
   1. Copies every top-level *.md file from docs/wiki/ into the wiki repo.
   2. Renames index.md -> Home.md (GitHub's wiki landing page).
   3. Rewrites relative links that point at files outside docs/wiki/
-     (scripts, backend-service, custom-connector, SharedMailboxSkills)
+     (scripts, backend-service, custom-connector)
      into absolute GitHub "blob" URLs on the main branch, since those
      files are not mirrored into the wiki repo.
   4. Strips the ".md" extension from links that point at other wiki

@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.27] - 2026-09-05
+
+### What's Removed
+- `SharedMailboxSkills/` folder (the "GitHub Copilot harness" - executable skills using a static bearer token) - fully removed. The custom connector's action set is a strict superset of the skill's and is the only path that supports the `NewMessageReceived` polling trigger, so once the connector is registered in a Power Platform environment the skill added no capability, only a parallel, less-secure setup path.
+
+### What's Modified
+- Purged all `SharedMailboxSkills`/"GitHub Copilot harness" references from forward-looking documentation: `README.md` (Project Structure tree, Overview bullets), `docs/implementation-plan.md` (roadmap mermaid diagram and every phase's harness framing), `docs/wiki/phase-1-mailbox-setup.md` (architecture mermaid diagram, dedicated GitHub Copilot Harness setup section removed, Integration Test simplified to the connector only, subsequent sections renumbered), `docs/wiki/index.md`, `docs/wiki/phase-2-classification-table.md`, `docs/shared-mailbox-classification-master-guide.md` (harness-mapping and BART-orchestration sections simplified to the single connector path), and `.github/scripts/sync-wiki.py` (comment only).
+- Historical `CHANGELOG.md` entries (e.g. v0.4.0-v0.4.12) and README `Detailed Status` entries that describe `SharedMailboxSkills` while it existed are left unchanged, per this project's convention of not rewriting history.
+
+### Breaking Changes
+- Any Copilot Studio agent using `SharedMailboxSkills` actions as Tools must switch to the `custom-connector` instead - the skill/action definitions no longer exist in this repo.
+
+---
+
 ## [0.4.26] - 2026-09-05
 
 ### What's Modified
