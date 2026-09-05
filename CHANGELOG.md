@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.3] - 2026-09-05
+
+### What's Modified
+- `docs/wiki/phase-2-classification-table.md`: Section 3 no longer implies a connector operation is used for today's audit write (Dataverse connector only); Section 5 retitled from "Copilot Studio Integration (Planned)" to "Connector Requirements by Classification Path" and rewritten to clarify that the current/default Prompt-tool classification path (Section 4.1) needs no custom connector operation, and that a `ClassifyMessage` connector operation is only needed for the future Foundry-hosted swap-in path (Section 3).
+
+### Breaking Changes
+- None.
+
+---
+
 ## [0.5.2] - 2026-09-05
 
 ### What's Modified

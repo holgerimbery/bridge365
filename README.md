@@ -51,6 +51,7 @@ This project provides:
 | Phase 2: Dataverse Classification Tables (Rule + Audit) | ✅ Complete | v0.5.0 |
 | Phase 2: Copilot Studio Prompt Tool Examples & Smoke Test | ✅ Complete | v0.5.1 |
 | Phase 2: Public-Repo Security Hardening | ✅ Complete | v0.5.2 |
+| Phase 2: Connector Requirements Clarification (Prompt Tool vs. Foundry Swap-in) | ✅ Complete | v0.5.3 |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
 ## Quick Start (Phase 1: v0.4.23)
@@ -403,6 +404,12 @@ All code samples include copyright headers. See individual files for details.
 
 ---
 
+### v0.5.3: Phase 2 - Connector Requirements Clarification
+- 🔧 `docs/wiki/phase-2-classification-table.md`: Section 3 simplified so the audit write is described as Dataverse-connector-only, with no stray reference to a not-yet-existing connector operation.
+- 🔧 Section 5 retitled from "Copilot Studio Integration (Planned)" to "Connector Requirements by Classification Path" and rewritten to make clear that the current/default classification path (a Copilot Studio Prompt tool, Section 4.1, plus the built-in Dataverse connector) requires no custom connector operation at all - everything runs natively inside Copilot Studio. A `ClassifyMessage` custom connector operation only becomes necessary if/when the future Foundry-hosted model swap-in (Section 3) is implemented, to invoke that server-side model call.
+
+---
+
 ## 📋 ROADMAP
 
 ### v0.6.0: Phase 3 - Draft Creation & Routing
@@ -448,4 +455,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.5.2 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.5.3 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
