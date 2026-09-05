@@ -11,6 +11,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.22] - 2026-09-05
+
+### What's Fixed
+- **`custom-connector/scripts/deploy-connector.ps1` failed on every run with `json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)`** - the `paconn` CLI's `--api-def` flag always parses the file with `json.load()` regardless of extension, so passing `openapi.yaml` (our source of truth, used by the portal-import path too) directly always failed. Fixed by having the script auto-convert `openapi.yaml` to a generated, gitignored `openapi.generated.json` via a new `custom-connector/scripts/_yaml_to_json.py` helper (using `pyyaml`) before invoking `paconn`, so `openapi.yaml` stays the single source of truth for both the portal-import and command-line deployment paths.
+
+### What's Modified
+- `custom-connector/scripts/deploy-connector.ps1`: added the YAML-to-JSON conversion step (requires Python + `pip install pyyaml`, in addition to `paconn`); error messages now mention `pyyaml` where relevant.
+- `custom-connector/README.md`: `pip install paconn` command updated to `pip install paconn pyyaml`.
+- `.gitignore`: added `custom-connector/openapi.generated.json` (generated at deploy time, never committed).
+
+### Breaking Changes
+- None. Existing `.env`/parameter usage is unchanged; the conversion step runs automatically and only requires adding `pyyaml` to your Python environment (`pip install pyyaml`).
+
+---
+
 ## [0.4.21] - 2026-09-05
 
 ### What's New

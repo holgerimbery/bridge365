@@ -41,10 +41,11 @@ This project provides:
 | Phase 1: Custom Connector Delegated Auth Fix | ✅ Complete | v0.4.19 |
 | Phase 1: Custom Connector CLI Deployment | ✅ Complete | v0.4.20 |
 | Phase 1: Delegated Auth Token Fix (Scope/Audience/Version) | ✅ Complete | v0.4.21 |
+| Phase 1: Custom Connector Deploy Script Fix | ✅ Complete | v0.4.22 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
-## Quick Start (Phase 1: v0.4.21)
+## Quick Start (Phase 1: v0.4.22)
 
 ### Prerequisites
 
@@ -347,6 +348,11 @@ All code samples include copyright headers. See individual files for details.
 - 🔧 `backend-service/scripts/enable-backend-auth.ps1` now performs all three fixes automatically (`Enable-DelegatedApiScope` + updated `az webapp auth update`); add `-SkipDelegatedScopeSetup` to skip the scope step on repeat runs.
 - ✨ Added `docs/wiki/phase-1-mailbox-setup.md` Step 4.6.7 - a full PowerShell recipe for smoke-testing authenticated endpoints (acquire a delegated token, call the API with a bearer header) plus a troubleshooting guide.
 
+### v0.4.22: Custom Connector Deploy Script Fix (paconn requires JSON)
+- 🐛 Fixed `custom-connector/scripts/deploy-connector.ps1` failing every run with `JSONDecodeError: Expecting value: line 1 column 1` - the `paconn` CLI's `--api-def` always parses the file as JSON regardless of extension, so passing `openapi.yaml` directly always failed.
+- 🔧 The script now auto-converts `openapi.yaml` to a generated, gitignored `openapi.generated.json` (via new `custom-connector/scripts/_yaml_to_json.py`, using `pyyaml`) before invoking `paconn`, so `openapi.yaml` remains the single source of truth for both the portal-import and command-line paths.
+- 🔧 Updated `pip install paconn` to `pip install paconn pyyaml` in `custom-connector/README.md`.
+
 ---
 
 ## 🔄 IN PROGRESS
@@ -416,4 +422,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.4.21 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.4.22 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)

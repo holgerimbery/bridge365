@@ -5,8 +5,10 @@
 # connector can be deployed/updated from the command line instead of the
 # Power Platform portal wizard (see docs/wiki/phase-1-mailbox-setup.md, Section 5).
 #
-# Requires: Python 3.5+ and `pip install paconn`, and a one-time interactive
-# `paconn login` (device-code flow; no service-principal support today).
+# Requires: Python 3.5+ and `pip install paconn pyyaml`, and a one-time
+# interactive `paconn login` (device-code flow; no service-principal support
+# today). pyyaml is needed because paconn's --api-def only accepts JSON - this
+# script converts openapi.yaml to a generated (gitignored) JSON file for it.
 #
 # First run (no -ConnectorId): creates a new connector and prints its ID -
 # save that ID (e.g. into .env as CUSTOM_CONNECTOR_ID) to update it later.
@@ -58,7 +60,7 @@ if (-not $EnvironmentId -or -not $TenantId -or -not $ClientId -or -not $ClientSe
 }
 
 if (-not (Get-Command paconn -ErrorAction SilentlyContinue)) {
-    Write-Error "paconn CLI not found. Install it with 'pip install paconn' (requires Python 3.5+), then run 'paconn login' once before retrying."
+    Write-Error "paconn CLI not found. Install it with 'pip install paconn pyyaml' (requires Python 3.5+), then run 'paconn login' once before retrying."
     exit 1
 }
 
@@ -70,6 +72,27 @@ if (-not (Test-Path $ApiDefinition)) {
 if (-not (Test-Path $ApiPropertiesTemplate)) {
     Write-Error "API properties template not found at '$ApiPropertiesTemplate'."
     exit 1
+}
+
+# paconn only accepts JSON for --api-def, but openapi.yaml is our source of
+# truth (imported directly by the portal wizard). Convert it to a generated,
+# gitignored JSON file here so both paths stay in sync with one source file.
+if ($ApiDefinition -match '\.ya?ml$') {
+    $PythonCmd = Get-Command python -ErrorAction SilentlyContinue
+    if (-not $PythonCmd) { $PythonCmd = Get-Command py -ErrorAction SilentlyContinue }
+    if (-not $PythonCmd) {
+        Write-Error "Python not found (needed to convert openapi.yaml to JSON for paconn). Install Python 3.5+ and 'pip install pyyaml'."
+        exit 1
+    }
+
+    $ConvertScript = Join-Path $RepoRoot "custom-connector\scripts\_yaml_to_json.py"
+    $GeneratedApiDefinition = Join-Path $RepoRoot "custom-connector\openapi.generated.json"
+    & $PythonCmd.Source $ConvertScript $ApiDefinition $GeneratedApiDefinition
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Failed to convert '$ApiDefinition' to JSON. Ensure 'pyyaml' is installed: pip install pyyaml"
+        exit 1
+    }
+    $ApiDefinition = $GeneratedApiDefinition
 }
 
 # Render the template with real tenant/client IDs (not secrets - safe to
