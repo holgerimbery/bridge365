@@ -35,10 +35,11 @@ This project provides:
 | Phase 1: Security Model Documentation (Worked Example) | ✅ Complete | v0.4.13 |
 | Phase 1: Fail-safe Backend Deployment Script | ✅ Complete | v0.4.14 |
 | Phase 1: Wiki Wording Cleanup (no version-history references) | ✅ Complete | v0.4.15 |
+| Phase 1: Graph API Error Handling Fix | ✅ Complete | v0.4.16 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
-## Quick Start (Phase 1: v0.4.15)
+## Quick Start (Phase 1: v0.4.16)
 
 ### Prerequisites
 
@@ -310,6 +311,11 @@ All code samples include copyright headers. See individual files for details.
 ### v0.4.15: Wiki Wording Cleanup
 - 🐛 Fixed `docs/wiki/phase-1-mailbox-setup.md`: two sections referenced an "earlier version of this guide" and "v0.4.10+" - reworded to describe only current, correct behavior. The wiki is a how-to guide, not a changelog, and should never reference prior versions of itself or the scripts.
 
+### v0.4.16: Graph API Error Handling Fix
+- 🐛 Fixed `backend-service/app.py`: Graph API calls in `get_messages`, `poll_new_messages`, `get_message`, `create_draft`, `update_draft`, `send_message`, and `send_draft_message` did not check the HTTP status code Microsoft Graph returned before treating the call as successful - a Graph error (e.g. a nonexistent message/draft ID) was silently parsed and returned as a `200 OK` with null/empty fields instead of an error.
+- 🔧 Added a `GraphError` exception plus `graph_json()`/`check_graph_response()` helpers; every Graph-calling endpoint now returns Graph's own error status/message on failure instead of a misleading `200` or an unhandled `500`/`502`.
+- ⚠️ Breaking: CreateDraft, UpdateDraft, SendMessage, and SendDraftMessage now return Graph's real error status (typically `404`) for a message/draft ID Graph can't find, instead of the previous (incorrect) always-`200` response.
+
 ---
 
 ## 🔄 IN PROGRESS
@@ -379,4 +385,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.4.15 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.4.16 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)

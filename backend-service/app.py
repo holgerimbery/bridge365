@@ -23,6 +23,48 @@ try:
 except Exception as e:
     logging.error(f"Failed to initialize Graph client: {e}")
 
+
+class GraphError(Exception):
+    """Raised when Microsoft Graph returns a non-2xx response.
+
+    msgraph-core's GraphClient does not raise for HTTP error statuses (it
+    behaves like a plain requests.Session) - it returns the response object
+    regardless of status code, so a Graph error body (e.g. ErrorItemNotFound)
+    would otherwise be silently parsed and returned to the caller as if the
+    call had succeeded. This exception, and the helpers below, make sure a
+    Graph-side failure always surfaces as an error to API callers.
+    """
+
+    def __init__(self, response):
+        self.status_code = response.status_code
+        try:
+            body = response.json()
+        except ValueError:
+            body = {}
+        error = body.get("error", {}) if isinstance(body, dict) else {}
+        self.message = (
+            error.get("message")
+            or response.text
+            or f"Graph request failed with status {response.status_code}"
+        )
+        super().__init__(self.message)
+
+
+def graph_json(response):
+    """Parses a Graph response as JSON, raising GraphError if Graph reported
+    a non-2xx status instead of treating its error body as a success payload."""
+    if response.status_code >= 400:
+        raise GraphError(response)
+    return response.json()
+
+
+def check_graph_response(response):
+    """Raises GraphError if a Graph response (whose body is unused, e.g. a
+    send action that returns no content) reported a non-2xx status."""
+    if response.status_code >= 400:
+        raise GraphError(response)
+
+
 # Authorization allowlist of caller email addresses. Authentication itself
 # (who is this caller, is their Microsoft sign-in valid) is handled entirely
 # by Azure App Service Authentication (Easy Auth) with Microsoft Entra ID as
@@ -74,7 +116,10 @@ def get_messages():
         response = graph_client.get(
             f"/users/{mailbox}/messages?$top={top}&$select=id,subject,from,receivedDateTime,bodyPreview"
         )
-        return jsonify(response.json()), 200
+        return jsonify(graph_json(response)), 200
+    except GraphError as e:
+        logging.error(f"Error fetching messages (Graph error {e.status_code}): {e}")
+        return jsonify({"error": str(e)}), e.status_code
     except Exception as e:
         logging.error(f"Error fetching messages: {e}")
         return jsonify({"error": str(e)}), 500
@@ -100,7 +145,10 @@ def poll_new_messages():
             f"/users/{mailbox}/messages?$filter={filter_clause}&$orderby=receivedDateTime desc"
             f"&$select=id,subject,from,receivedDateTime,bodyPreview"
         )
-        return jsonify(response.json()), 200
+        return jsonify(graph_json(response)), 200
+    except GraphError as e:
+        logging.error(f"Error polling for new messages (Graph error {e.status_code}): {e}")
+        return jsonify({"error": str(e)}), e.status_code
     except Exception as e:
         logging.error(f"Error polling for new messages: {e}")
         return jsonify({"error": str(e)}), 500
@@ -117,7 +165,10 @@ def get_message(message_id):
         response = graph_client.get(
             f"/users/{mailbox}/messages/{message_id}"
         )
-        return jsonify(response.json()), 200
+        return jsonify(graph_json(response)), 200
+    except GraphError as e:
+        logging.error(f"Error fetching message (Graph error {e.status_code}): {e}")
+        return jsonify({"error": str(e)}), e.status_code
     except Exception as e:
         logging.error(f"Error fetching message: {e}")
         return jsonify({"error": str(e)}), 500
@@ -167,10 +218,10 @@ def create_draft():
             return jsonify({"error": "mailboxAddress, messageId, body required"}), 400
 
         reply_action = "createReplyAll" if reply_all else "createReply"
-        draft = graph_client.post(
+        draft = graph_json(graph_client.post(
             f"/users/{mailbox}/messages/{message_id}/{reply_action}",
             json={}
-        ).json()
+        ))
 
         draft_id = draft.get("id")
         if not draft_id:
@@ -180,16 +231,19 @@ def create_draft():
         if subject:
             update_payload["subject"] = subject
 
-        updated = graph_client.patch(
+        updated = graph_json(graph_client.patch(
             f"/users/{mailbox}/messages/{draft_id}",
             json=update_payload
-        ).json()
+        ))
 
         return jsonify({
             "draftId": draft_id,
             "subject": updated.get("subject"),
             "draftUrl": updated.get("webLink", "")
         }), 200
+    except GraphError as e:
+        logging.error(f"Error creating draft (Graph error {e.status_code}): {e}")
+        return jsonify({"error": str(e)}), e.status_code
     except Exception as e:
         logging.error(f"Error creating draft: {e}")
         return jsonify({"error": str(e)}), 500
@@ -224,16 +278,19 @@ def update_draft(draft_id):
                 {"emailAddress": {"address": address}} for address in recipients
             ]
 
-        updated = graph_client.patch(
+        updated = graph_json(graph_client.patch(
             f"/users/{mailbox}/messages/{draft_id}",
             json=update_payload
-        ).json()
+        ))
 
         return jsonify({
             "draftId": draft_id,
             "subject": updated.get("subject"),
             "draftUrl": updated.get("webLink", "")
         }), 200
+    except GraphError as e:
+        logging.error(f"Error updating draft (Graph error {e.status_code}): {e}")
+        return jsonify({"error": str(e)}), e.status_code
     except Exception as e:
         logging.error(f"Error updating draft: {e}")
         return jsonify({"error": str(e)}), 500
@@ -252,7 +309,7 @@ def send_message():
             return jsonify({"error": "mailboxAddress, to, subject, body required"}), 400
 
         # Call Microsoft Graph API sendMail action
-        graph_client.post(
+        check_graph_response(graph_client.post(
             f"/users/{mailbox}/sendMail",
             json={
                 "message": {
@@ -262,9 +319,12 @@ def send_message():
                 },
                 "saveToSentItems": "true"
             }
-        )
+        ))
 
         return jsonify({"status": "sent"}), 200
+    except GraphError as e:
+        logging.error(f"Error sending message (Graph error {e.status_code}): {e}")
+        return jsonify({"error": str(e)}), e.status_code
     except Exception as e:
         logging.error(f"Error sending message: {e}")
         return jsonify({"error": str(e)}), 500
@@ -280,9 +340,12 @@ def send_draft_message(draft_id):
             return jsonify({"error": "mailboxAddress parameter required"}), 400
 
         # Call Microsoft Graph API to send the draft message as-is
-        graph_client.post(f"/users/{mailbox}/messages/{draft_id}/send")
+        check_graph_response(graph_client.post(f"/users/{mailbox}/messages/{draft_id}/send"))
 
         return jsonify({"status": "sent", "draftId": draft_id}), 200
+    except GraphError as e:
+        logging.error(f"Error sending draft message (Graph error {e.status_code}): {e}")
+        return jsonify({"error": str(e)}), e.status_code
     except Exception as e:
         logging.error(f"Error sending draft message: {e}")
         return jsonify({"error": str(e)}), 500
