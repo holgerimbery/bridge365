@@ -28,7 +28,7 @@ using this folder's `openapi.yaml` and `apiProperties.template.json` directly -
 no manual portal steps needed.
 
 ```powershell
-pip install paconn
+pip install paconn pyyaml
 paconn login   # one-time interactive device-code sign-in
 
 .\custom-connector\scripts\deploy-connector.ps1 `
