@@ -45,6 +45,7 @@ Status summary and full version-by-version history for the Bridge365 project. Se
 | Phase 2: Connector Requirements Clarification (Prompt Tool vs. Foundry Swap-in) | ✅ Complete | v0.5.3 |
 | Documentation: Slim Down README (moved Status Summary & Detailed Status to docs/status.md) | ✅ Complete | v0.5.4 |
 | Bug Fix: Dataverse Deploy/Seed Script URL Scheme & Token-Error Hardening | ✅ Complete | v0.5.5 |
+| Documentation: Phase 2 Status Label Correction (README) | ✅ Complete | v0.5.6 |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
 ## Detailed Status
@@ -286,6 +287,15 @@ Status summary and full version-by-version history for the Bridge365 project. Se
 
 ---
 
+### v0.5.6: Documentation - Phase 2 Status Label Correction
+- 🔧 README.md: fixed 3 stale Phase 2 status labels left over from when classification work was still in progress, now that Phase 2 (Dataverse classification tables + Copilot Studio Prompt tool classification) is fully complete and verified end-to-end against a real Dataverse environment. The "Next Phase" note now reads "Phase 1 and Phase 2 (classification) are complete. Proceed to Phase 3: Draft Creation & Routing (planned)." instead of describing Phase 2 as in progress.
+- 🔧 README.md: changed the Phase 2 documentation link status from 🔄 In Progress to ✅ Complete, matching the Phase 1 line above it.
+- 🔧 README.md: changed the Project Structure tree comment for phase-2-classification-table.md from # Phase 2 (in progress) to # Phase 2 (complete), matching the Phase 1 comment style.
+- 🔧 README.md: bumped the Current Version footer pointer to v0.5.6.
+- 🔧 README.md: replaced links to docs/implementation-plan.md with docs/status.md in the Reference Documentation list, the Support & Contribution numbered list, and the Current Version footer (removed the now-redundant "View Implementation Plan" link); docs/status.md is now the canonical living roadmap/status doc.
+
+---
+
 ## 📋 ROADMAP
 
 ### v0.6.0: Phase 3 - Draft Creation & Routing
@@ -333,4 +343,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.5.4 | [View README](../README.md) | [View Changelog](../CHANGELOG.md)
+**Current Version:** v0.5.6 | [View README](../README.md) | [View Changelog](../CHANGELOG.md)
