@@ -47,6 +47,7 @@ This project provides:
 | Phase 1: CreateDraft Wiki Documentation (Inbox-Only messageId) | ✅ Complete | v0.4.26 |
 | Phase 1: Remove SharedMailboxSkills (Connector-Only) | ✅ Complete | v0.4.27 |
 | Phase 1: Full Connector Operation Testing Guide | ✅ Complete | v0.4.28 |
+| Phase 1: README & Wiki Documentation Fixes | ✅ Complete | v0.4.29 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
@@ -70,8 +71,7 @@ This project provides:
    - Create Application Registration (Step 3)
    - Deploy Backend Service (Step 4)
    - Configure Custom Connector, optionally as an autonomous agent trigger (Step 5)
-   - Set Up Executable Skills (Step 6)
-   - Run Integration Tests (Step 7)
+   - Run Integration Tests (Step 6)
 
 3. **Test Each Component**
    All phases include testing procedures with expected outputs.
@@ -104,7 +104,7 @@ graph TB
 ## Documentation
 
 **Phase-by-Phase Guides:**
-- [Phase 1: Shared Mailbox Skill & Custom Connector](docs/wiki/phase-1-mailbox-setup.md) ✅ Complete
+- [Phase 1: Shared Mailbox Custom Connector Setup](docs/wiki/phase-1-mailbox-setup.md) ✅ Complete
 - [Phase 2: Classification via Dataverse Table](docs/wiki/phase-2-classification-table.md) 🔄 In Progress
 
 **Reference Documentation:**
@@ -368,6 +368,11 @@ All code samples include copyright headers. See individual files for details.
 - ✨ `docs/wiki/phase-1-mailbox-setup.md` Step 5.5 now walks through testing all seven connector operations (`GetMessages`, `GetMessage`, `ClassifyMessage`, `CreateDraft`, `UpdateDraft`, `SendMessage`, `SendDraftMessage`) via the Power Platform Test tab, with exact webform field values, expected output, and how ids chain between operations.
 - 🔧 Documented the required one-time **New connection** (sign in with an allowlisted user) before any operation can be tested, and flagged that `SendMessage`/`SendDraftMessage` deliver real email.
 
+### v0.4.29: README & Wiki Documentation Fixes
+- 🐛 `docs/wiki/phase-1-mailbox-setup.md`: renumbered `## 7.`/`## 8.`/`## 9.` to `## 6.`/`## 7.`/`## 8.` - the v0.4.27 removal of the old Section 6 never renumbered the sections after it despite that commit claiming otherwise.
+- 🐛 `custom-connector/README.md`: restored the missing `# Custom Connector Setup` title, which had been overwritten by a stray duplicate of the Step 5 agent-instructions quote since v0.4.1.
+- 🐛 `README.md`: removed the stale "Set Up Executable Skills (Step 6)" Quick Start bullet, renumbered "Run Integration Tests" to Step 6, and corrected the Phase 1 doc link text to match the wiki's actual title.
+
 ---
 
 ## 🔄 IN PROGRESS
@@ -437,4 +442,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.4.28 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.4.29 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)

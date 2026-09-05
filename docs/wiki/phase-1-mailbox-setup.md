@@ -2420,7 +2420,7 @@ per-end-user credentials.
 
 ---
 
-## 7. Integration Test: End-to-End
+## 6. Integration Test: End-to-End
 
 Create a Copilot Studio topic that demonstrates the custom connector:
 
@@ -2430,7 +2430,7 @@ Create a Copilot Studio topic that demonstrates the custom connector:
 
 ---
 
-## 8. Troubleshooting
+## 7. Troubleshooting
 
 | Issue | Resolution |
 |---|---|
@@ -2446,7 +2446,7 @@ Create a Copilot Studio topic that demonstrates the custom connector:
 
 ---
 
-## 9. Next Steps
+## 8. Next Steps
 
 - Proceed to Phase 2: Classification via Dataverse table
 - Implement remaining backend endpoints

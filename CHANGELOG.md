@@ -11,6 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.29] - 2026-09-05
+
+### What's Fixed
+- `docs/wiki/phase-1-mailbox-setup.md`: renumbered `## 7. Integration Test: End-to-End` -> `## 6.`, `## 8. Troubleshooting` -> `## 7.`, and `## 9. Next Steps` -> `## 8.`. The v0.4.27 removal of the "GitHub Copilot Harness" section (formerly Section 6) deleted the section content but never renumbered the sections that followed it, despite that commit's message claiming it had been done.
+- `custom-connector/README.md`: restored the missing `# Custom Connector Setup` title. The file's opening lines had been overwritten by a stray duplicate of the Step 5 agent-instructions quote (introduced in v0.4.1) instead of the actual title, so the file started mid-sentence with no heading.
+- `README.md` Quick Start "Setup Steps": removed the stale "Set Up Executable Skills (Step 6)" bullet (that section no longer exists since v0.4.27) and renumbered "Run Integration Tests" from Step 7 to Step 6 to match the corrected wiki numbering.
+- `README.md` Documentation section: updated the Phase 1 link text from "Phase 1: Shared Mailbox Skill & Custom Connector" to "Phase 1: Shared Mailbox Custom Connector Setup" to match the wiki page's actual (already-renamed) title.
+
+### What's Modified
+- `custom-connector/README.md`: reworded "used by the standard Copilot Studio harness" to "used by Copilot Studio" for consistency with the connector-only architecture.
+
+### Breaking Changes
+- None.
+
+---
+
 ## [0.4.28] - 2026-09-05
 
 ### What's New
