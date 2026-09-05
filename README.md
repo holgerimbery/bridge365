@@ -37,10 +37,11 @@ This project provides:
 | Phase 1: Wiki Wording Cleanup (no version-history references) | ✅ Complete | v0.4.15 |
 | Phase 1: Graph API Error Handling Fix | ✅ Complete | v0.4.16 |
 | Phase 1: SendDraftMessage JSON Body Fix | ✅ Complete | v0.4.17 |
+| Phase 1: Wiki Consent-Verification and Real Success-Path Testing | ✅ Complete | v0.4.18 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
-## Quick Start (Phase 1: v0.4.17)
+## Quick Start (Phase 1: v0.4.18)
 
 ### Prerequisites
 
@@ -321,6 +322,11 @@ All code samples include copyright headers. See individual files for details.
 - 🐛 Fixed `backend-service/app.py`: `send_draft_message()` called `graph_client.post()` without an explicit JSON body, which raised an internal `TypeError` in `msgraph-core==0.2.2` and surfaced as an opaque `500` regardless of the draft ID's validity - masking the real outcome. Confirmed as a client-side bug, not a permissions issue, since it persisted even after Graph `Mail.Read`/`Mail.ReadWrite`/`Mail.Send` application permissions were correctly consented.
 - 🔧 `send_draft_message()` now passes `json={}` explicitly, matching `create_draft()`'s existing pattern; Graph's real status code (`400`/`404`) now surfaces via the v0.4.16 `GraphError` handling instead of a generic `500`.
 
+### v0.4.18: Wiki Consent-Verification and Real Success-Path Testing
+- 🔧 Added "Verify Admin Consent Was Actually Granted" under Step 3.2 of `docs/wiki/phase-1-mailbox-setup.md` - shows how to check a service principal's `appRoleAssignments` directly, since the Entra portal's "Granted" status and `az ad app permission list-grants` (delegated grants only) can both misleadingly suggest consent when none was actually recorded.
+- 🔧 Added Step 4.5.1, "Validate the Real Send/Draft Success Path" - walks through sending a real message to the shared mailbox, capturing its real `messageId`, and using it to exercise CreateDraft/UpdateDraft/SendDraftMessage against real Graph data, since Step 4.5's smoke test intentionally only uses fake IDs and reports `400`/`404`.
+- 🔧 Added two troubleshooting table rows: `403` despite portal-reported consent, and opaque `500` from a Graph POST/PATCH call missing a JSON body.
+
 ---
 
 ## 🔄 IN PROGRESS
@@ -390,4 +396,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.4.17 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.4.18 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
