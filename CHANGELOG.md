@@ -11,6 +11,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.2] - 2026-09-05
+
+### What's Modified
+- `docs/shared-mailbox-classification-master-guide.md`: replaced the non-placeholder example domain with the repo's standard `company.com` placeholder (15 occurrences).
+- `.env.example`, `custom-connector/README.md`, `docs/wiki/phase-1-mailbox-setup.md`: replaced the literal deployed App Service name/hostname with a generic `your-app-name`/`your-app-name.azurewebsites.net` placeholder.
+
+### What's Fixed
+- Public-repo readiness: full audit for secrets, credentials, real GUIDs/tenant IDs, and real email addresses - no client secrets, passwords, private keys, or sensitive data found beyond the two items above, which are now sanitized.
+
+### Breaking Changes
+- None.
+
+---
+
+## [0.5.1] - 2026-09-05
+
+### What's New
+- `docs/wiki/phase-2-classification-table.md`, new Section 4 "Prompt Tool Examples": a `ClassifyMessage` Copilot Studio Prompt tool example (message + active rule list in, structured classification JSON out) and a `DraftEmailBody` Prompt tool example (classification result + original message in, a single 3-section HTML draft body out).
+- New Section 7.1 "Smoke Test": a step-by-step end-to-end validation covering deploy -> idempotency -> seed -> both Prompt tools (match/no-match/language checks) -> `CreateDraft` wiring -> audit write-back.
+
+### What's Modified
+- `docs/wiki/phase-2-classification-table.md`: renumbered sections 4-8 to 5-9 to accommodate the new Prompt Tool Examples section; added two Troubleshooting entries for the new Prompt tools.
+
+### Breaking Changes
+- None.
+
+---
+
+## [0.5.0] - 2026-09-05
+
+### What's New
+- `dataverse/schemas/classification-rule.schema.json` and `dataverse/schemas/classification-audit.schema.json`: JSON templates defining the two Phase 2 Dataverse tables (Classification Rule, Classification Audit), including a lookup relationship from Audit to Rule.
+- `dataverse/scripts/deploy-dataverse-tables.ps1`: idempotent Dataverse Web API deployment script - creates both tables, their columns, and the lookup relationship from the JSON templates directly via the Web API, no manual maker-portal steps required. Safe to re-run.
+- `dataverse/scripts/seed-sample-classifications.ps1`: upserts sample classification rules via the Web API, matched/updated by `className`.
+- `dataverse/README.md`: setup guide, including the required Azure AD Application User + security role prerequisite in the target Dataverse environment.
+- `DATAVERSE_ENVIRONMENT_URL` and `DATAVERSE_PUBLISHER_PREFIX` added to `.env.example`.
+
+### What's Modified
+- `docs/wiki/phase-2-classification-table.md`: rewritten to describe the finalized table schemas, reference the new templates/scripts, and document the classification approach - a Copilot Studio Prompt tool (Generative AI action), with a documented future option to swap in a Foundry-hosted model (e.g. BART-MNLI zero-shot classification).
+- `README.md`, `docs/implementation-plan.md`, `docs/wiki/index.md`: cross-references updated from the old stub scripts to `dataverse/schemas/`/`dataverse/scripts/`; Status Summary table and Detailed Status updated for the new v0.5.0 entry.
+
+### What's Removed
+- `docs/wiki/scripts/setup-classification-table.ps1` and `create-sample-classifications.ps1` - non-functional stub scripts (printed instructions only, never called Dataverse) superseded by the real `dataverse/scripts/` implementations.
+- The dead "GitHub Copilot Skill" section and the old Python rule-based classifier sketch from the Phase 2 wiki page, both superseded by the connector-only architecture (v0.4.27) and the Prompt tool classification approach.
+
+### Breaking Changes
+- None.
+
+---
+
 ## [0.4.29] - 2026-09-05
 
 ### What's Fixed

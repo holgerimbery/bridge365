@@ -101,7 +101,7 @@ Otherwise, run it now (safe to re-run):
 ```powershell
 .\backend-service\scripts\enable-backend-auth.ps1 `
     -ResourceGroup "rg-shared-mailbox" `
-    -AppServiceName "shared-mailbox-classifier" `
+    -AppServiceName "your-app-name" `
     -TenantId "<tenant-id>" `
     -ClientId "<app-client-id>" `
     -SubscriptionId "<subscription-id>"

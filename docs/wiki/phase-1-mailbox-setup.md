@@ -438,7 +438,7 @@ Run it:
 ```powershell
 .\backend-service\scripts\create-app-service.ps1 `
     -ResourceGroup "shared-mailbox-rg" `
-    -AppServiceName "shared-mailbox-classifier"
+    -AppServiceName "your-app-name"
 ```
 
 **Expected output:**
@@ -446,7 +446,7 @@ Run it:
 Creating Azure App Service...
 ✓ Resource group created: shared-mailbox-rg
 ✓ App Service plan created
-✓ App Service created: https://shared-mailbox-classifier.azurewebsites.net
+✓ App Service created: https://your-app-name.azurewebsites.net
 ```
 
 ### Step 4.2: Test App Service is Running
@@ -500,7 +500,7 @@ Write-Host "Response: $($Response.Content)" -ForegroundColor Gray
 Run it:
 
 ```powershell
-.\backend-service\scripts\test-app-service.ps1 -BackendUrl "https://shared-mailbox-classifier.azurewebsites.net"
+.\backend-service\scripts\test-app-service.ps1 -BackendUrl "https://your-app-name.azurewebsites.net"
 ```
 
 **Expected output (initially):**
@@ -613,7 +613,7 @@ Run it:
 ```powershell
 .\backend-service\scripts\configure-app-service.ps1 `
     -ResourceGroup "rg-shared-mailbox" `
-    -AppServiceName "shared-mailbox-classifier" `
+    -AppServiceName "your-app-name" `
     -ClientId "<app-client-id>" `
     -ClientSecret "<app-client-secret>" `
     -TenantId "<tenant-id>" `
@@ -855,14 +855,14 @@ Run it:
 ```powershell
 .\backend-service\scripts\deploy-backend.ps1 `
     -ResourceGroup "rg-shared-mailbox" `
-    -AppServiceName "shared-mailbox-classifier" `
+    -AppServiceName "your-app-name" `
     -TenantId "<tenant-id>" `
     -SubscriptionId "<subscription-id>"
 ```
 
 **Expected output:**
 ```
-Backend deployed and healthy: https://shared-mailbox-classifier.azurewebsites.net
+Backend deployed and healthy: https://your-app-name.azurewebsites.net
 ```
 
 If it fails, the script automatically prints the deployment log and suggests
@@ -1029,20 +1029,20 @@ Run it:
 
 ```powershell
 .\backend-service\scripts\test-backend.ps1 `
-    -BackendUrl "https://shared-mailbox-classifier.azurewebsites.net" `
+    -BackendUrl "https://your-app-name.azurewebsites.net" `
     -MailboxAddress "shared@company.com"
 ```
 
 **Expected output:**
 ```
 Testing Backend Endpoints
-Backend: https://shared-mailbox-classifier.azurewebsites.net
+Backend: https://your-app-name.azurewebsites.net
 
 1. Testing /health endpoint...
    ✓ Health check passed
    Response: {
      "status": "healthy",
-     "service": "shared-mailbox-classifier"
+     "service": "your-app-name"
    }
 
 2. Testing /api/mailbox/messages endpoint...
@@ -1295,7 +1295,7 @@ Run it:
 ```powershell
 .\backend-service\scripts\enable-backend-auth.ps1 `
     -ResourceGroup "rg-shared-mailbox" `
-    -AppServiceName "shared-mailbox-classifier" `
+    -AppServiceName "your-app-name" `
     -TenantId "<tenant-id>" `
     -ClientId "<app-client-id>" `
     -SubscriptionId "<subscription-id>"
@@ -1304,7 +1304,7 @@ Run it:
 **Expected output:**
 ```
 Delegated scope 'user_impersonation' exposed on api://<app-client-id> (v1 access tokens)
-Entra authentication enabled for shared-mailbox-classifier
+Entra authentication enabled for your-app-name
 ```
 
 This single script now does three things: (1) exposes a delegated
@@ -1322,7 +1322,7 @@ already configured the scope another way (e.g. via the portal).
 
 ```powershell
 # Request without a token should now be rejected
-Invoke-RestMethod -Uri "https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/messages" -Method Get
+Invoke-RestMethod -Uri "https://your-app-name.azurewebsites.net/api/mailbox/messages" -Method Get
 ```
 
 **Expected result:** the call fails with a redirect to an interactive
@@ -1442,7 +1442,7 @@ Run it:
 ```powershell
 .\backend-service\scripts\configure-allowlist.ps1 `
     -ResourceGroup "rg-shared-mailbox" `
-    -AppServiceName "shared-mailbox-classifier" `
+    -AppServiceName "your-app-name" `
     -AllowedEmailAddresses "alice@company.com,bob@company.com" `
     -TenantId "<tenant-id>" `
     -SubscriptionId "<subscription-id>"
@@ -1450,7 +1450,7 @@ Run it:
 
 **Expected output:**
 ```
-Email allowlist configured on shared-mailbox-classifier
+Email allowlist configured on your-app-name
 ```
 
 `app.py` reads `ALLOWED_EMAIL_ADDRESSES` (a comma-separated list) on startup and enforces it in a `before_request` hook: every request except `/health` must carry an `X-MS-CLIENT-PRINCIPAL-NAME` header (set by Easy Auth) whose value, case-insensitively, matches one of the allowed addresses — otherwise the backend returns `403 Forbidden` before any Graph API call is made.
@@ -1459,8 +1459,8 @@ Email allowlist configured on shared-mailbox-classifier
 
 ```powershell
 # Restart so the app picks up new settings, then confirm they are applied
-az webapp restart --resource-group "rg-shared-mailbox" --name "shared-mailbox-classifier"
-az webapp config appsettings list --resource-group "rg-shared-mailbox" --name "shared-mailbox-classifier" `
+az webapp restart --resource-group "rg-shared-mailbox" --name "your-app-name"
+az webapp config appsettings list --resource-group "rg-shared-mailbox" --name "your-app-name" `
     --query "[?name=='ALLOWED_EMAIL_ADDRESSES']"
 ```
 
@@ -1689,7 +1689,7 @@ Run it:
 .\backend-service\scripts\secure-client-secret.ps1 `
     -ResourceGroup "rg-shared-mailbox" `
     -KeyVaultName "kv-shared-mailbox" `
-    -AppServiceName "shared-mailbox-classifier" `
+    -AppServiceName "your-app-name" `
     -ClientSecret "<app-client-secret>" `
     -TenantId "<tenant-id>" `
     -SubscriptionId "<subscription-id>"
@@ -1703,7 +1703,7 @@ Client secret moved to Key Vault: kv-shared-mailbox
 **Test it:**
 
 ```powershell
-az webapp config appsettings list --resource-group "rg-shared-mailbox" --name "shared-mailbox-classifier" `
+az webapp config appsettings list --resource-group "rg-shared-mailbox" --name "your-app-name" `
     --query "[?name=='AZURE_CLIENT_SECRET'].value" -o tsv
 ```
 
@@ -1821,7 +1821,7 @@ Run it:
 ```powershell
 .\backend-service\scripts\restrict-network-access.ps1 `
     -ResourceGroup "rg-shared-mailbox" `
-    -AppServiceName "shared-mailbox-classifier" `
+    -AppServiceName "your-app-name" `
     -AllowedIpRanges "203.0.113.0/24","198.51.100.10" `
     -TenantId "<tenant-id>" `
     -SubscriptionId "<subscription-id>"
@@ -1829,14 +1829,14 @@ Run it:
 
 **Expected output:**
 ```
-HTTPS-only enforced and ingress restricted on shared-mailbox-classifier
+HTTPS-only enforced and ingress restricted on your-app-name
 ```
 
 **Test it:**
 
 ```powershell
 # HTTP (not HTTPS) should now be rejected
-Invoke-WebRequest -Uri "http://shared-mailbox-classifier.azurewebsites.net/health" -Method Get
+Invoke-WebRequest -Uri "http://your-app-name.azurewebsites.net/health" -Method Get
 ```
 
 **Expected result:** the request fails or redirects to HTTPS (`301`/`403`), confirming plain HTTP is blocked.
@@ -1933,7 +1933,7 @@ Run it (then trigger a few test requests in another window):
 ```powershell
 .\backend-service\scripts\review-backend-logs.ps1 `
     -ResourceGroup "rg-shared-mailbox" `
-    -AppServiceName "shared-mailbox-classifier" `
+    -AppServiceName "your-app-name" `
     -TenantId "<tenant-id>" `
     -SubscriptionId "<subscription-id>"
 ```
@@ -1971,7 +1971,7 @@ $token = az account get-access-token --resource "api://<app-client-id>" --query 
 **3. Call the API with the token:**
 
 ```powershell
-Invoke-RestMethod -Uri "https://shared-mailbox-classifier.azurewebsites.net/api/mailbox/messages?mailboxAddress=shared@company.com" `
+Invoke-RestMethod -Uri "https://your-app-name.azurewebsites.net/api/mailbox/messages?mailboxAddress=shared@company.com" `
     -Headers @{ Authorization = "Bearer $token" }
 ```
 
@@ -2063,7 +2063,7 @@ automatically. Otherwise, run it now (safe to re-run):
 ```powershell
 .\backend-service\scripts\enable-backend-auth.ps1 `
     -ResourceGroup "rg-shared-mailbox" `
-    -AppServiceName "shared-mailbox-classifier" `
+    -AppServiceName "your-app-name" `
     -TenantId "<tenant-id>" `
     -ClientId "<app-client-id>" `
     -SubscriptionId "<subscription-id>"
@@ -2108,7 +2108,7 @@ to verify it - the script only creates/updates the connector, it does not test i
 ### Step 5.2: Create the Connector
 
 1. Name: `SharedMailboxConnector`
-2. Host: `shared-mailbox-classifier.azurewebsites.net` (your actual backend URL)
+2. Host: `your-app-name.azurewebsites.net` (your actual backend URL)
 3. Leave all other fields default
 4. Click **Create**
 

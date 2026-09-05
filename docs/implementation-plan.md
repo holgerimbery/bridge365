@@ -19,7 +19,7 @@ Source guidance: See `docs/shared-mailbox-classification-master-guide.md`.
 ```mermaid
 graph TD
     A["Phase 0: Foundation<br/>(v0.1.0)"] --> B["Phase 1: Shared Mailbox<br/>Custom Connector (v0.2.0)"]
-    B --> C["Phase 2: Classification via Table<br/>(v0.3.0)"]
+    B --> C["Phase 2: Classification via Dataverse Table<br/>(v0.5.0)"]
     C --> D["Phase 3: Draft Creation<br/>(v0.4.0)"]
     D --> E["Phase 4: Override/Change<br/>Classification (v0.5.0)"]
     E --> F["Phase 5: MCP Server<br/>Integration (v0.6.0)"]
@@ -86,35 +86,36 @@ graph TD
 
 ---
 
-### Phase 2: Classification via Table (v0.3.0)
+### Phase 2: Classification via Dataverse Table (v0.5.0)
 
-**Objective:** Integrate classification table, implement rule-based classifier, and route messages.
+**Objective:** Store classification rules and audit results in Dataverse, and classify messages via a Copilot Studio Prompt tool.
 
 **Deliverables:**
 
-**Classification Table & Provider:**
-- Dataverse classification table schema (uuid, className, classExamples, classTarget, classTargetEmail, isActive, priority, modelLabel)
-- Rule-based classifier (deterministic keyword matching)
-- Classification output schema (messageId, classifications[], needsHumanRoutingDecision, provider, modelVersion)
-- Validation against table rows
+**Classification Rule & Audit Tables:**
+- Dataverse Classification Rule table (classificationruleid, classname, classexamples, classtarget, classtargetemail, isactive, priority, modellabel)
+- Dataverse Classification Audit table (classificationauditid, messageid, classificationresult, provider, modelversion, confidence, needshumanreview, classificationruleid lookup)
+- Classification output schema (classifications[], needsHumanRoutingDecision, confidence, provider, modelVersion)
 
-**Copilot Studio Custom Connector:**
-- Connector operation: `ClassifyMessage` returns all plausible classifications
-- Store classification results in Dataverse audit table
+**Copilot Studio Prompt Tool:**
+- Prompt tool (Generative AI action) classifies message text against the active Classification Rule rows, with or without a wrapping Flow
+- Result written to the Classification Audit table via the Dataverse connector
+- Planned follow-up: swap in a Foundry-hosted model (e.g. BART-MNLI) behind the same Prompt tool/schema
 
 **Wiki & Documentation:**
-- `docs/wiki/phase-2-classification-table.md` — table setup and rule configuration
-- `docs/wiki/scripts/setup-classification-table.ps1` — Dataverse table provisioning
-- `docs/wiki/scripts/create-sample-classifications.ps1` — Sample classification data
+- `docs/wiki/phase-2-classification-table.md` — table setup and Prompt tool design
+- `dataverse/schemas/classification-rule.schema.json`, `classification-audit.schema.json` — table column templates
+- `dataverse/scripts/deploy-dataverse-tables.ps1` — Dataverse table provisioning (idempotent Web API deployment)
+- `dataverse/scripts/seed-sample-classifications.ps1` — Sample classification data
 - Mermaid diagram: classification flow
 
 **Success Criteria:**
-- Classification table created in Dataverse with sample data
-- Rule-based classifier returns all matching classes
+- Classification Rule and Audit tables created in Dataverse with sample data
+- Prompt tool returns all matching classes for a test message
 - Multi-class results are handled correctly
 - PowerShell scripts automate table setup
 
-**Major PR:** "Feature: Classification via table and rule-based classifier (Phase 2)"
+**Major PR:** "Feature: Classification via Dataverse table and Copilot Studio Prompt tool (Phase 2)"
 
 ---
 
@@ -345,7 +346,7 @@ Licensed under [LICENSE FILE]
 
 1. Implement Phase 0 (already v0.1.0).
 2. Implement Phase 1 (Shared Mailbox Skill + Connector) → tag `v0.2.0`.
-3. Implement Phase 2 (Classification via Table) → tag `v0.3.0`.
+3. Implement Phase 2 (Classification via Dataverse Table) → tag `v0.5.0`.
 4. Continue sequentially through Phase 6 → tag `v1.0.0`.
 
 ---

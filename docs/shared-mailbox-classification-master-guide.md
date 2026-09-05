@@ -1,6 +1,6 @@
 # Complete Optional Module: Incoming Email Classification, Knowledge-Grounded Draft Responses, and Foundry BART
 
-**Example shared mailbox:** `service@instruo365.de`  
+**Example shared mailbox:** `service@company.com`  
 **Authentication:** application or workload identity  
 **Safety default:** create drafts only, never automatically send  
 **Applies to:** Copilot Studio (custom connector)
@@ -76,7 +76,7 @@ Example:
       "Please send a copy of the invoice"
     ],
     "classTarget": "Finance",
-    "classTargetEmail": "finance@instruo365.de",
+    "classTargetEmail": "finance@company.com",
     "isActive": true,
     "priority": 100,
     "modelLabel": "invoice_question"
@@ -104,14 +104,14 @@ Rules:
     {
       "className": "Invoice question",
       "classTarget": "Finance",
-      "classTargetEmail": "finance@instruo365.de",
+      "classTargetEmail": "finance@company.com",
       "score": 0.87,
       "reason": "The message asks about an incorrect invoice amount."
     },
     {
       "className": "Contract question",
       "classTarget": "Legal Operations",
-      "classTargetEmail": "legalops@instruo365.de",
+      "classTargetEmail": "legalops@company.com",
       "score": 0.81,
       "reason": "The message also disputes a contract-related charge."
     }
@@ -144,7 +144,7 @@ For an actual multi-class result:
 --- please remove ---
 classification: Invoice question, Contract question
 department: Finance, Legal Operations
-email: finance@instruo365.de, legalops@instruo365.de
+email: finance@company.com, legalops@company.com
 --- please remove ---
 
 ```
@@ -159,7 +159,7 @@ Use an identifiable HTML wrapper so a reviewer or cleanup function can remove it
   <strong>--- please remove ---</strong><br>
   <strong>classification:</strong> Invoice question, Contract question<br>
   <strong>department:</strong> Finance, Legal Operations<br>
-  <strong>email:</strong> finance@instruo365.de, legalops@instruo365.de<br>
+  <strong>email:</strong> finance@company.com, legalops@company.com<br>
   <strong>--- please remove ---</strong>
 </div>
 <br>
@@ -1133,7 +1133,7 @@ The extension is ready only when:
 
 # Updated Optional Module: Original Email, Routing Block, and Dataverse Classification Audit
 
-**Example mailbox:** `service@instruo365.de`  
+**Example mailbox:** `service@company.com`  
 **Authentication:** application or workload identity  
 **Default:** create and update drafts only; never send automatically
 
@@ -1191,7 +1191,7 @@ Example:
 sender: customer@example.com
 classification: Invoice question, Contract question
 department: Finance, Legal Operations
-email: finance@instruo365.de, legalops@instruo365.de
+email: finance@company.com, legalops@company.com
 --- please remove ---
 
 ```
@@ -1205,7 +1205,7 @@ email: finance@instruo365.de, legalops@instruo365.de
   <strong>sender:</strong> customer@example.com<br>
   <strong>classification:</strong> Invoice question, Contract question<br>
   <strong>department:</strong> Finance, Legal Operations<br>
-  <strong>email:</strong> finance@instruo365.de, legalops@instruo365.de<br>
+  <strong>email:</strong> finance@company.com, legalops@company.com<br>
   <strong>--- please remove ---</strong>
 </div>
 <br>
@@ -1222,7 +1222,7 @@ email: finance@instruo365.de, legalops@instruo365.de
 <div data-original-email="true">
   <p><strong>From:</strong> Customer Name &lt;customer@example.com&gt;<br>
   <strong>Sent:</strong> 2026-09-02T07:30:00Z<br>
-  <strong>To:</strong> service@instruo365.de<br>
+  <strong>To:</strong> service@company.com<br>
   <strong>Subject:</strong> Question about invoice 4711</p>
 
   <div data-original-email-body="true">
@@ -3097,7 +3097,7 @@ In addition to normalized Decision rows, store the complete provider response as
       "uuid": "...",
       "className": "Invoice question",
       "classTarget": "Finance",
-      "classTargetEmail": "finance@instruo365.de",
+      "classTargetEmail": "finance@company.com",
       "score": 0.91,
       "reason": "..."
     }
