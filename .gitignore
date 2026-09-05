@@ -11,3 +11,7 @@ Thumbs.db
 # with real tenant/client IDs by custom-connector/scripts/deploy-connector.ps1)
 custom-connector/apiProperties.json
 custom-connector/openapi.generated.json
+
+# Real (non-template) openapi.yaml, generated from openapi.template.yaml by
+# custom-connector/scripts/generate-openapi.ps1 with your actual backend host
+custom-connector/openapi.yaml

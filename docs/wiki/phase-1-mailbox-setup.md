@@ -2038,7 +2038,10 @@ Do not proceed to Phase 2+ production rollout until every row in this table is v
 All artifacts for this section (the OpenAPI definition and a standalone setup guide)
 live in [`custom-connector/`](../../custom-connector) - see
 [`custom-connector/README.md`](../../custom-connector/README.md) and
-[`custom-connector/openapi.yaml`](../../custom-connector/openapi.yaml).
+[`custom-connector/openapi.template.yaml`](../../custom-connector/openapi.template.yaml).
+The real `openapi.yaml` (with your backend hostname) is generated locally by
+[`generate-openapi.ps1`](../../custom-connector/scripts/generate-openapi.ps1)
+and gitignored - it is never committed.
 
 Steps 5.1-5.5 below use the Power Platform portal wizard. If you prefer a
 scriptable, repeatable setup, skip ahead to
@@ -2050,12 +2053,14 @@ instead - it covers the same create/configure/test flow via the `paconn` CLI.
 **Script:** [`deploy-connector.ps1`](../../custom-connector/scripts/deploy-connector.ps1)
 
 Creates or updates the `SharedMailboxConnector` connector directly from
-`custom-connector/openapi.yaml` and `custom-connector/apiProperties.template.json`,
-without using the portal wizard at all. Requires Python 3.5+ and the
+`custom-connector/openapi.template.yaml` and `custom-connector/apiProperties.template.json`,
+without using the portal wizard at all. It automatically generates the real,
+gitignored `openapi.yaml` (via `generate-openapi.ps1`) from `.env`'s
+`BACKEND_URL`/`APP_SERVICE_NAME` before deploying. Requires Python 3.5+ and the
 [`paconn` CLI](https://learn.microsoft.com/connectors/custom-connectors/paconn-cli):
 
 ```powershell
-pip install paconn
+pip install paconn pyyaml
 paconn login   # one-time interactive device-code sign-in
 ```
 
@@ -2232,7 +2237,7 @@ Since [Step 4.6](#46-security-hardening-required-before-production-use) enables
 delegated Easy Auth with a per-user email allowlist, the connector must
 authenticate as the **signed-in user** (not app-only client-credentials), so
 their email reaches the backend's `X-MS-CLIENT-PRINCIPAL-NAME` allowlist check.
-This is why `custom-connector/openapi.yaml` uses OAuth `flow: accessCode`
+This is why `custom-connector/openapi.template.yaml` uses OAuth `flow: accessCode`
 (Authorization Code), not `application`.
 
 **Prerequisite - expose the delegated OAuth2 scope** used by the
