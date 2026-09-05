@@ -27,6 +27,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.16] - 2026-09-05
+
+### What's Fixed
+- `backend-service/app.py`: Microsoft Graph API calls (`get_messages`, `poll_new_messages`, `get_message`, `create_draft`, `update_draft`, `send_message`, `send_draft_message`) previously called `.json()` (or ignored the response entirely) without checking the HTTP status code Graph actually returned. `msgraph-core`'s `GraphClient` does not raise for non-2xx Graph responses, so a Graph error (e.g. `ErrorItemNotFound` for a deleted or nonexistent message/draft) was silently parsed as if it were a successful payload - callers received a `200 OK` with `null`/empty fields instead of an error, even though the requested operation never happened.
+- `POST /api/mailbox/drafts/<draft_id>/send` and `POST /api/mailbox/messages/send` previously discarded the Graph response entirely, so a failed send (e.g. a deleted draft) could report `{"status": "sent"}` even when nothing was sent.
+
+### What's Modified
+- `backend-service/app.py`: added a `GraphError` exception plus `graph_json()`/`check_graph_response()` helpers that inspect `response.status_code` and raise `GraphError` for any non-2xx Graph response. Every endpoint that calls Microsoft Graph now routes its response through one of these helpers and has a dedicated `except GraphError` handler that returns Graph's own status code (e.g. `404`, `403`) with the underlying Graph error message, instead of a misleading `200` or a generic unhandled `500`/`502`.
+
+### Breaking Changes
+- Callers of `/api/mailbox/drafts` (CreateDraft), `/api/mailbox/drafts/<draft_id>` (UpdateDraft), `/api/mailbox/messages/send` (SendMessage), and `/api/mailbox/drafts/<draft_id>/send` (SendDraftMessage) that operate on a message/draft ID Microsoft Graph can't find will now receive Graph's actual error status (typically `404`) instead of a `200` with empty/null fields. Any caller that was relying on the old (incorrect) always-`200` behavior for these endpoints must now check the response status code.
+
+---
+
 ## [0.4.14] - 2026-09-05
 
 ### What's New
