@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.28] - 2026-09-05
+
+### What's New
+- `docs/wiki/phase-1-mailbox-setup.md` Step 5.5 now documents how to test every connector operation via the Power Platform Test tab, not just `GetMessages`: `GetMessage`, `ClassifyMessage`, `CreateDraft`, `UpdateDraft`, `SendMessage`, and `SendDraftMessage`, each with exact webform field values and expected output, chaining ids returned by earlier tests (e.g. the Inbox `messageId` from `GetMessages` feeds `GetMessage`/`ClassifyMessage`/`CreateDraft`, and the `draftId` from `CreateDraft` feeds `UpdateDraft`/`SendDraftMessage`).
+- Documented the one-time **New connection** step required before the Test tab can call any operation (sign in with an allowlisted user), since the connector uses delegated Azure AD auth.
+
+### What's Modified
+- Noted that `SendMessage`/`SendDraftMessage` send **real email** and suggested using a self-addressed test message to avoid spamming real recipients while testing.
+
+### Breaking Changes
+- None.
+
+---
+
 ## [0.4.27] - 2026-09-05
 
 ### What's Removed
