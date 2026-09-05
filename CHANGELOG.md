@@ -11,6 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.25] - 2026-09-05
+
+### What's Fixed
+- **`CreateDraft` failed with `400: "The reference item does not support the requested operation"` even when using an `id` freshly copied from `GetMessages`** - `GetMessages` and the `NewMessageReceived` polling trigger called Microsoft Graph's `/users/{mailbox}/messages` root collection, which returns items from **every** folder (Inbox, Drafts, Sent Items), not just the Inbox. `createReply`/`createReplyAll` only work on real received messages, so whenever the returned list included a draft or sent item, using its `id` for `CreateDraft` failed with this Graph error.
+
+### What's Modified
+- `backend-service/app.py`: `get_messages()` and `poll_new_messages()` now call `/users/{mailbox}/mailFolders/inbox/messages` instead of `/users/{mailbox}/messages`, so both only ever return real Inbox mail. No permission changes needed - `Mail.Read` already covers this sub-resource.
+
+### Breaking Changes
+- None. `GetMessages`/`NewMessageReceived` responses are now scoped to Inbox only, which is the intended behavior - existing callers see the same shape, just without Drafts/Sent Items mixed in.
+
+---
+
 ## [0.4.24] - 2026-09-05
 
 ### What's New

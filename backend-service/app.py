@@ -112,9 +112,12 @@ def get_messages():
         if not mailbox:
             return jsonify({"error": "mailboxAddress parameter required"}), 400
         
-        # Call Microsoft Graph API
+        # Restrict to the Inbox folder (not the /messages root collection,
+        # which also returns Drafts/Sent Items) - createReply/createReplyAll
+        # only work on real received messages, so mixing in drafts/sent
+        # items here would make CreateDraft fail with a confusing Graph 400.
         response = graph_client.get(
-            f"/users/{mailbox}/messages?$top={top}&$select=id,subject,from,receivedDateTime,bodyPreview"
+            f"/users/{mailbox}/mailFolders/inbox/messages?$top={top}&$select=id,subject,from,receivedDateTime,bodyPreview"
         )
         return jsonify(graph_json(response)), 200
     except GraphError as e:
@@ -140,9 +143,9 @@ def poll_new_messages():
 
         filter_clause = f"receivedDateTime gt {since}" if since else "receivedDateTime gt 1970-01-01T00:00:00Z"
 
-        # Call Microsoft Graph API - newest first, as required by the polling trigger contract
+        # Restrict to the Inbox folder - see get_messages() above for why.
         response = graph_client.get(
-            f"/users/{mailbox}/messages?$filter={filter_clause}&$orderby=receivedDateTime desc"
+            f"/users/{mailbox}/mailFolders/inbox/messages?$filter={filter_clause}&$orderby=receivedDateTime desc"
             f"&$select=id,subject,from,receivedDateTime,bodyPreview"
         )
         return jsonify(graph_json(response)), 200
