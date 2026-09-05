@@ -33,10 +33,11 @@ This project provides:
 | Phase 1: Email Allowlist OAuth Authorization + Wiki Doc Cleanup | ✅ Complete | v0.4.11 |
 | Phase 1: Shared Mailbox Draft Create/Update (Graph createReply + PATCH) | ✅ Complete | v0.4.12 |
 | Phase 1: Security Model Documentation (Worked Example) | ✅ Complete | v0.4.13 |
+| Phase 1: Fail-safe Backend Deployment Script | ✅ Complete | v0.4.14 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
-## Quick Start (Phase 1: v0.4.13)
+## Quick Start (Phase 1: v0.4.14)
 
 ### Prerequisites
 
@@ -301,6 +302,10 @@ All code samples include copyright headers. See individual files for details.
 ### v0.4.13: Security Model Documentation (Worked Example)
 - ✨ `docs/wiki/phase-1-mailbox-setup.md` Section 4.6: new "Understanding the Combined Security Model (Worked Example)" subsection - walks through a concrete example (generic tenant/mailbox/user addresses) showing that a caller can operate the backend and draft mail in the shared mailbox based on Easy Auth (tenant restriction) + the email allowlist, and clarifies that Exchange shared-mailbox membership/delegation is irrelevant to this API's authorization chain.
 
+### v0.4.14: Fail-safe Backend Deployment Script
+- ✨ New `backend-service/scripts/deploy-backend.ps1` - deploys the Python backend via the already-authenticated `az` CLI session (no Git credential prompts), removes any conflicting `WEBSITE_RUN_FROM_PACKAGE` setting, sets an explicit `gunicorn` startup command, waits for Kudu to be responsive, retries transient failures up to 3 times, and polls `/health` afterward.
+- 🐛 Fixed `docs/wiki/phase-1-mailbox-setup.md` Step 4.4: replaced `git push azure main` (required typing App Service publishing credentials into a Git prompt, and offered no protection against the `WEBSITE_RUN_FROM_PACKAGE`/`SCM_DO_BUILD_DURING_DEPLOYMENT` conflict that causes an endless "Starting the site..."/HTTP 502 loop) with `deploy-backend.ps1`.
+
 ---
 
 ## 🔄 IN PROGRESS
@@ -370,4 +375,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.4.13 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.4.14 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)

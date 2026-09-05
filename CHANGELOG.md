@@ -11,6 +11,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.14] - 2026-09-05
+
+### What's New
+- `backend-service/scripts/deploy-backend.ps1`: new fail-safe ZIP deployment script for the Python backend on Azure App Service (Linux). Deploys via the already-authenticated `az` CLI session (no Git credential prompts at all), removes any conflicting `WEBSITE_RUN_FROM_PACKAGE` app setting, sets an explicit `gunicorn` startup command, waits for Kudu to become responsive before deploying, retries transient deployment failures up to 3 times, and polls `/health` afterward - printing the deployment log automatically on failure instead of leaving an ambiguous hang.
+
+### What's Fixed
+- `docs/wiki/phase-1-mailbox-setup.md` Step 4.4 previously documented deploying via `git push azure main`, which required typing App Service's own publishing credentials into a Git credential prompt (easily confused with a personal Microsoft account password) and offered no protection against the `WEBSITE_RUN_FROM_PACKAGE`/`SCM_DO_BUILD_DURING_DEPLOYMENT` conflict that silently skips the Oryx build step - both were observed in practice to cause an endless "Starting the site..." / HTTP 502 loop with no clear error message.
+
+### What's Modified
+- `docs/wiki/phase-1-mailbox-setup.md` Step 4.4 rewritten to use `deploy-backend.ps1` instead of `git push azure main`.
+
+### Breaking Changes
+- None. `git push azure main` still works as a manual fallback; `deploy-backend.ps1` is the new documented/recommended path.
+
+---
+
 ## [0.4.13] - 2026-09-03
 
 ### What's New
