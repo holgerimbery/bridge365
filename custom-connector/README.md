@@ -1,11 +1,9 @@
-   > then call CreateDraft with a reply based on the returned classification. Call
-   > SendDraftMessage only after a human has approved the draft (or call
-   > SendMessage directly for a fully autonomous reply with no draft step)."
+# Custom Connector Setup
 
 (c) 2026 Holger Imbery (contact@holgerimbery.blog). Licensed under the project LICENSE file.
 
 This folder contains the artifacts needed to create the `SharedMailboxConnector` Power
-Platform custom connector, used by the standard Copilot Studio harness to call the
+Platform custom connector, used by Copilot Studio to call the
 [backend service](../backend-service).
 
 ## Contents
