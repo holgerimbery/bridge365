@@ -11,6 +11,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.6] - 2026-09-05
+
+### What's Modified
+- `README.md`: corrected 3 stale Phase 2 status labels left over from when classification work was still in progress. The "Next Phase" note now reads "Phase 1 and Phase 2 (classification) are complete. Proceed to Phase 3: Draft Creation & Routing (planned)." instead of pointing at Phase 2 as the next/in-progress step; the Phase 2 documentation link status changed from 🔄 In Progress to ✅ Complete; the Project Structure tree comment for phase-2-classification-table.md changed from # Phase 2 (in progress) to # Phase 2 (complete), matching the Phase 1 comment style.
+- `README.md`: bumped the `Current Version` footer pointer to v0.5.6.
+- `docs/status.md`: added the Status Summary row and Detailed Status entry for this release.
+
+### Breaking Changes
+- None.
+
+---
+
 ## [0.5.4] - 2026-09-05
 
 ### What's Modified

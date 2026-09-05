@@ -37,7 +37,7 @@ This project provides:
    All phases include testing procedures with expected outputs.
 
 4. **Next Phase**
-   After Phase 1 is complete, proceed to Phase 2: Classification (currently in progress).
+   Phase 1 and Phase 2 (classification) are complete. Proceed to Phase 3: Draft Creation & Routing (planned).
 
 ## Architecture
 
@@ -65,7 +65,7 @@ graph TB
 
 **Phase-by-Phase Guides:**
 - [Phase 1: Shared Mailbox Custom Connector Setup](docs/wiki/phase-1-mailbox-setup.md) ✅ Complete
-- [Phase 2: Classification via Dataverse Table](docs/wiki/phase-2-classification-table.md) 🔄 In Progress
+- [Phase 2: Classification via Dataverse Table](docs/wiki/phase-2-classification-table.md) ✅ Complete
 
 **Reference Documentation:**
 - [Wiki Home](docs/wiki/index.md) - Overview and navigation
@@ -111,7 +111,7 @@ bridge365/
     └── wiki/                           # Phase-by-phase guides
         ├── index.md                    # Wiki home
         ├── phase-1-mailbox-setup.md    # Phase 1 (complete with testing)
-        ├── phase-2-classification-table.md  # Phase 2 (in progress)
+        ├── phase-2-classification-table.md  # Phase 2 (complete)
         └── scripts/                    # Shared app-registration scripts
 ```
 
@@ -135,4 +135,4 @@ All code samples include copyright headers. See individual files for details.
 
 ---
 
-**Current Version:** v0.5.4 | [View Changelog](CHANGELOG.md) | [View Status & Roadmap](docs/status.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.5.6 | [View Changelog](CHANGELOG.md) | [View Status & Roadmap](docs/status.md) | [View Implementation Plan](docs/implementation-plan.md)
