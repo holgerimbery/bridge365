@@ -45,6 +45,7 @@ This project provides:
 | Phase 1: Custom Connector Resource GUID Fix | ✅ Complete | v0.4.23 |
 | Phase 1: OpenAPI Host Templating (Public-Repo Hardening) | ✅ Complete | v0.4.24 |
 | Phase 1: GetMessages Inbox-Only Scope Fix | ✅ Complete | v0.4.25 |
+| Phase 1: CreateDraft Wiki Documentation (Inbox-Only messageId) | ✅ Complete | v0.4.26 |
 | Phase 2: Classification Table | 🔄 In Progress | v0.5.0 (planned) |
 | Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
 
@@ -431,4 +432,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.4.25 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.4.26 | [View Changelog](CHANGELOG.md) | [View Implementation Plan](docs/implementation-plan.md)
