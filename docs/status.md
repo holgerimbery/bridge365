@@ -292,6 +292,7 @@ Status summary and full version-by-version history for the Bridge365 project. Se
 - 🔧 README.md: changed the Phase 2 documentation link status from 🔄 In Progress to ✅ Complete, matching the Phase 1 line above it.
 - 🔧 README.md: changed the Project Structure tree comment for phase-2-classification-table.md from # Phase 2 (in progress) to # Phase 2 (complete), matching the Phase 1 comment style.
 - 🔧 README.md: bumped the Current Version footer pointer to v0.5.6.
+- 🔧 README.md: replaced links to docs/implementation-plan.md with docs/status.md in the Reference Documentation list, the Support & Contribution numbered list, and the Current Version footer (removed the now-redundant "View Implementation Plan" link); docs/status.md is now the canonical living roadmap/status doc.
 
 ---
 

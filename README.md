@@ -69,7 +69,7 @@ graph TB
 
 **Reference Documentation:**
 - [Wiki Home](docs/wiki/index.md) - Overview and navigation
-- [Implementation Plan](docs/implementation-plan.md) - Full roadmap with all phases
+- [Status & Roadmap](docs/status.md) - Full roadmap with all phases and current status
 - [Changelog](CHANGELOG.md) - Version history and release notes
 - [Commit Conventions](COMMIT_CONVENTION.md) - Standardized commit message format
 
@@ -120,7 +120,7 @@ bridge365/
 For questions or issues:
 1. Check the relevant phase documentation in `docs/wiki/`
 2. Review the troubleshooting section in the phase guide
-3. Check [Implementation Plan](docs/implementation-plan.md) for detailed phase definitions
+3. Check [Status & Roadmap](docs/status.md) for detailed phase definitions
 4. Verify all test procedures pass
 
 ## License
@@ -135,4 +135,4 @@ All code samples include copyright headers. See individual files for details.
 
 ---
 
-**Current Version:** v0.5.6 | [View Changelog](CHANGELOG.md) | [View Status & Roadmap](docs/status.md) | [View Implementation Plan](docs/implementation-plan.md)
+**Current Version:** v0.5.6 | [View Changelog](CHANGELOG.md) | [View Status & Roadmap](docs/status.md)
