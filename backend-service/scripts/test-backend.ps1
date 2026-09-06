@@ -51,6 +51,27 @@ function Get-HttpStatusCode {
     return $null
 }
 
+# Detects the Microsoft Entra sign-in page HTML that Easy Auth returns for
+# unauthenticated requests. Without this check, a 200 response containing a
+# login page reads as "success" (Invoke-RestMethod doesn't throw on HTML
+# content), silently defeating the test and flooding output with megabytes of
+# the sign-in page's inline script/JSON.
+function Test-IsAuthRedirect {
+    param($Response)
+    $text = if ($Response -is [string]) { $Response } elseif ($Response.PSObject.Properties.Name -contains 'Content') { $Response.Content } else { $null }
+    if (-not $text) { return $false }
+    return ($text -match 'ConvergedSignIn' -or $text -match 'Sign in to your account')
+}
+
+# Caps how much response detail we print, so any unexpectedly large or
+# non-JSON body (like a full HTML page) can never flood the console.
+function Get-SafeDetail {
+    param($Response, [int]$MaxLength = 300)
+    $text = if ($Response -is [string]) { $Response } else { ($Response | ConvertTo-Json -Compress -Depth 4) }
+    if ($text.Length -gt $MaxLength) { return $text.Substring(0, $MaxLength) + "... (truncated)" }
+    return $text
+}
+
 function Add-TestResult {
     param(
         [Parameter(Mandatory)][string]$Name,
@@ -76,8 +97,12 @@ function Invoke-EndpointTest {
     )
     try {
         $Response = & $Action
-        $detail = if ($Response) { ($Response | ConvertTo-Json -Compress -Depth 4) } else { "" }
-        Add-TestResult -Name $Name -Status 'Pass' -Detail $detail
+        if (Test-IsAuthRedirect $Response) {
+            Add-TestResult -Name $Name -Status 'Warn' -Detail "Blocked by Easy Auth: request was redirected to the Microsoft sign-in page. The endpoint is reachable, but anonymous test calls can't verify its actual behavior once Easy Auth is enabled."
+        } else {
+            $detail = if ($Response) { Get-SafeDetail $Response } else { "" }
+            Add-TestResult -Name $Name -Status 'Pass' -Detail $detail
+        }
     } catch {
         $code = Get-HttpStatusCode $_
         if ($null -ne $code) {
@@ -95,7 +120,11 @@ Write-Host ""
 Write-Host "1. Testing /health endpoint..." -ForegroundColor Yellow
 try {
     $Response = Invoke-RestMethod -Uri "$BackendUrl/health" -Method Get
-    Add-TestResult -Name "Health check" -Status 'Pass' -Detail ($Response | ConvertTo-Json -Compress)
+    if (Test-IsAuthRedirect $Response) {
+        Add-TestResult -Name "Health check" -Status 'Warn' -Detail "Blocked by Easy Auth: /health was redirected to the Microsoft sign-in page instead of returning health data. This confirms the App Service is reachable, but does not verify the app itself is healthy. To check real health, use the Azure Portal's Log Stream/Kudu console, or temporarily allow anonymous access to /health."
+    } else {
+        Add-TestResult -Name "Health check" -Status 'Pass' -Detail (Get-SafeDetail $Response)
+    }
 } catch {
     Add-TestResult -Name "Health check" -Status 'Fail' -Detail $_.Exception.Message
 }
