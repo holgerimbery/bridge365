@@ -193,8 +193,3 @@ All code samples include copyright headers. See individual files for details.
 
 **Current Version:** v0.5.7 | [View Changelog](CHANGELOG.md) | [View Status & Roadmap](docs/status.md)
 
-## Promotional Website
-
-A promotional landing page for Bridge365 lives in [`site/`](site/) and is
-published via GitHub Pages (see `.github/workflows/deploy-pages.yml`). Enable
-Pages in repo Settings > Pages > Source: GitHub Actions to publish it.
