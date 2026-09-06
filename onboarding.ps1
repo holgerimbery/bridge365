@@ -708,11 +708,19 @@ while ($true) {
     $choice = Read-Prompt "Choice" "1"
     switch ($choice) {
         "1" {
-            Step-AppRegistration
+            $appRegOk = Step-AppRegistration
+            if (-not $appRegOk) {
+                Write-Warn2 "Stopping guided setup: App Registration failed and every later step needs CLIENT_ID/CLIENT_SECRET/TENANT_ID from it. Fix the issue above, then re-run option 1 (already-completed steps are safe to repeat)."
+                break
+            }
             Step-MailboxAccess
-            Step-AzureResources
-            Step-ConfigureAndDeployBackend
-            Step-SecurityHardening
+            $azureResourcesOk = Step-AzureResources
+            if ($azureResourcesOk) {
+                Step-ConfigureAndDeployBackend
+                Step-SecurityHardening
+            } else {
+                Write-Warn2 "Skipping 'Configure Settings & Deploy Backend Code' and 'Security Hardening' - both require the App Service created in the previous step, which failed (see [X] above, e.g. a regional quota limit). Fix the issue (request a quota increase, or retry with a different region/SKU), then run menu option 4, then 5 and 6 - or re-run option 1 from the top."
+            }
             Step-CustomConnector
             Step-Dataverse
             Step-Diagnostics

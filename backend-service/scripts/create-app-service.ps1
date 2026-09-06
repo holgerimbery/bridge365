@@ -81,16 +81,50 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host "✓ Resource group created: $ResourceGroup" -ForegroundColor Green
 
-# Create App Service plan
-az appservice plan create `
-    --resource-group $ResourceGroup `
-    --name "$AppServiceName-plan" `
-    --sku B1 `
-    --is-linux
+# Create App Service plan. A B1 plan needs regional vCPU quota that many
+# subscriptions (especially free/trial/dev-test ones) start out at zero for,
+# so a first attempt can fail with "insufficient regional vCPU quota" even
+# though everything else (resource group, permissions) is fine. Rather than
+# aborting the whole onboarding run on that single external quota limit,
+# offer to retry interactively with a different region - most subscriptions
+# have quota for at least one of eastus/westus2/westeurope.
+$PlanLocation = $Location
+$PlanSku = "B1"
+$PlanCreated = $false
+$MaxAttempts = 3
+for ($Attempt = 1; $Attempt -le $MaxAttempts; $Attempt++) {
+    az appservice plan create `
+        --resource-group $ResourceGroup `
+        --name "$AppServiceName-plan" `
+        --sku $PlanSku `
+        --location $PlanLocation `
+        --is-linux
 
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "Failed to create App Service plan '$AppServiceName-plan'. Common cause: insufficient regional vCPU quota for the selected SKU - request a quota increase or try a different region/SKU. See az CLI output above for details."
+    if ($LASTEXITCODE -eq 0) {
+        $PlanCreated = $true
+        break
+    }
+
+    Write-Warning "Failed to create App Service plan '$AppServiceName-plan' (sku=$PlanSku, location=$PlanLocation)."
+    Write-Host "  Common cause: insufficient regional vCPU quota for this SKU/region in the current subscription." -ForegroundColor Yellow
+    Write-Host "  Option A - request a quota increase: https://aka.ms/ProdportalCRP/#blade/Microsoft_Azure_Capacity/UsageAndQuota.ReactView (Compute-VM (cores-vCPUs) subscription limit increases)" -ForegroundColor Gray
+    Write-Host "  Option B - switch Azure subscription (menu: re-run onboarding.ps1 and pick a different subscription index) if another one has spare quota." -ForegroundColor Gray
+    Write-Host "  Option C - retry now with a different region." -ForegroundColor Gray
+
+    if ($Attempt -eq $MaxAttempts) { break }
+    $RetryChoice = Read-Host "Retry with a different region now? (y/n) [n]"
+    if ($RetryChoice -ne 'y') { break }
+
+    $NewLocation = Read-Host "Azure region to try [$PlanLocation]"
+    if ($NewLocation) { $PlanLocation = $NewLocation }
+}
+
+if (-not $PlanCreated) {
+    Write-Error "Failed to create App Service plan '$AppServiceName-plan' after $Attempt attempt(s). See az CLI output above for details."
     exit 1
+}
+if ($PlanLocation -ne $Location) {
+    Write-Host "  Note: the plan was created in '$PlanLocation' instead of '$Location'. Update LOCATION=$PlanLocation in .env so later steps (and future runs) stay consistent." -ForegroundColor Yellow
 }
 Write-Host "✓ App Service plan created" -ForegroundColor Green
 
