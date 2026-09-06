@@ -382,4 +382,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.5.7 | [View README](../README.md) | [View Changelog](../CHANGELOG.md)
+**Current Version:** v0.6.2 | [View README](../README.md) | [View Changelog](../CHANGELOG.md)

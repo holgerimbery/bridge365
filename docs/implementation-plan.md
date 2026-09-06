@@ -21,9 +21,9 @@ graph TD
     A["Phase 0: Foundation<br/>(v0.1.0)"] --> B["Phase 1: Shared Mailbox<br/>Custom Connector (v0.2.0)"]
     B --> C["Phase 2: Classification via Dataverse Table<br/>(v0.5.0)"]
     C --> D["Phase 3: Draft Creation<br/>& Routing (v0.6.0)"]
-    D --> E["Phase 4: Override/Change<br/>Classification (v0.5.0)"]
-    E --> F["Phase 5: MCP Server<br/>Integration (v0.6.0)"]
-    F --> G["Phase 6: BART Classifier<br/>(v0.7.0)"]
+    D --> E["Phase 4: Override/Change<br/>Classification (v0.7.0)"]
+    E --> F["Phase 5: MCP Server<br/>Integration (v0.8.0)"]
+    F --> G["Phase 6: BART Classifier<br/>(v0.9.0)"]
     G --> H["v1.0.0: Release Candidate"]
 ```
 
@@ -155,7 +155,7 @@ Phase 1 (`CreateDraft` with `replyAll`, `UpdateDraft`, `SendDraftMessage`).
 
 ---
 
-### Phase 4: Override/Change Classification (v0.5.0)
+### Phase 4: Override/Change Classification (v0.7.0)
 
 **Objective:** Allow reviewers to accept, reject, or override automated classifications before sending.
 
@@ -187,7 +187,7 @@ Phase 1 (`CreateDraft` with `replyAll`, `UpdateDraft`, `SendDraftMessage`).
 
 ---
 
-### Phase 5: MCP Server Integration (v0.6.0)
+### Phase 5: MCP Server Integration (v0.8.0)
 
 **Objective:** Add MCP server layer for standardized tool invocation.
 
@@ -224,7 +224,7 @@ Phase 1 (`CreateDraft` with `replyAll`, `UpdateDraft`, `SendDraftMessage`).
 
 ---
 
-### Phase 6: BART Classifier (v0.7.0)
+### Phase 6: BART Classifier (v0.9.0)
 
 **Objective:** Add machine learning classifier option (Foundry BART or Azure ML).
 
