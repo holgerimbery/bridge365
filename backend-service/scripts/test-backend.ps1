@@ -8,7 +8,10 @@
 
 param(
     [string]$BackendUrl,
-    [string]$MailboxAddress = "test@company.com"
+    [string]$MailboxAddress = "test@company.com",
+    [string]$TenantId,
+    [string]$ClientId,
+    [string]$ClientSecret
 )
 
 # Load from .env if parameters not provided
@@ -29,6 +32,9 @@ if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
     if (-not $BackendUrl) { $BackendUrl = $env_vars['BACKEND_URL'] }
     if ($MailboxAddress -eq "test@company.com" -and $env_vars['MAILBOX_ADDRESS']) { $MailboxAddress = $env_vars['MAILBOX_ADDRESS'] }
+    if (-not $TenantId) { $TenantId = $env_vars['TENANT_ID'] }
+    if (-not $ClientId) { $ClientId = $env_vars['CLIENT_ID'] }
+    if (-not $ClientSecret) { $ClientSecret = $env_vars['CLIENT_SECRET'] }
 }
 
 # Validate
@@ -70,6 +76,33 @@ function Get-SafeDetail {
     $text = if ($Response -is [string]) { $Response } else { ($Response | ConvertTo-Json -Compress -Depth 4) }
     if ($text.Length -gt $MaxLength) { return $text.Substring(0, $MaxLength) + "... (truncated)" }
     return $text
+}
+
+# Acquires an app-only access token scoped to the App Service's own app
+# registration (audience = the bare client ID), the same self-referencing
+# token shape enable-backend-auth.ps1 allowlists for the custom connector.
+# This lets us prove the backend genuinely works behind Easy Auth - not just
+# that it is reachable - instead of only reporting "blocked by Easy Auth" for
+# every endpoint. Returns $null (and the caller falls back to anonymous,
+# Easy-Auth-aware calls) if TenantId/ClientId/ClientSecret are not available.
+function Get-BackendAuthToken {
+    param([string]$TenantId, [string]$ClientId, [string]$ClientSecret)
+    if (-not $TenantId -or -not $ClientId -or -not $ClientSecret) { return $null }
+    try {
+        $TokenUrl = "https://login.microsoftonline.com/$TenantId/oauth2/token"
+        $Body = @{
+            grant_type    = "client_credentials"
+            client_id     = $ClientId
+            client_secret = $ClientSecret
+            resource      = $ClientId
+        }
+        $Response = Invoke-RestMethod -Uri $TokenUrl -Method Post -Body $Body -ErrorAction Stop
+        return $Response.access_token
+    } catch {
+        Write-Host "   Could not acquire an authenticated test token: $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Host "   Falling back to anonymous calls - Easy-Auth-protected endpoints will report Warn instead of a verified Pass." -ForegroundColor Yellow
+        return $null
+    }
 }
 
 function Add-TestResult {
@@ -115,11 +148,19 @@ function Invoke-EndpointTest {
 
 Write-Host "Testing Backend Endpoints" -ForegroundColor Cyan
 Write-Host "Backend: $BackendUrl" -ForegroundColor Gray
+$script:AuthToken = Get-BackendAuthToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret
+$script:AuthHeaders = if ($script:AuthToken) { @{ Authorization = ($'Bearer ' + $script:AuthToken) } } else { @{} }
+if ($script:AuthToken) {
+    Write-Host "Authenticated testing: acquired an app-only token; calls below use a real authorization header." -ForegroundColor Gray
+} else {
+    Write-Host "Authenticated testing not available (need TENANT_ID, CLIENT_ID, CLIENT_SECRET) - calls below are anonymous; Easy-Auth-protected endpoints will report Warn." -ForegroundColor Gray
+}
+
 Write-Host ""
 
 Write-Host "1. Testing /health endpoint..." -ForegroundColor Yellow
 try {
-    $Response = Invoke-RestMethod -Uri "$BackendUrl/health" -Method Get
+    $Response = Invoke-RestMethod -Uri "$BackendUrl/health" -Method Get -Headers $script:AuthHeaders
     if (Test-IsAuthRedirect $Response) {
         Add-TestResult -Name "Health check" -Status 'Warn' -Detail "Blocked by Easy Auth: /health was redirected to the Microsoft sign-in page instead of returning health data. This confirms the App Service is reachable, but does not verify the app itself is healthy. To check real health, use the Azure Portal's Log Stream/Kudu console, or temporarily allow anonymous access to /health."
     } else {
@@ -132,48 +173,48 @@ Write-Host ""
 
 Write-Host "2. Testing /api/mailbox/messages endpoint..." -ForegroundColor Yellow
 Invoke-EndpointTest -Name "Get messages" -WarnHint "Normal if app registration doesn't have mailbox access yet." -Action {
-    Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/messages?mailboxAddress=$MailboxAddress&top=5" -Method Get -ErrorAction Stop
+    Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/messages?mailboxAddress=$MailboxAddress&top=5" -Method Get -Headers $script:AuthHeaders -ErrorAction Stop
 }
 Write-Host ""
 
 Write-Host "3. Testing /api/mailbox/classify endpoint..." -ForegroundColor Yellow
 Invoke-EndpointTest -Name "Classify message" -WarnHint "Normal if test-message-id doesn't refer to a real message yet." -Action {
     $Body = @{ messageId = "test-message-id" } | ConvertTo-Json
-    Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/classify" -Method Post -Body $Body -ContentType "application/json" -ErrorAction Stop
+    Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/classify" -Method Post -Body $Body -ContentType "application/json" -Headers $script:AuthHeaders -ErrorAction Stop
 }
 Write-Host ""
 
 Write-Host "4. Testing /api/mailbox/messages/poll endpoint..." -ForegroundColor Yellow
 Invoke-EndpointTest -Name "Poll messages" -WarnHint "Normal if app registration doesn't have mailbox access yet." -Action {
-    Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/messages/poll?mailboxAddress=$MailboxAddress" -Method Get -ErrorAction Stop
+    Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/messages/poll?mailboxAddress=$MailboxAddress" -Method Get -Headers $script:AuthHeaders -ErrorAction Stop
 }
 Write-Host ""
 
 Write-Host "5. Testing /api/mailbox/drafts (CreateDraft) endpoint..." -ForegroundColor Yellow
 Invoke-EndpointTest -Name "Create draft" -WarnHint "Normal if test-message-id doesn't refer to a real message yet." -Action {
     $Body = @{ mailboxAddress = $MailboxAddress; messageId = "test-message-id"; subject = "Re: Test"; body = "Test reply body" } | ConvertTo-Json
-    Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/drafts" -Method Post -Body $Body -ContentType "application/json" -ErrorAction Stop
+    Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/drafts" -Method Post -Body $Body -ContentType "application/json" -Headers $script:AuthHeaders -ErrorAction Stop
 }
 Write-Host ""
 
 Write-Host "6. Testing /api/mailbox/drafts/{draftId} (UpdateDraft) endpoint..." -ForegroundColor Yellow
 Invoke-EndpointTest -Name "Update draft" -WarnHint "Normal if test-draft-id doesn't refer to a real draft yet." -Action {
     $Body = @{ mailboxAddress = $MailboxAddress; subject = "Re: Test (edited)"; body = "Edited reply body" } | ConvertTo-Json
-    Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/drafts/test-draft-id" -Method Patch -Body $Body -ContentType "application/json" -ErrorAction Stop
+    Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/drafts/test-draft-id" -Method Patch -Body $Body -ContentType "application/json" -Headers $script:AuthHeaders -ErrorAction Stop
 }
 Write-Host ""
 
 Write-Host "7. Testing /api/mailbox/messages/send endpoint..." -ForegroundColor Yellow
 Invoke-EndpointTest -Name "Send message" -WarnHint "Normal if app registration doesn't have mailbox access yet." -Action {
     $Body = @{ mailboxAddress = $MailboxAddress; to = "recipient@company.com"; subject = "Test"; body = "Test body" } | ConvertTo-Json
-    Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/messages/send" -Method Post -Body $Body -ContentType "application/json" -ErrorAction Stop
+    Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/messages/send" -Method Post -Body $Body -ContentType "application/json" -Headers $script:AuthHeaders -ErrorAction Stop
 }
 Write-Host ""
 
 Write-Host "8. Testing /api/mailbox/drafts/{draftId}/send endpoint..." -ForegroundColor Yellow
 Invoke-EndpointTest -Name "Send draft message" -WarnHint "Normal if test-draft-id doesn't refer to a real draft yet." -Action {
     $Body = @{ mailboxAddress = $MailboxAddress } | ConvertTo-Json
-    Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/drafts/test-draft-id/send" -Method Post -Body $Body -ContentType "application/json" -ErrorAction Stop
+    Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/drafts/test-draft-id/send" -Method Post -Body $Body -ContentType "application/json" -Headers $script:AuthHeaders -ErrorAction Stop
 }
 Write-Host ""
 
