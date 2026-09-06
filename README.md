@@ -191,5 +191,5 @@ All code samples include copyright headers. See individual files for details.
 
 ---
 
-**Current Version:** v0.5.7 | [View Changelog](CHANGELOG.md) | [View Status & Roadmap](docs/status.md)
+**Current Version:** v0.6.2 | [View Changelog](CHANGELOG.md) | [View Status & Roadmap](docs/status.md)
 
