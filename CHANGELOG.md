@@ -10,6 +10,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ---
+## [0.6.0] - 2026-09-06
+
+### What's Added
+- `backend-service/app.py`: seven new Microsoft Graph mailbox-routing endpoints, so a Copilot Studio agent can act on a message after classification (not just draft/send replies):
+  - `PATCH /api/mailbox/messages/{id}/categories` (`update_message_categories`) - sets/replaces Outlook categories, e.g. tag with a department name after classification.
+  - `POST /api/mailbox/messages/{id}/move` (`move_message`) - moves a message to another mail folder; Graph assigns the moved message a new id, returned as `movedMessageId`.
+  - `GET /api/mailbox/messages/delta` (`get_messages_delta`) - Graph delta query for change tracking on the Inbox, for incremental sync. Additive to the existing `/api/mailbox/messages/poll` timestamp-filter polling trigger, not a replacement - both are kept.
+  - `GET /api/mailbox/messages/{id}/attachments` (`get_attachments`) and `GET /api/mailbox/messages/{id}/attachments/{attachmentId}` (`get_attachment`) - list attachment metadata, and read a single attachment including base64 `contentBytes` for file attachments.
+  - `GET`/`PATCH /api/mailbox/messages/{id}/extended-properties` (`get_extended_property`/`set_extended_property`) - read/write Graph `singleValueExtendedProperties` on a message, to stash internal routing/classification metadata directly on the Graph message object.
+- `custom-connector/openapi.template.yaml`: seven matching connector operations - `UpdateMessageCategories`, `MoveMessage`, `GetMessagesDelta`, `GetAttachments`, `GetAttachment`, `GetExtendedProperty`, `SetExtendedProperty` - following the existing `operationId`/`x-ms-summary`/`x-ms-visibility` conventions. `custom-connector/README.md`'s operation summary updated from seven to fourteen actions.
+- New `docs/wiki/phase-3-draft-creation.md`: setup steps, Graph API mappings, and PowerShell test snippets for each new endpoint; Copilot Studio connector operation-by-operation test steps; an Integration Test: End-to-End section (categorize -> move -> verify via delta -> read attachments -> set extended property); and a documented design decision to keep `CreateDraft`'s `replyAll` flag as the single createReply/createReplyAll operation instead of splitting it in two.
+- `docs/status.md`: moved the "Phase 3: Draft Creation & Routing" entry out of the ROADMAP section into the Status Summary table (now Complete) and Detailed Status, following the existing ➕/🔧/🐛/⚠️ convention.
+
+### What's Modified
+- `docs/implementation-plan.md`: rewrote the Phase 3 section's Objective/Deliverables/Success Criteria/Major PR description to match the actual delivered feature set (categories, move, delta, attachments, extended properties) instead of the earlier, unbuilt "routing block generator"/`CreateResponseDraft`/`RemoveRoutingBlock` design; corrected the mermaid phase diagram's Phase 3 label and version.
+
+### Breaking Changes
+- None. All seven new endpoints/operations are additive; no existing route, connector operation, or request/response shape changed.
+
+---
 ## [0.5.7] - 2026-09-05
 
 ### What's Added

@@ -9,9 +9,11 @@ Platform custom connector, used by Copilot Studio to call the
 ## Contents
 
 - `openapi.template.yaml` - **committed, safe-to-share** OpenAPI (Swagger 2.0)
-  template of the backend operations: seven actions (`GetMessages`, `GetMessage`,
-  `ClassifyMessage`, `CreateDraft`, `UpdateDraft`, `SendMessage`, `SendDraftMessage`)
-  and one polling trigger (`NewMessageReceived`, see Step 5). Its `host:` field is
+  template of the backend operations: fourteen actions (`GetMessages`, `GetMessage`,
+  `ClassifyMessage`, `CreateDraft`, `UpdateDraft`, `SendMessage`, `SendDraftMessage`,
+  `UpdateMessageCategories`, `MoveMessage`, `GetMessagesDelta`, `GetAttachments`,
+  `GetAttachment`, `GetExtendedProperty`, `SetExtendedProperty`) and one polling
+  trigger (`NewMessageReceived`, see Step 5). Its `host:` field is
   a placeholder (`__BACKEND_HOST__`), not your real backend hostname.
 - `openapi.yaml` - **gitignored, generated** from `openapi.template.yaml` by
   `scripts/generate-openapi.ps1` (or automatically by `deploy-connector.ps1`),

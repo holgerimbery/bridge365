@@ -47,7 +47,8 @@ Status summary and full version-by-version history for the Bridge365 project. Se
 | Bug Fix: Dataverse Deploy/Seed Script URL Scheme & Token-Error Hardening | ✅ Complete | v0.5.5 |
 | Documentation: Authentication Flow Sequence Diagram | ✅ Complete | v0.5.7 |
 | Documentation: Phase 2 Status Label Correction (README) | ✅ Complete | v0.5.6 |
-| Phase 3-7: Advanced Features | 📋 Planned | v0.6.0+ |
+| Phase 3: Draft Creation & Routing (Categories, Move, Delta, Attachments, Extended Properties) | ✅ Complete | v0.6.0 |
+| Phase 4-7: Advanced Features | 📋 Planned | v0.7.0+ |
 
 ## Detailed Status
 
@@ -304,13 +305,19 @@ Status summary and full version-by-version history for the Bridge365 project. Se
 
 ---
 
-## 📋 ROADMAP
-
 ### v0.6.0: Phase 3 - Draft Creation & Routing
-- 📋 Draft composition engine with routing block generation
-- 📋 Microsoft Graph draft creation API
-- 📋 Draft preview in Copilot Studio
-- 📋 Draft submission and tracking
+- ➕ `backend-service/app.py`: seven new Microsoft Graph mailbox-routing endpoints, so a Copilot Studio agent can act on a message after classification (not just draft/send replies) - `PATCH /api/mailbox/messages/{id}/categories` (set/replace Outlook categories), `POST /api/mailbox/messages/{id}/move` (move to another mail folder, returns the message's new id), `GET /api/mailbox/messages/delta` (Graph delta query for incremental sync, additive to the existing timestamp-filter `poll` trigger), `GET /api/mailbox/messages/{id}/attachments` and `GET /api/mailbox/messages/{id}/attachments/{attachmentId}` (list/read attachments including base64 content), `GET`/`PATCH /api/mailbox/messages/{id}/extended-properties` (read/write Graph `singleValueExtendedProperties` for internal routing metadata stashed directly on the message).
+- ➕ `custom-connector/openapi.template.yaml`: seven matching connector operations - `UpdateMessageCategories`, `MoveMessage`, `GetMessagesDelta`, `GetAttachments`, `GetAttachment`, `GetExtendedProperty`, `SetExtendedProperty` - following the existing `operationId`/`x-ms-summary`/`x-ms-visibility` conventions; `custom-connector/README.md`'s operation count/list updated to fourteen actions.
+- ➕ New `docs/wiki/phase-3-draft-creation.md`: setup, Graph mapping, and PowerShell test snippets for each new endpoint, connector operation-by-operation test steps, and an Integration Test: End-to-End section (categorize -> move -> verify via delta -> read attachments -> set extended property).
+- 🔧 `docs/implementation-plan.md`: rewrote the Phase 3 section to describe the actual delivered feature set (categories, move, delta, attachments, extended properties) instead of the earlier unbuilt "routing block generator"/`CreateResponseDraft`/`RemoveRoutingBlock` design; corrected the mermaid phase diagram's Phase 3 label/version.
+- 🔍 Confirmed `createReply`/`createReplyAll` (Phase 1's `CreateDraft` with its `replyAll` flag) and `SendDraftMessage` already cover reply-draft creation and sending - kept as a single connector operation rather than splitting into two, since both call the same Graph action/PATCH pattern.
+
+### Breaking Changes
+- None.
+
+---
+
+## 📋 ROADMAP
 
 ### v0.7.0: Phase 4 - Override Workflow & Approvals
 - 📋 Manual classification override capability
