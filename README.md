@@ -22,6 +22,13 @@ This project provides:
 
 ### Setup Steps
 
+**Fastest path:** run the interactive onboarding wizard, which auto-discovers your Azure/Power Platform context, minimizes prompts, generates a collision-safe resource-name postfix, and walks through app registration, mailbox access, Azure resource creation, backend deploy, security hardening, custom connector deployment, and Dataverse tables from one menu - including an `Update & Redeploy` submenu for later changes:
+```powershell
+.\onboarding.ps1
+```
+
+Or follow the manual phase-by-phase guide:
+
 1. **Read Phase 1 Documentation**
    ```
    docs/wiki/phase-1-mailbox-setup.md
@@ -104,6 +111,7 @@ sequenceDiagram
 
 **Helper Scripts:**
 All scripts include copyright headers.
+- `onboarding.ps1` - Menu-driven onboarding wizard that orchestrates all the scripts below end-to-end (recommended entry point)
 - `docs/wiki/scripts/test-app-registration.ps1` - Validate app registration credentials
 - `docs/wiki/scripts/grant-mailbox-permissions.ps1` - Configure mailbox access
 - `backend-service/scripts/create-app-service.ps1` - Create Azure App Service
@@ -117,6 +125,7 @@ All scripts include copyright headers.
 
 ```
 bridge365/
+├── onboarding.ps1                       # Menu-driven onboarding wizard (recommended entry point)
 ├── README.md                           # This file
 ├── CHANGELOG.md                        # Version history
 ├── COMMIT_CONVENTION.md                # Commit message format
