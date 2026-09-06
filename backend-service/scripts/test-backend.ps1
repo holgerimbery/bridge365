@@ -105,6 +105,34 @@ function Get-BackendAuthToken {
     }
 }
 
+# Acquires a delegated (real user) access token for the App Service by reusing
+# the caller's existing `az login` session - no extra sign-in step, and no
+# plaintext credentials. Unlike the app-only token above, a delegated token
+# carries the signed-in user's identity, so Easy Auth can populate
+# X-MS-CLIENT-PRINCIPAL-NAME and the app's ALLOWED_EMAIL_ADDRESSES allowlist
+# check can genuinely pass - this is what lets endpoints like "Get messages"
+# be verified end-to-end instead of only proving Easy Auth blocks anonymous
+# callers. Returns $null (falls back to the app-only token) if az CLI is not
+# logged in, or if the signed-in user/app has not consented to the
+# api://<ClientId>/user_impersonation scope yet.
+function Get-DelegatedUserToken {
+    param([string]$ClientId)
+    if (-not $ClientId) { return $null }
+    try {
+        $Output = az account get-access-token --resource "api://$ClientId" --query accessToken -o tsv 2>&1
+        if ($LASTEXITCODE -ne 0 -or -not $Output) {
+            Write-Host "   Could not acquire a delegated user token via az CLI: $Output" -ForegroundColor Yellow
+            Write-Host "   Guidance: run az login as a user listed in ALLOWED_EMAIL_ADDRESSES, then retry." -ForegroundColor Yellow
+            Write-Host "   If this is the first consent, that user (or an admin) must run: az ad app permission admin-consent --id $ClientId" -ForegroundColor Yellow
+            return $null
+        }
+        return $Output.Trim()
+    } catch {
+        Write-Host "   Could not acquire a delegated user token: $($_.Exception.Message)" -ForegroundColor Yellow
+        return $null
+    }
+}
+
 function Add-TestResult {
     param(
         [Parameter(Mandatory)][string]$Name,
@@ -116,6 +144,17 @@ function Add-TestResult {
         'Pass' { Write-Host "   $([char]0x2713) $Name" -ForegroundColor Green; if ($Detail) { Write-Host "     $Detail" -ForegroundColor Gray } }
         'Warn' { Write-Host "   $([char]0x26A0) $Name" -ForegroundColor Yellow; if ($Detail) { Write-Host "     $Detail" -ForegroundColor Gray } }
         'Fail' { Write-Host "   $([char]0x2717) $Name" -ForegroundColor Red; if ($Detail) { Write-Host "     $Detail" -ForegroundColor Gray } }
+    }
+}
+
+# Explains a 403 with guidance tailored to which kind of token was used, since
+# app.py's ALLOWED_EMAIL_ADDRESSES allowlist can only recognize a real signed-in
+# user (delegated token), never an app-only/client-credentials token.
+function Get-ForbiddenHint {
+    if ($script:AuthMode -eq 'delegated') {
+        return "HTTP 403 - Forbidden. Your signed-in account's email may not be on the ALLOWED_EMAIL_ADDRESSES allowlist yet - add it in .env (comma-separated) and redeploy/restart the App Service, then re-run this test."
+    } else {
+        return "HTTP 403 - Forbidden. Expected without a delegated user token: app-only tokens have no caller identity, so ALLOWED_EMAIL_ADDRESSES can't match. Run az login as an allowlisted user so this test can use a delegated token and genuinely verify the endpoint."
     }
 }
 
@@ -138,7 +177,9 @@ function Invoke-EndpointTest {
         }
     } catch {
         $code = Get-HttpStatusCode $_
-        if ($null -ne $code) {
+        if ($code -eq 403) {
+            Add-TestResult -Name $Name -Status 'Warn' -Detail (Get-ForbiddenHint)
+        } elseif ($null -ne $code) {
             Add-TestResult -Name $Name -Status 'Warn' -Detail "HTTP $code - $WarnHint"
         } else {
             Add-TestResult -Name $Name -Status 'Fail' -Detail $_.Exception.Message
@@ -148,12 +189,15 @@ function Invoke-EndpointTest {
 
 Write-Host "Testing Backend Endpoints" -ForegroundColor Cyan
 Write-Host "Backend: $BackendUrl" -ForegroundColor Gray
-$script:AuthToken = Get-BackendAuthToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret
+$script:DelegatedToken = Get-DelegatedUserToken -ClientId $ClientId
+$script:AppOnlyToken = if (-not $script:DelegatedToken) { Get-BackendAuthToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret } else { $null }
+$script:AuthToken = if ($script:DelegatedToken) { $script:DelegatedToken } else { $script:AppOnlyToken }
+$script:AuthMode = if ($script:DelegatedToken) { 'delegated' } elseif ($script:AppOnlyToken) { 'app-only' } else { 'anonymous' }
 $script:AuthHeaders = if ($script:AuthToken) { @{ Authorization = ("Bear" + "er " + $script:AuthToken) } } else { @{} }
-if ($script:AuthToken) {
-    Write-Host "Authenticated testing: acquired an app-only token; calls below use a real authorization header." -ForegroundColor Gray
-} else {
-    Write-Host "Authenticated testing not available (need TENANT_ID, CLIENT_ID, CLIENT_SECRET) - calls below are anonymous; Easy-Auth-protected endpoints will report Warn." -ForegroundColor Gray
+switch ($script:AuthMode) {
+    'delegated' { Write-Host "Authenticated testing: using your signed-in az CLI identity (delegated token) - endpoints gated by ALLOWED_EMAIL_ADDRESSES can genuinely succeed if your account is listed." -ForegroundColor Gray }
+    'app-only'  { Write-Host "Authenticated testing: using an app-only token (no caller identity) - mailbox endpoints gated by ALLOWED_EMAIL_ADDRESSES will report 403 by design. Run az login as an allowlisted user for a full functional test." -ForegroundColor Gray }
+    'anonymous' { Write-Host "Authenticated testing not available (need az login, or TENANT_ID/CLIENT_ID/CLIENT_SECRET) - calls below are anonymous; Easy-Auth-protected endpoints will report Warn." -ForegroundColor Gray }
 }
 
 Write-Host ""
