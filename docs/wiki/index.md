@@ -7,8 +7,8 @@ This wiki documents the setup, implementation, and operation of the email classi
 ## Phases
 
 - [Phase 1: Shared Mailbox Custom Connector Setup](phase-1-mailbox-setup.md) - includes [Security Hardening](phase-1-mailbox-setup.md#46-security-hardening-required-before-production-use) checklist
-- [Phase 2: Classification via Table](phase-2-classification-table.md)
-- [Phase 3: Draft Creation](phase-3-draft-creation.md)
+- [Phase 2: Classification via Dataverse Table](phase-2-classification-table.md)
+- [Phase 3: Draft Creation & Routing](phase-3-draft-creation.md)
 - [Phase 4: Override/Change Classification](phase-4-override-workflow.md)
 - [Phase 5: MCP Server Integration](phase-5-mcp-integration.md)
 - [Phase 6: BART Classifier](phase-6-bart-classifier.md)

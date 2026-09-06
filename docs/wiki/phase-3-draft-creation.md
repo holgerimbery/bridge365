@@ -8,6 +8,21 @@ properties. Reply drafting and sending (createReply/createReplyAll/send)
 were already delivered in Phase 1 - see the "Already Available" section
 below.
 
+> **Not to be confused with Phase 2's `DraftEmailBody` routing block:**
+> Phase 2's Prompt tool ([`phase-2-classification-table.md`, Section
+> 4.2](phase-2-classification-table.md#42-example-draftemailbody-prompt-tool))
+> generates an HTML "routing block" *inside the reply draft's body* -
+> a human-reviewable table of classifications, meant to be read and removed
+> by a reviewer before sending. This phase's routing capabilities
+> (categories, move, extended properties) are a different, machine-actionable
+> mechanism - they act directly on the Graph message/mailbox itself (visible
+> in Outlook, queryable via Graph), independent of whatever draft body is
+> attached to it. The two are complementary, not overlapping: use Phase 2's
+> routing block so a human reviewer sees the routing decision before
+> sending, and this phase's operations so the mailbox itself reflects that
+> decision (tagged, filed, and annotated) regardless of what happens to any
+> draft.
+
 **Harness:** Same Flask backend service (`backend-service/app.py`) and
 `SharedMailboxConnector` custom connector as Phase 1 - this phase only adds
 new routes/operations to both, no new infrastructure.

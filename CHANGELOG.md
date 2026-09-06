@@ -10,6 +10,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ---
+## [0.6.1] - 2026-09-06
+
+### What's Fixed
+- `README.md`: the "Next Phase" note still said "Proceed to Phase 3: Draft Creation & Routing (planned)" after Phase 3 shipped in v0.6.0 - now reads "...are complete. Proceed to Phase 4...". Added the missing Phase 3 entry to the Documentation phase list and Project Structure tree (both previously stopped at Phase 2).
+- `docs/wiki/index.md`: phase link text was inconsistent with each phase doc's own heading - "Phase 2: Classification via Table" -> "Phase 2: Classification via Dataverse Table", "Phase 3: Draft Creation" -> "Phase 3: Draft Creation & Routing".
+- `docs/wiki/phase-2-classification-table.md`: Section 9 "Next Steps" still pointed at the old, unbuilt "Phase 3: Draft Creation with routing-block generation" design - updated to link to the actual `phase-3-draft-creation.md` and describe its real scope (categories, move, delta, attachments, extended properties).
+
+### What's Modified
+- `docs/wiki/phase-3-draft-creation.md`: added a note in the Objective clarifying this phase's mailbox-level routing (categories/move/extended properties) is a different, machine-actionable mechanism from Phase 2's `DraftEmailBody` HTML routing block (a human-reviewable summary inside the draft body) - the two are complementary, not overlapping.
+
+### Breaking Changes
+- None.
+
+---
 ## [0.6.0] - 2026-09-06
 
 ### What's Added

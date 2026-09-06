@@ -48,6 +48,7 @@ Status summary and full version-by-version history for the Bridge365 project. Se
 | Documentation: Authentication Flow Sequence Diagram | ✅ Complete | v0.5.7 |
 | Documentation: Phase 2 Status Label Correction (README) | ✅ Complete | v0.5.6 |
 | Phase 3: Draft Creation & Routing (Categories, Move, Delta, Attachments, Extended Properties) | ✅ Complete | v0.6.0 |
+| Documentation: Phase 2/3 Cross-Reference & Headline Consistency Fixes | ✅ Complete | v0.6.1 |
 | Phase 4-7: Advanced Features | 📋 Planned | v0.7.0+ |
 
 ## Detailed Status
@@ -311,6 +312,17 @@ Status summary and full version-by-version history for the Bridge365 project. Se
 - ➕ New `docs/wiki/phase-3-draft-creation.md`: setup, Graph mapping, and PowerShell test snippets for each new endpoint, connector operation-by-operation test steps, and an Integration Test: End-to-End section (categorize -> move -> verify via delta -> read attachments -> set extended property).
 - 🔧 `docs/implementation-plan.md`: rewrote the Phase 3 section to describe the actual delivered feature set (categories, move, delta, attachments, extended properties) instead of the earlier unbuilt "routing block generator"/`CreateResponseDraft`/`RemoveRoutingBlock` design; corrected the mermaid phase diagram's Phase 3 label/version.
 - 🔍 Confirmed `createReply`/`createReplyAll` (Phase 1's `CreateDraft` with its `replyAll` flag) and `SendDraftMessage` already cover reply-draft creation and sending - kept as a single connector operation rather than splitting into two, since both call the same Graph action/PATCH pattern.
+
+### Breaking Changes
+- None.
+
+---
+
+### v0.6.1: Documentation - Phase 2/3 Cross-Reference & Headline Consistency Fixes
+- 🐛 `README.md`: the "Next Phase" note still said Phase 3 was "(planned)" after it shipped in v0.6.0 - corrected to reflect Phase 1-3 as complete and point at Phase 4 next; added the missing Phase 3 entry to the Documentation phase list and Project Structure tree.
+- 🐛 `docs/wiki/index.md`: phase link text didn't match each phase doc's own heading ("Classification via Table" vs "Classification via Dataverse Table"; "Draft Creation" vs "Draft Creation & Routing") - aligned both.
+- 🐛 `docs/wiki/phase-2-classification-table.md`: Section 9 "Next Steps" still pointed at the original, unbuilt "Draft Creation with routing-block generation" Phase 3 design - updated to link to the real `phase-3-draft-creation.md` and describe its actual scope.
+- 🔧 `docs/wiki/phase-3-draft-creation.md`: added a note distinguishing this phase's mailbox-level routing (Outlook categories/folder move/extended properties, machine-actionable) from Phase 2's `DraftEmailBody` HTML routing block (a human-reviewable summary inside the draft body) - the two are complementary, not overlapping, and were previously undocumented as related concepts.
 
 ### Breaking Changes
 - None.
