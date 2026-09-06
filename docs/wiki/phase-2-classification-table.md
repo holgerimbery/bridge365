@@ -377,4 +377,4 @@ If steps 1-4 fail, see Troubleshooting (Section 8) before attempting steps 5-10.
 
 (c) 2026 Holger Imbery (contact@holgerimbery.blog)
 
-Licensed under the project LICENSE file.
+Licensed under the Bridge365 Sustainable Use License 1.0 (BSUL-1.0). See the [LICENSE file](https://github.com/holgerimbery/bridge365/blob/main/LICENSE).

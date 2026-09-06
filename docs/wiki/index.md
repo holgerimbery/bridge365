@@ -43,4 +43,4 @@ All PowerShell scripts include copyright headers.
 
 (c) 2026 Holger Imbery (contact@holgerimbery.blog)
 
-All code and documentation in this module are copyright protected. See LICENSE file for details.
+All code and documentation in this module are copyright protected. Licensed under the Bridge365 Sustainable Use License 1.0 (BSUL-1.0). See the [LICENSE file](https://github.com/holgerimbery/bridge365/blob/main/LICENSE) for details.

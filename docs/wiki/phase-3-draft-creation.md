@@ -339,3 +339,5 @@ move -> verify via delta -> read attachments -> set extended property**.
 **Copyright & License**
 
 (c) 2026 Holger Imbery (contact@holgerimbery.blog)
+
+Licensed under the Bridge365 Sustainable Use License 1.0 (BSUL-1.0). See the [LICENSE file](https://github.com/holgerimbery/bridge365/blob/main/LICENSE).
