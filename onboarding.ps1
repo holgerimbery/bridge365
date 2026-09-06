@@ -244,27 +244,86 @@ function Test-Prerequisites {
     return $ok
 }
 
+# Best-effort tenant display name lookup (older az CLI versions, or callers
+# without az account tenant list rights, silently fall back to just the ID).
+function Get-TenantDisplayName {
+    param([string]$TenantId)
+    try {
+        $tenants = az account tenant list -o json 2>$null | ConvertFrom-Json
+        $match = $tenants | Where-Object { $_.tenantId -eq $TenantId } | Select-Object -First 1
+        if ($match -and $match.displayName) { return $match.displayName }
+    } catch {
+        Write-Verbose "Tenant display name lookup failed (older az CLI or insufficient rights): $($_.Exception.Message)"
+    }
+    return $null
+}
+
+# Replaces .env with a blank template of every known key - used when the
+# signed-in account/tenant turns out to be wrong and the user asks to start
+# clean instead of keeping settings from the previous tenant. The previous
+# .env is backed up first, never silently discarded.
+function Reset-EnvFile {
+    if (Test-Path $EnvFile) {
+        $backup = "$EnvFile.bak"
+        Copy-Item -Path $EnvFile -Destination $backup -Force
+        Write-Warn2 "Backed up previous .env to $backup"
+    }
+    $script:EnvVars = [ordered]@{}
+    foreach ($key in $script:KnownEnvKeys) { $script:EnvVars[$key] = "" }
+    Save-DotEnv -Vars $script:EnvVars -Path $EnvFile
+    # A different tenant/account means any previously generated naming
+    # postfix should not be reused either - force a fresh one.
+    $script:State.Postfix = $null
+    Save-State $script:State
+    Write-Ok "Replaced .env with a blank template ($($script:KnownEnvKeys.Count) keys)."
+}
+
 function Get-AzureContext {
-    Write-Heading "Discovering Azure context"
+    Write-Heading "Azure sign-in"
     $account = az account show -o json 2>$null | ConvertFrom-Json
-    if (-not $account) {
+
+    if ($account) {
+        $tenantName = Get-TenantDisplayName $account.tenantId
+        $tenantLabel = if ($tenantName) { "$tenantName ($($account.tenantId))" } else { $account.tenantId }
+        Write-Host "  Signed in as:  $($account.user.name)" -ForegroundColor Cyan
+        Write-Host "  Tenant:        $tenantLabel" -ForegroundColor Cyan
+        Write-Host "  Subscription:  $($account.name) ($($account.id))" -ForegroundColor Cyan
+
+        $confirm = Read-Prompt "Is this the correct account/tenant? (y/n)" "y"
+        if ($confirm -eq 'n') {
+            Write-Warn2 "Signing out and starting a fresh 'az login'..."
+            az logout -o none 2>$null
+            az login -o none
+            $account = az account show -o json | ConvertFrom-Json
+            $tenantName = Get-TenantDisplayName $account.tenantId
+            $tenantLabel = if ($tenantName) { "$tenantName ($($account.tenantId))" } else { $account.tenantId }
+            Write-Ok "Now signed in as $($account.user.name) (tenant $tenantLabel)"
+
+            $replace = Read-Prompt "Replace the existing .env with a fresh one for this account? (y/n)" "n"
+            if ($replace -eq 'y') { Reset-EnvFile }
+        }
+    } else {
         Write-Warn2 "Not signed in to Azure CLI. Running 'az login'..."
         az login -o none
         $account = az account show -o json | ConvertFrom-Json
     }
-    Write-Ok "Signed in as $($account.user.name) (tenant $($account.tenantId))"
-    Set-EnvValue "TENANT_ID" $account.tenantId
-    Set-EnvValue "AZURE_SUBSCRIPTION_ID" $account.id
 
+    Write-Ok "Using tenant $($account.tenantId), subscription $($account.name) ($($account.id))"
+    Set-EnvValue "TENANT_ID" $account.tenantId
+
+    # Only offer to pick a different subscription when .env didn't already
+    # have one pinned - check the pre-existing value, not the one we are
+    # about to write, so this doesn't just silently no-op every run.
+    $existingSubscriptionId = Get-EnvValue "AZURE_SUBSCRIPTION_ID"
     $accounts = az account list -o json | ConvertFrom-Json
-    if ($accounts.Count -gt 1 -and -not (Get-EnvValue "AZURE_SUBSCRIPTION_ID")) {
+    if (-not $existingSubscriptionId -and $accounts.Count -gt 1) {
         Write-Host "Multiple subscriptions available:"
         for ($i = 0; $i -lt $accounts.Count; $i++) { Write-Host "  [$i] $($accounts[$i].name) ($($accounts[$i].id))" }
         $choice = Read-Prompt "Select subscription index" "0"
         $account = $accounts[[int]$choice]
         az account set --subscription $account.id -o none
-        Set-EnvValue "AZURE_SUBSCRIPTION_ID" $account.id
     }
+    Set-EnvValue "AZURE_SUBSCRIPTION_ID" $account.id
     return $account
 }
 
