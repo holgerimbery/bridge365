@@ -127,6 +127,27 @@ Then configure the connector:
 Each allowlisted user is prompted to sign in with their own Entra ID account
 the first time they use the connector.
 
+**Required - register the connector's redirect URI on the app registration.**
+`apiProperties.template.json` sets `redirectMode: GlobalPerConnector`, so
+Power Platform generates a **unique reply URL per connector** that only
+exists once the connector has been created - it can't be pre-set when the
+app registration itself is created. Skipping this step causes sign-in to
+fail with `AADSTS500113: No reply address is registered for the application`:
+
+1. On the connector's **Security** tab, copy the exact **Redirect URL**
+   value (looks like
+   `https://global.consent.azure-apim.net/redirect/<connector-specific-id>`).
+2. Add it to the app registration:
+   ```powershell
+   az ad app update --id "<app-client-id>" --web-redirect-uris "<the-redirect-url-you-copied>"
+   ```
+3. Also confirm the app registration has the delegated Microsoft Graph
+   **User.Read** permission (required for any interactive sign-in, not just
+   this connector) - `docs/wiki/scripts/create-app-registration.ps1`
+   requests this automatically. Without it, sign-in fails instead with
+   `AADSTS90008: ... must require access to Microsoft Graph by specifying
+   at least 'Sign in and read user profile' permission`.
+
 ## Step 4: Test the Custom Connector
 
 1. Click **Test** (top-right)

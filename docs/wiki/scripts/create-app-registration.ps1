@@ -9,12 +9,23 @@
 # only reliable check - az ad app permission list-grants only shows
 # delegated grants and misleadingly returns [] for application permissions).
 #
+# Also requests the delegated Microsoft Graph "User.Read" permission
+# (Scope, not Role). This isn't used by the backend service itself, but
+# it is required for any INTERACTIVE sign-in against this app registration
+# - e.g. creating/testing a connection for the custom connector in the
+# Power Platform maker portal, which performs a delegated AAD OAuth login.
+# Without it, Azure AD rejects the sign-in with AADSTS90008 ("must require
+# access to Microsoft Graph by specifying at least 'Sign in and read user
+# profile' permission"), since apps created purely via 'az ad app create'
+# don't get this default permission the portal wizard normally adds.
+#
 # Idempotent: re-running with the same -DisplayName reuses the existing app
 # registration instead of creating a duplicate.
 
 param(
     [string]$DisplayName,
     [string[]]$GraphAppPermissions = @('Mail.Read', 'Mail.Send'),
+    [string[]]$GraphDelegatedPermissions = @('User.Read'),
     [int]$SecretExpiryMonths = 12
 )
 
@@ -83,6 +94,17 @@ foreach ($permName in $GraphAppPermissions) {
     $resourceAccess += @{ id = $role.id; type = "Role" }
 }
 
+$resolvedScopeIds = @{}
+foreach ($permName in $GraphDelegatedPermissions) {
+    $scope = $graphSp.oauth2PermissionScopes | Where-Object { $_.value -eq $permName }
+    if (-not $scope) {
+        Write-Warning "Could not resolve Graph delegated permission '$permName' - skipping. Add it manually via API permissions in the portal."
+        continue
+    }
+    $resolvedScopeIds[$permName] = $scope.id
+    $resourceAccess += @{ id = $scope.id; type = "Scope" }
+}
+
 if ($resourceAccess.Count -gt 0) {
     # Use "az ad app permission add" instead of "az ad app update
     # --required-resource-accesses": it is additive/idempotent per permission
@@ -93,9 +115,12 @@ if ($resourceAccess.Count -gt 0) {
     foreach ($permName in $resolvedRoleIds.Keys) {
         $permArgs += "$($resolvedRoleIds[$permName])=Role"
     }
+    foreach ($permName in $resolvedScopeIds.Keys) {
+        $permArgs += "$($resolvedScopeIds[$permName])=Scope"
+    }
     az ad app permission add --id $AppId --api $GraphResourceAppId --api-permissions $permArgs -o none
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "Failed to request Graph application permissions (az ad app permission add exited with code $LASTEXITCODE). Add them manually via API permissions in the portal, then re-run this script."
+        Write-Error "Failed to request Graph permissions (az ad app permission add exited with code $LASTEXITCODE). Add them manually via API permissions in the portal, then re-run this script."
         exit 1
     }
 
@@ -103,19 +128,20 @@ if ($resourceAccess.Count -gt 0) {
     # trusting the exit code alone - this is what previously failed
     # silently and left API permissions completely empty in the portal.
     $verifyApp = az ad app show --id $AppId --query "requiredResourceAccess" -o json | ConvertFrom-Json
-    $verifiedRoleIds = @()
+    $verifiedIds = @()
     foreach ($entry in $verifyApp) {
         if ($entry.resourceAppId -eq $GraphResourceAppId) {
-            $verifiedRoleIds += $entry.resourceAccess.id
+            $verifiedIds += $entry.resourceAccess.id
         }
     }
-    $notRequested = @($resolvedRoleIds.Keys | Where-Object { $verifiedRoleIds -notcontains $resolvedRoleIds[$_] })
+    $allResolved = $resolvedRoleIds + $resolvedScopeIds
+    $notRequested = @($allResolved.Keys | Where-Object { $verifiedIds -notcontains $allResolved[$_] })
     if ($notRequested.Count -gt 0) {
-        Write-Error "Graph application permissions were not found on the app registration after requesting them: $($notRequested -join ', '). Add them manually via API permissions in the portal, then re-run this script."
+        Write-Error "Graph permissions were not found on the app registration after requesting them: $($notRequested -join ', '). Add them manually via API permissions in the portal, then re-run this script."
         exit 1
     }
 
-    Write-Host "Requested Graph application permissions: $($resolvedRoleIds.Keys -join ', ')" -ForegroundColor Cyan
+    Write-Host "Requested Graph permissions: $($resolvedRoleIds.Keys -join ', ') (application), $($resolvedScopeIds.Keys -join ', ') (delegated)" -ForegroundColor Cyan
 }
 
 # 4. Attempt admin consent. This requires Global Administrator or Privileged
