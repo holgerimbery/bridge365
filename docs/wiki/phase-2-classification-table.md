@@ -357,7 +357,10 @@ If steps 1-4 fail, see Troubleshooting (Section 8) before attempting steps 5-10.
 
 - Build the Copilot Studio Prompt tools + Topic (Section 4)
 - Evaluate swapping in a Foundry-hosted BART-MNLI (or similar) model once the Prompt tool baseline is working
-- Proceed to Phase 3: Draft Creation with routing-block generation
+- Proceed to [Phase 3: Draft Creation & Routing](phase-3-draft-creation.md) - mailbox-level routing actions
+  (Outlook categories, folder move, delta sync, attachments, extended properties) that act on a message
+  after this phase's classification result, complementing (not replacing) the `DraftEmailBody` HTML
+  routing block above, which is a human-reviewable summary inside the draft itself
 
 ---
 
