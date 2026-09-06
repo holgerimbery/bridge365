@@ -1,5 +1,7 @@
 # Wiki Index
 
+![Bridge365 logo](https://raw.githubusercontent.com/holgerimbery/bridge365/main/docs/assets/bridge365-logo.png)
+
 Welcome to the shared mailbox email classification module wiki.
 
 This wiki documents the setup, implementation, and operation of the email classification system for Microsoft Power Platform and Copilot Studio.
