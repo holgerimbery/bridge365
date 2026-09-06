@@ -23,6 +23,7 @@
       <a href="#features">Features</a>
       <a href="#roadmap">Roadmap</a>
       <a href="#architecture">Architecture</a>
+      <a href="#api-details">API &amp; Connector</a>
       <a href="#docs">Docs</a>
       <a class="btn btn-ghost" href="https://github.com/holgerimbery/bridge365" target="_blank" rel="noopener">GitHub</a>
     </nav>
@@ -211,6 +212,62 @@
     </p>
   </section>
 
+  <section id="api-details" class="section section-alt">
+    <h2>Backend Service &amp; Custom Connector - Every Feature</h2>
+    <p class="section-sub">The Azure backend exposes 17 REST endpoints; 15 of them are wired into the
+      <code>SharedMailboxConnector</code> custom connector as actions, plus one polling trigger for
+      autonomous agents.</p>
+
+    <div class="detail-grid">
+      <div class="detail-col">
+        <h3>Azure Backend Service - REST API</h3>
+        <ul class="endpoint-list">
+          <li><span class="method method-get">GET</span><div><code>/health</code><p>Health check endpoint for uptime monitoring.</p></div></li>
+          <li><span class="method method-get">GET</span><div><code>/api/mailbox/messages</code><p>Fetch messages from the shared mailbox&#39;s Inbox.</p></div></li>
+          <li><span class="method method-get">GET</span><div><code>/api/mailbox/messages/poll</code><p>Polling endpoint returning new messages newest-first, backing the connector&#39;s <code>NewMessageReceived</code> trigger.</p></div></li>
+          <li><span class="method method-get">GET</span><div><code>/api/mailbox/messages/{id}</code><p>Fetch a single message by id.</p></div></li>
+          <li><span class="method method-post">POST</span><div><code>/api/mailbox/classify</code><p>Classify a message using rule-based (and future AI-powered) classification.</p></div></li>
+          <li><span class="method method-post">POST</span><div><code>/api/mailbox/drafts</code><p>Create a reply draft (reply or reply-all) in the shared mailbox&#39;s Drafts folder.</p></div></li>
+          <li><span class="method method-patch">PATCH</span><div><code>/api/mailbox/drafts/{id}</code><p>Update an existing draft&#39;s subject, body, or recipients.</p></div></li>
+          <li><span class="method method-post">POST</span><div><code>/api/mailbox/messages/send</code><p>Send a new (non-reply) message from the shared mailbox.</p></div></li>
+          <li><span class="method method-post">POST</span><div><code>/api/mailbox/drafts/{id}/send</code><p>Send an existing draft as-is.</p></div></li>
+          <li><span class="method method-patch">PATCH</span><div><code>/api/mailbox/messages/{id}/categories</code><p>Set/replace a message&#39;s Outlook categories after classification.</p></div></li>
+          <li><span class="method method-get">GET</span><div><code>/api/mailbox/folders</code><p>List mail folders (and subfolders) to resolve destination folder ids.</p></div></li>
+          <li><span class="method method-post">POST</span><div><code>/api/mailbox/messages/{id}/move</code><p>Move a message to a different mail folder (e.g. a department subfolder).</p></div></li>
+          <li><span class="method method-get">GET</span><div><code>/api/mailbox/messages/delta</code><p>Delta query for incremental sync - tracks new, changed, and deleted messages.</p></div></li>
+          <li><span class="method method-get">GET</span><div><code>/api/mailbox/messages/{id}/attachments</code><p>List a message&#39;s attachments (metadata only).</p></div></li>
+          <li><span class="method method-get">GET</span><div><code>/api/mailbox/messages/{id}/attachments/{attachmentId}</code><p>Fetch a single attachment, including base64 content bytes.</p></div></li>
+          <li><span class="method method-get">GET</span><div><code>/api/mailbox/messages/{id}/extended-properties</code><p>Read a MAPI extended property (e.g. internal routing metadata) on a message.</p></div></li>
+          <li><span class="method method-patch">PATCH</span><div><code>/api/mailbox/messages/{id}/extended-properties</code><p>Write a MAPI extended property on a message.</p></div></li>
+        </ul>
+      </div>
+
+      <div class="detail-col">
+        <h3>SharedMailboxConnector - Custom Connector</h3>
+        <ul class="endpoint-list">
+          <li><span class="method method-trigger">Trigger</span><div><strong>NewMessageReceived</strong><p>Polling trigger powering Copilot Studio autonomous agents that react to new mail without a conversation.</p></div></li>
+          <li><span class="method method-action">Action</span><div><strong>GetMessages</strong><p>Retrieve recent messages from the shared mailbox Inbox.</p></div></li>
+          <li><span class="method method-action">Action</span><div><strong>GetMessage</strong><p>Retrieve a single message by id.</p></div></li>
+          <li><span class="method method-action">Action</span><div><strong>ClassifyMessage</strong><p>Run rule-based classification and return a target department/confidence.</p></div></li>
+          <li><span class="method method-action">Action</span><div><strong>CreateDraft</strong><p>Create a reply or reply-all draft for a message.</p></div></li>
+          <li><span class="method method-action">Action</span><div><strong>UpdateDraft</strong><p>Update a draft&#39;s subject, body, or recipients before sending.</p></div></li>
+          <li><span class="method method-action">Action</span><div><strong>SendMessage</strong><p>Send a brand-new message from the shared mailbox.</p></div></li>
+          <li><span class="method method-action">Action</span><div><strong>SendDraftMessage</strong><p>Send an existing draft, e.g. after human approval.</p></div></li>
+          <li><span class="method method-action">Action</span><div><strong>GetMailFolders</strong><p>List top-level or nested mail folders to resolve a destination folder id.</p></div></li>
+          <li><span class="method method-action">Action</span><div><strong>UpdateMessageCategories</strong><p>Tag a message with Outlook categories after classification.</p></div></li>
+          <li><span class="method method-action">Action</span><div><strong>MoveMessage</strong><p>Move a message into a department or other mail folder.</p></div></li>
+          <li><span class="method method-action">Action</span><div><strong>GetMessagesDelta</strong><p>Incremental delta sync of new, changed, and deleted messages.</p></div></li>
+          <li><span class="method method-action">Action</span><div><strong>GetAttachments</strong><p>List a message&#39;s attachment metadata.</p></div></li>
+          <li><span class="method method-action">Action</span><div><strong>GetAttachment</strong><p>Fetch one attachment&#39;s content, including base64 bytes.</p></div></li>
+          <li><span class="method method-action">Action</span><div><strong>GetExtendedProperty</strong><p>Read a custom MAPI extended property from a message.</p></div></li>
+          <li><span class="method method-action">Action</span><div><strong>SetExtendedProperty</strong><p>Write a custom MAPI extended property onto a message.</p></div></li>
+        </ul>
+        <p class="detail-note">Authentication is delegated Azure AD OAuth2 (accessCode flow) so each
+          allowlisted user signs in with their own Entra ID identity - no app-only credentials are used
+          for connector actions.</p>
+      </div>
+    </div>
+  </section>
   <section id="docs" class="section section-alt docs-section">
     <h2>Explore the project</h2>
     <div class="links-grid">

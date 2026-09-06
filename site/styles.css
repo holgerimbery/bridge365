@@ -199,6 +199,49 @@ code {
 .arch-arrow { font-size: 1.8rem; color: var(--text-muted); }
 .arch-note { max-width: 720px; margin: 0 auto; text-align: center; color: var(--text-muted); font-size: 0.92rem; }
 
+/* Backend/Connector details */
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 24px;
+}
+.detail-col {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+.detail-col h3 { color: var(--navy); font-size: 1rem; margin-bottom: 16px; }
+.endpoint-list { list-style: none; margin: 0; padding: 0; }
+.endpoint-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.endpoint-list li:last-child { border-bottom: none; }
+.endpoint-list code { font-size: 0.85rem; }
+.endpoint-list p { color: var(--text-muted); font-size: 0.87rem; margin: 4px 0 0; }
+.endpoint-list strong { color: var(--navy); font-size: 0.92rem; }
+.method {
+  flex: 0 0 auto;
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-top: 2px;
+  min-width: 52px;
+  text-align: center;
+}
+.method-get { background: rgba(23, 195, 162, 0.14); color: #0d8f76; }
+.method-post { background: rgba(47, 111, 237, 0.12); color: var(--blue); }
+.method-patch { background: rgba(255, 159, 28, 0.16); color: #b3690a; }
+.method-action { background: rgba(47, 111, 237, 0.12); color: var(--blue); min-width: 60px; }
+.method-trigger { background: rgba(255, 152, 0, 0.16); color: #b3690a; min-width: 60px; }
+.detail-note { color: var(--text-muted); font-size: 0.87rem; margin: 18px 0 0; }
 /* Docs links */
 .links-grid {
   display: grid;
