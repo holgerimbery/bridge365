@@ -218,6 +218,56 @@ function Invoke-Step {
     }
 }
 
+# Runs a script in a separate PowerShell process (not "&" in-process) so that
+# an "exit" call inside the target script - e.g. because a required parameter
+# is missing - cannot terminate this wizard. Returns the child process exit
+# code; output still streams live to the console.
+function Invoke-ChildScript {
+    param(
+        [Parameter(Mandatory)][string]$ScriptPath,
+        [hashtable]$Arguments = @{}
+    )
+    $argList = @()
+    foreach ($key in $Arguments.Keys) {
+        $value = $Arguments[$key]
+        if ([string]::IsNullOrWhiteSpace($value)) { continue }
+        $argList += "-$key"
+        $argList += $value
+    }
+    $hostCmd = Get-Command pwsh -ErrorAction SilentlyContinue
+    $exePath = if ($hostCmd) { $hostCmd.Source } else { (Get-Process -Id $PID).Path }
+    & $exePath -NoProfile -ExecutionPolicy Bypass -File $ScriptPath @argList
+    return $LASTEXITCODE
+}
+
+# Runs one diagnostic check: skips cleanly with guidance if required .env
+# values aren't set yet (instead of invoking a script that would error out),
+# otherwise runs it safely out-of-process and records Pass/Fail/Skipped for
+# the end-of-run summary.
+function Invoke-DiagnosticCheck {
+    param(
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][string]$ScriptPath,
+        [hashtable]$Arguments = @{},
+        [string[]]$RequiredEnvKeys = @(),
+        [string]$SkipGuidance = ""
+    )
+    $missing = $RequiredEnvKeys | Where-Object { -not (Get-EnvValue $_) }
+    if ($missing.Count -gt 0) {
+        Write-Warn2 "Skipping '$Name' - missing: $($missing -join ', ')"
+        if ($SkipGuidance) { Write-Host "  $SkipGuidance" -ForegroundColor Gray }
+        $script:DiagnosticResults += [PSCustomObject]@{ Name = $Name; Status = "Skipped"; Detail = "Missing: $($missing -join ', ')" }
+        return
+    }
+    Write-Host ""
+    Write-Host "--- $Name ---" -ForegroundColor Cyan
+    $exitCode = Invoke-ChildScript -ScriptPath $ScriptPath -Arguments $Arguments
+    if ($exitCode -eq 0) {
+        $script:DiagnosticResults += [PSCustomObject]@{ Name = $Name; Status = "Pass"; Detail = "" }
+    } else {
+        $script:DiagnosticResults += [PSCustomObject]@{ Name = $Name; Status = "Fail"; Detail = "Exit code $exitCode" }
+    }
+}
 # ---------------------------------------------------------------------------
 # Prerequisite / environment discovery - minimizes what we have to ask for.
 # ---------------------------------------------------------------------------
@@ -545,11 +595,42 @@ function Step-Dataverse {
 
 function Step-Diagnostics {
     Write-Heading "Running diagnostics"
-    & (Join-Path $RepoRoot "docs\wiki\scripts\test-app-registration.ps1") -ClientId (Get-EnvValue "CLIENT_ID") -ClientSecret (Get-EnvValue "CLIENT_SECRET") -TenantId (Get-EnvValue "TENANT_ID")
-    & (Join-Path $RepoRoot "backend-service\scripts\test-app-service.ps1") -BackendUrl (Get-EnvValue "BACKEND_URL")
-    & (Join-Path $RepoRoot "backend-service\scripts\test-backend.ps1") -BackendUrl (Get-EnvValue "BACKEND_URL") -MailboxAddress (Get-EnvValue "MAILBOX_ADDRESS")
-    if (Get-EnvValue "SECURITY_GROUP_NAME") {
-        & (Join-Path $RepoRoot "docs\wiki\scripts\confirm-mailbox-scope-restriction.ps1") -ClientId (Get-EnvValue "CLIENT_ID") -MailboxAddress (Get-EnvValue "MAILBOX_ADDRESS")
+    $script:DiagnosticResults = @()
+
+    Invoke-DiagnosticCheck -Name "App Registration Credentials" `
+        -ScriptPath (Join-Path $RepoRoot "docs\wiki\scripts\test-app-registration.ps1") `
+        -Arguments @{ ClientId = (Get-EnvValue "CLIENT_ID"); ClientSecret = (Get-EnvValue "CLIENT_SECRET"); TenantId = (Get-EnvValue "TENANT_ID") } `
+        -RequiredEnvKeys @("CLIENT_ID", "CLIENT_SECRET", "TENANT_ID")
+
+    Invoke-DiagnosticCheck -Name "App Service Reachability" `
+        -ScriptPath (Join-Path $RepoRoot "backend-service\scripts\test-app-service.ps1") `
+        -Arguments @{ BackendUrl = (Get-EnvValue "BACKEND_URL") } `
+        -RequiredEnvKeys @("BACKEND_URL")
+
+    Invoke-DiagnosticCheck -Name "Backend Functional Tests (8 endpoints)" `
+        -ScriptPath (Join-Path $RepoRoot "backend-service\scripts\test-backend.ps1") `
+        -Arguments @{ BackendUrl = (Get-EnvValue "BACKEND_URL"); MailboxAddress = (Get-EnvValue "MAILBOX_ADDRESS") } `
+        -RequiredEnvKeys @("BACKEND_URL")
+
+    Invoke-DiagnosticCheck -Name "Mailbox Scope Restriction" `
+        -ScriptPath (Join-Path $RepoRoot "docs\wiki\scripts\confirm-mailbox-scope-restriction.ps1") `
+        -Arguments @{ ClientId = (Get-EnvValue "CLIENT_ID"); MailboxAddress = (Get-EnvValue "MAILBOX_ADDRESS") } `
+        -RequiredEnvKeys @("CLIENT_ID", "MAILBOX_ADDRESS", "SECURITY_GROUP_NAME") `
+        -SkipGuidance "Requires SECURITY_GROUP_NAME (set once the Shared Mailbox Access step has created the Application Access Policy)."
+
+    Write-Host ""
+    Write-Heading "Diagnostics Summary"
+    foreach ($r in $script:DiagnosticResults) {
+        switch ($r.Status) {
+            "Pass" { Write-Ok $r.Name }
+            "Skipped" { Write-Warn2 "$($r.Name) - skipped ($($r.Detail))" }
+            "Fail" { Write-Fail "$($r.Name) - $($r.Detail)" }
+        }
+    }
+    $failCount = ($script:DiagnosticResults | Where-Object { $_.Status -eq "Fail" }).Count
+    if ($failCount -gt 0) {
+        Write-Host ""
+        Write-Warn2 "$failCount check(s) failed. Scroll up to see the failing script's output, fix the issue, then re-run diagnostics."
     }
 }
 
