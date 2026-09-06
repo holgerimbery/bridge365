@@ -37,5 +37,15 @@ if (-not $BackendUrl) {
 # Test connectivity
 $Response = Invoke-WebRequest -Uri "$BackendUrl/health" -SkipHttpErrorCheck
 
-Write-Host "Status Code: $($Response.StatusCode)" -ForegroundColor Green
-Write-Host "Response: $($Response.Content)" -ForegroundColor Gray
+$isAuthRedirect = $Response.Content -and ($Response.Content -match 'ConvergedSignIn' -or $Response.Content -match 'Sign in to your account')
+if ($isAuthRedirect) {
+    Write-Host "Status Code: $($Response.StatusCode) (redirected to Microsoft sign-in page)" -ForegroundColor Yellow
+    Write-Host "Easy Auth (App Service Authentication) is enabled and is blocking anonymous access to /health." -ForegroundColor Yellow
+    Write-Host "This confirms the App Service itself is reachable, but does not verify the deployed app is healthy." -ForegroundColor Gray
+    Write-Host "To check real health once Easy Auth is on, use the Azure Portal's Log Stream/Kudu console, or temporarily allow anonymous access to /health." -ForegroundColor Gray
+} else {
+    Write-Host "Status Code: $($Response.StatusCode)" -ForegroundColor Green
+    $content = $Response.Content
+    if ($content -and $content.Length -gt 300) { $content = $content.Substring(0, 300) + "... (truncated)" }
+    Write-Host "Response: $content" -ForegroundColor Gray
+}
