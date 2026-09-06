@@ -26,6 +26,32 @@ $RepoRoot = $PSScriptRoot
 $EnvFile = Join-Path $RepoRoot ".env"
 $StateFile = Join-Path $RepoRoot ".onboarding-state.json"
 
+# Canonical set of every key the wizard (and the scripts it wraps) can read
+# or write, in the same order as .env.example, with the onboarding-specific
+# naming keys appended at the end. This is the single source of truth used
+# to detect an existing .env's completeness - keep it in sync with
+# .env.example whenever a step gains a new setting.
+$script:KnownEnvKeys = @(
+    "AZURE_SUBSCRIPTION_ID",
+    "RESOURCE_GROUP",
+    "LOCATION",
+    "APP_SERVICE_NAME",
+    "TENANT_ID",
+    "CLIENT_ID",
+    "CLIENT_SECRET",
+    "SECURITY_GROUP_NAME",
+    "ALLOWED_EMAIL_ADDRESSES",
+    "POWER_PLATFORM_ENVIRONMENT_ID",
+    "CUSTOM_CONNECTOR_ID",
+    "DATAVERSE_ENVIRONMENT_URL",
+    "DATAVERSE_PUBLISHER_PREFIX",
+    "BACKEND_URL",
+    "MAILBOX_ADDRESS",
+    "APP_BASE_NAME",
+    "APP_REGISTRATION_NAME",
+    "KEY_VAULT_NAME"
+)
+
 # ---------------------------------------------------------------------------
 # .env helpers - same format/semantics as every script under */scripts, so
 # either can be run standalone and both stay in sync.
@@ -60,6 +86,49 @@ function Get-EnvValue {
     param([string]$Key, [string]$Default = "")
     if ($script:EnvVars.Contains($Key) -and $script:EnvVars[$Key]) { return $script:EnvVars[$Key] }
     return $Default
+}
+
+# Loads an existing .env (reusing every value already in it - nothing is
+# ever overwritten here) or, if none exists, treats this as a brand-new
+# install and creates an empty one. Either way, ensures every key in
+# $script:KnownEnvKeys is present in the file (appending any that are
+# missing, left blank) so the file is always a complete, self-documenting
+# template and later steps only need to fill in the blanks - they never
+# have to guess whether a setting exists.
+function Initialize-EnvFile {
+    if (-not (Test-Path $EnvFile)) {
+        Write-Heading ".env"
+        Write-Warn2 "No existing .env found - starting a brand-new installation."
+        $script:EnvVars = [ordered]@{}
+        foreach ($key in $script:KnownEnvKeys) { $script:EnvVars[$key] = "" }
+        Save-DotEnv -Vars $script:EnvVars -Path $EnvFile
+        Write-Ok "Created a new .env with $($script:KnownEnvKeys.Count) known keys."
+        return
+    }
+
+    Write-Heading ".env"
+    Write-Ok "Existing .env found at $EnvFile - reusing its values."
+    $script:EnvVars = Read-DotEnv $EnvFile
+
+    $missing = @()
+    foreach ($key in $script:KnownEnvKeys) {
+        if (-not $script:EnvVars.Contains($key)) {
+            $script:EnvVars[$key] = ""
+            $missing += $key
+        }
+    }
+
+    if ($missing.Count -gt 0) {
+        Save-DotEnv -Vars $script:EnvVars -Path $EnvFile
+        Write-Warn2 "Appended $($missing.Count) missing key(s) to .env (left blank - the wizard will fill them in as it runs): $($missing -join ', ')"
+    } else {
+        Write-Ok "All $($script:KnownEnvKeys.Count) expected keys are already present in .env."
+    }
+
+    $unknown = @($script:EnvVars.Keys | Where-Object { $script:KnownEnvKeys -notcontains $_ })
+    if ($unknown.Count -gt 0) {
+        Write-Warn2 "Note: .env also has $($unknown.Count) extra key(s) not managed by this wizard (left untouched): $($unknown -join ', ')"
+    }
 }
 
 # ---------------------------------------------------------------------------
@@ -175,27 +244,86 @@ function Test-Prerequisites {
     return $ok
 }
 
+# Best-effort tenant display name lookup (older az CLI versions, or callers
+# without az account tenant list rights, silently fall back to just the ID).
+function Get-TenantDisplayName {
+    param([string]$TenantId)
+    try {
+        $tenants = az account tenant list -o json 2>$null | ConvertFrom-Json
+        $match = $tenants | Where-Object { $_.tenantId -eq $TenantId } | Select-Object -First 1
+        if ($match -and $match.displayName) { return $match.displayName }
+    } catch {
+        Write-Verbose "Tenant display name lookup failed (older az CLI or insufficient rights): $($_.Exception.Message)"
+    }
+    return $null
+}
+
+# Replaces .env with a blank template of every known key - used when the
+# signed-in account/tenant turns out to be wrong and the user asks to start
+# clean instead of keeping settings from the previous tenant. The previous
+# .env is backed up first, never silently discarded.
+function Reset-EnvFile {
+    if (Test-Path $EnvFile) {
+        $backup = "$EnvFile.bak"
+        Copy-Item -Path $EnvFile -Destination $backup -Force
+        Write-Warn2 "Backed up previous .env to $backup"
+    }
+    $script:EnvVars = [ordered]@{}
+    foreach ($key in $script:KnownEnvKeys) { $script:EnvVars[$key] = "" }
+    Save-DotEnv -Vars $script:EnvVars -Path $EnvFile
+    # A different tenant/account means any previously generated naming
+    # postfix should not be reused either - force a fresh one.
+    $script:State.Postfix = $null
+    Save-State $script:State
+    Write-Ok "Replaced .env with a blank template ($($script:KnownEnvKeys.Count) keys)."
+}
+
 function Get-AzureContext {
-    Write-Heading "Discovering Azure context"
+    Write-Heading "Azure sign-in"
     $account = az account show -o json 2>$null | ConvertFrom-Json
-    if (-not $account) {
+
+    if ($account) {
+        $tenantName = Get-TenantDisplayName $account.tenantId
+        $tenantLabel = if ($tenantName) { "$tenantName ($($account.tenantId))" } else { $account.tenantId }
+        Write-Host "  Signed in as:  $($account.user.name)" -ForegroundColor Cyan
+        Write-Host "  Tenant:        $tenantLabel" -ForegroundColor Cyan
+        Write-Host "  Subscription:  $($account.name) ($($account.id))" -ForegroundColor Cyan
+
+        $confirm = Read-Prompt "Is this the correct account/tenant? (y/n)" "y"
+        if ($confirm -eq 'n') {
+            Write-Warn2 "Signing out and starting a fresh 'az login'..."
+            az logout -o none 2>$null
+            az login -o none
+            $account = az account show -o json | ConvertFrom-Json
+            $tenantName = Get-TenantDisplayName $account.tenantId
+            $tenantLabel = if ($tenantName) { "$tenantName ($($account.tenantId))" } else { $account.tenantId }
+            Write-Ok "Now signed in as $($account.user.name) (tenant $tenantLabel)"
+
+            $replace = Read-Prompt "Replace the existing .env with a fresh one for this account? (y/n)" "n"
+            if ($replace -eq 'y') { Reset-EnvFile }
+        }
+    } else {
         Write-Warn2 "Not signed in to Azure CLI. Running 'az login'..."
         az login -o none
         $account = az account show -o json | ConvertFrom-Json
     }
-    Write-Ok "Signed in as $($account.user.name) (tenant $($account.tenantId))"
-    Set-EnvValue "TENANT_ID" $account.tenantId
-    Set-EnvValue "AZURE_SUBSCRIPTION_ID" $account.id
 
+    Write-Ok "Using tenant $($account.tenantId), subscription $($account.name) ($($account.id))"
+    Set-EnvValue "TENANT_ID" $account.tenantId
+
+    # Only offer to pick a different subscription when .env didn't already
+    # have one pinned - check the pre-existing value, not the one we are
+    # about to write, so this doesn't just silently no-op every run.
+    $existingSubscriptionId = Get-EnvValue "AZURE_SUBSCRIPTION_ID"
     $accounts = az account list -o json | ConvertFrom-Json
-    if ($accounts.Count -gt 1 -and -not (Get-EnvValue "AZURE_SUBSCRIPTION_ID")) {
+    if (-not $existingSubscriptionId -and $accounts.Count -gt 1) {
         Write-Host "Multiple subscriptions available:"
         for ($i = 0; $i -lt $accounts.Count; $i++) { Write-Host "  [$i] $($accounts[$i].name) ($($accounts[$i].id))" }
         $choice = Read-Prompt "Select subscription index" "0"
         $account = $accounts[[int]$choice]
         az account set --subscription $account.id -o none
-        Set-EnvValue "AZURE_SUBSCRIPTION_ID" $account.id
     }
+    Set-EnvValue "AZURE_SUBSCRIPTION_ID" $account.id
     return $account
 }
 
@@ -465,7 +593,6 @@ function Show-UpdateMenu {
 # Main menu
 # ---------------------------------------------------------------------------
 
-$script:EnvVars = Read-DotEnv $EnvFile
 $script:State = Read-State
 
 Write-Host ""
@@ -473,6 +600,7 @@ Write-Host "#############################################################" -Fore
 Write-Host "#   Bridge365 Onboarding Wizard                            #" -ForegroundColor Magenta
 Write-Host "#############################################################" -ForegroundColor Magenta
 
+Initialize-EnvFile
 Test-Prerequisites | Out-Null
 Get-AzureContext | Out-Null
 Initialize-Naming
