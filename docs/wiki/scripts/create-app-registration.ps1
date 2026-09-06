@@ -84,11 +84,37 @@ foreach ($permName in $GraphAppPermissions) {
 }
 
 if ($resourceAccess.Count -gt 0) {
-    $requiredResourceAccess = @(@{ resourceAppId = $GraphResourceAppId; resourceAccess = $resourceAccess })
-    $tmpFile = New-TemporaryFile
-    ($requiredResourceAccess | ConvertTo-Json -Depth 5) | Set-Content -Path $tmpFile -Encoding utf8
-    az ad app update --id $AppId --required-resource-accesses "@$tmpFile" -o none
-    Remove-Item $tmpFile -Force
+    # Use "az ad app permission add" instead of "az ad app update
+    # --required-resource-accesses": it is additive/idempotent per permission
+    # and, critically, its failures are not silently swallowed like the
+    # single bulk "update" call could be. Each permission is requested
+    # individually and its exit code is checked.
+    $permArgs = @()
+    foreach ($permName in $resolvedRoleIds.Keys) {
+        $permArgs += "$($resolvedRoleIds[$permName])=Role"
+    }
+    az ad app permission add --id $AppId --api $GraphResourceAppId --api-permissions $permArgs -o none
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Failed to request Graph application permissions (az ad app permission add exited with code $LASTEXITCODE). Add them manually via API permissions in the portal, then re-run this script."
+        exit 1
+    }
+
+    # Verify the permissions actually landed on the app object instead of
+    # trusting the exit code alone - this is what previously failed
+    # silently and left API permissions completely empty in the portal.
+    $verifyApp = az ad app show --id $AppId --query "requiredResourceAccess" -o json | ConvertFrom-Json
+    $verifiedRoleIds = @()
+    foreach ($entry in $verifyApp) {
+        if ($entry.resourceAppId -eq $GraphResourceAppId) {
+            $verifiedRoleIds += $entry.resourceAccess.id
+        }
+    }
+    $notRequested = @($resolvedRoleIds.Keys | Where-Object { $verifiedRoleIds -notcontains $resolvedRoleIds[$_] })
+    if ($notRequested.Count -gt 0) {
+        Write-Error "Graph application permissions were not found on the app registration after requesting them: $($notRequested -join ', '). Add them manually via API permissions in the portal, then re-run this script."
+        exit 1
+    }
+
     Write-Host "Requested Graph application permissions: $($resolvedRoleIds.Keys -join ', ')" -ForegroundColor Cyan
 }
 
