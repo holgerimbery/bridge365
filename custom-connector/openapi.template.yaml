@@ -11,8 +11,8 @@
 
 swagger: "2.0"
 info:
-  title: SharedMailboxConnector
-  description: Custom connector for the shared mailbox classification backend service.
+  title: bridge365
+  description: Custom connector for the shared mailbox classification backend service. (c) 2026 Holger Imbery.
   version: "1.0.0"
 host: __BACKEND_HOST__
 basePath: /
