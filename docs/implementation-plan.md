@@ -20,7 +20,7 @@ Source guidance: See `docs/shared-mailbox-classification-master-guide.md`.
 graph TD
     A["Phase 0: Foundation<br/>(v0.1.0)"] --> B["Phase 1: Shared Mailbox<br/>Custom Connector (v0.2.0)"]
     B --> C["Phase 2: Classification via Dataverse Table<br/>(v0.5.0)"]
-    C --> D["Phase 3: Draft Creation<br/>(v0.4.0)"]
+    C --> D["Phase 3: Draft Creation<br/>& Routing (v0.6.0)"]
     D --> E["Phase 4: Override/Change<br/>Classification (v0.5.0)"]
     E --> F["Phase 5: MCP Server<br/>Integration (v0.6.0)"]
     F --> G["Phase 6: BART Classifier<br/>(v0.7.0)"]
@@ -119,36 +119,39 @@ graph TD
 
 ---
 
-### Phase 3: Draft Creation (v0.4.0)
+### Phase 3: Draft Creation & Routing (v0.6.0)
 
-**Objective:** Generate reply drafts with routing block and optional knowledge integration.
+**Objective:** Give a Copilot Studio agent Microsoft Graph mailbox-routing
+capabilities to act on a message after classification - categorize, move,
+track changes, read attachments, and stash routing metadata - building on
+the reply-draft creation/update/send capabilities already delivered in
+Phase 1 (`CreateDraft` with `replyAll`, `UpdateDraft`, `SendDraftMessage`).
 
 **Deliverables:**
 
-**Draft Generation:**
-- Routing block generator (HTML format, sender + classifications + departments)
-- Routing block detector and removal functions
-- Draft creation via Microsoft Graph `createReply`
-- Knowledge retrieval (optional) from approved sources
-- Customer-facing answer composition
-- Complete draft body: routing block + answer + original email below
+**Backend Service (`backend-service/app.py`):**
+- `PATCH /api/mailbox/messages/{id}/categories` — set/replace Outlook categories
+- `POST /api/mailbox/messages/{id}/move` — move a message to another mail folder
+- `GET /api/mailbox/messages/delta` — Graph delta query for incremental sync (additive to the existing `poll` timestamp-filter trigger, not a replacement)
+- `GET /api/mailbox/messages/{id}/attachments`, `GET /api/mailbox/messages/{id}/attachments/{attachmentId}` — list/read attachments
+- `GET`/`PATCH /api/mailbox/messages/{id}/extended-properties` — read/write Graph `singleValueExtendedProperties` for internal routing metadata
 
 **Copilot Studio Custom Connector:**
-- Connector operations: `CreateResponseDraft`, `RemoveRoutingBlock`
-- Prepare-send guard that rejects drafts with routing block present
+- Connector operations: `UpdateMessageCategories`, `MoveMessage`, `GetMessagesDelta`, `GetAttachments`, `GetAttachment`, `GetExtendedProperty`, `SetExtendedProperty`
+- `CreateDraft`/`UpdateDraft`/`SendDraftMessage` (Phase 1) cover createReply/createReplyAll/send — no new operations needed for those
 
 **Wiki & Documentation:**
-- `docs/wiki/phase-3-draft-creation.md` — draft generation workflow and approval flow
-- `docs/wiki/scripts/test-draft-creation.ps1` — Test script to verify draft generation
-- Mermaid diagram: end-to-end draft workflow (original email → classification → draft → review)
+- `docs/wiki/phase-3-draft-creation.md` — setup, PowerShell test snippets, and connector test steps for each new operation
+- Integration Test: End-to-End section (categorize → move → verify via delta → read attachments → set extended property)
 
 **Success Criteria:**
-- Drafts include routing block with all classifications and departments
-- Routing block is marked with `data-internal-routing-block="true"`
-- Original email is sanitized and included below the proposed answer
-- Prepare-send rejects drafts while block is present
+- Categories can be set on a real Inbox message and confirmed via Graph
+- A message can be moved to a target folder and re-located via its new id
+- Delta query returns a usable `@odata.deltaLink`/`@odata.nextLink` for incremental sync
+- Attachments (list and single, with content) can be retrieved
+- Extended properties round-trip (write then read back the same value)
 
-**Major PR:** "Feature: Draft creation with routing block and knowledge grounding (Phase 3)"
+**Major PR:** "Feature: Draft creation & mailbox routing - categories, move, delta, attachments, extended properties (Phase 3)"
 
 ---
 

@@ -221,3 +221,174 @@ paths:
       responses:
         "200":
           description: "{ status, draftId }"
+
+  /api/mailbox/messages/{messageId}/categories:
+    patch:
+      summary: UpdateMessageCategories
+      description: Sets (replaces) a message's Outlook categories, e.g. to tag it with a department name after classification. This is a full replace, not a merge - include any existing categories you want to keep.
+      operationId: UpdateMessageCategories
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              mailboxAddress:
+                type: string
+              categories:
+                type: array
+                items:
+                  type: string
+                x-ms-summary: Categories
+                x-ms-visibility: important
+      responses:
+        "200":
+          description: "{ messageId, categories }"
+  /api/mailbox/messages/{messageId}/move:
+    post:
+      summary: MoveMessage
+      description: Moves a message to a different mail folder (e.g. route to a department subfolder). Graph assigns the moved message a NEW id in the destination folder - use movedMessageId from the response for any further operation on this message.
+      operationId: MoveMessage
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              mailboxAddress:
+                type: string
+              destinationId:
+                type: string
+                x-ms-summary: Destination Folder Id
+                x-ms-visibility: important
+      responses:
+        "200":
+          description: "{ movedMessageId, destinationId }"
+  /api/mailbox/messages/delta:
+    get:
+      summary: GetMessagesDelta
+      description: Graph delta query for change tracking on the Inbox (new/changed/deleted messages since a checkpoint) - for incremental sync. Distinct from NewMessageReceived (a timestamp-filter polling trigger); this uses Graph's real delta-token protocol. Omit deltaLink to start a fresh delta; persist the returned @odata.deltaLink/@odata.nextLink and pass it back as deltaLink to resume.
+      operationId: GetMessagesDelta
+      parameters:
+        - name: mailboxAddress
+          in: query
+          required: true
+          type: string
+        - name: deltaLink
+          in: query
+          required: false
+          type: string
+          x-ms-summary: Delta Link (resume checkpoint)
+          x-ms-visibility: advanced
+      responses:
+        "200":
+          description: "Delta payload: { value: [Message], '@odata.deltaLink' or '@odata.nextLink' }"
+  /api/mailbox/messages/{messageId}/attachments:
+    get:
+      summary: GetAttachments
+      description: Lists a message's attachments (metadata only - id, name, contentType, size; no content bytes). Use GetAttachment to fetch a single attachment's content.
+      operationId: GetAttachments
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          type: string
+        - name: mailboxAddress
+          in: query
+          required: true
+          type: string
+      responses:
+        "200":
+          description: Array of attachment metadata objects
+  /api/mailbox/messages/{messageId}/attachments/{attachmentId}:
+    get:
+      summary: GetAttachment
+      description: Fetches a single attachment, including its base64 contentBytes for file attachments.
+      operationId: GetAttachment
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          type: string
+        - name: attachmentId
+          in: path
+          required: true
+          type: string
+        - name: mailboxAddress
+          in: query
+          required: true
+          type: string
+      responses:
+        "200":
+          description: Single attachment object (includes contentBytes for file attachments)
+  /api/mailbox/messages/{messageId}/extended-properties:
+    get:
+      summary: GetExtendedProperty
+      description: Reads a single Graph MAPI singleValueExtendedProperty stashed on a message (e.g. internal routing/classification metadata), identified by a caller-chosen propertyGuid plus propertyName.
+      operationId: GetExtendedProperty
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          type: string
+        - name: mailboxAddress
+          in: query
+          required: true
+          type: string
+        - name: propertyGuid
+          in: query
+          required: true
+          type: string
+          x-ms-summary: Property GUID
+          x-ms-visibility: important
+        - name: propertyName
+          in: query
+          required: true
+          type: string
+          x-ms-summary: Property Name
+          x-ms-visibility: important
+      responses:
+        "200":
+          description: "{ messageId, propertyId, value }"
+    patch:
+      summary: SetExtendedProperty
+      description: Writes a single Graph MAPI singleValueExtendedProperty on a message - see GetExtendedProperty for the propertyGuid/propertyName pairing. Creates the property if it doesn't exist yet, or overwrites its value if it does.
+      operationId: SetExtendedProperty
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              mailboxAddress:
+                type: string
+              propertyGuid:
+                type: string
+                x-ms-summary: Property GUID
+                x-ms-visibility: important
+              propertyName:
+                type: string
+                x-ms-summary: Property Name
+                x-ms-visibility: important
+              value:
+                type: string
+                x-ms-summary: Value
+                x-ms-visibility: important
+      responses:
+        "200":
+          description: "{ messageId, propertyId, value }"

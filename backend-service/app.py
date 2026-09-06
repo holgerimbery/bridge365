@@ -353,5 +353,241 @@ def send_draft_message(draft_id):
         logging.error(f"Error sending draft message: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/api/mailbox/messages/<message_id>/categories", methods=["PATCH"])
+def update_message_categories(message_id):
+    """Set/replace a message's Outlook categories (e.g. tag with a department
+    name after classification), so routing decisions are visible directly in
+    Outlook, not just in Dataverse.
+
+    Graph categories are a full replace, not a merge - callers that want to
+    add a category to existing ones must first GET the message and include
+    its current categories in the list they send here.
+    """
+    try:
+        data = request.json or {}
+        mailbox = data.get("mailboxAddress")
+        categories = data.get("categories")
+
+        if not mailbox or categories is None:
+            return jsonify({"error": "mailboxAddress, categories required"}), 400
+        if not isinstance(categories, list):
+            return jsonify({"error": "categories must be an array of strings"}), 400
+
+        updated = graph_json(graph_client.patch(
+            f"/users/{mailbox}/messages/{message_id}",
+            json={"categories": categories}
+        ))
+
+        return jsonify({
+            "messageId": message_id,
+            "categories": updated.get("categories", [])
+        }), 200
+    except GraphError as e:
+        logging.error(f"Error updating message categories (Graph error {e.status_code}): {e}")
+        return jsonify({"error": str(e)}), e.status_code
+    except Exception as e:
+        logging.error(f"Error updating message categories: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/mailbox/messages/<message_id>/move", methods=["POST"])
+def move_message(message_id):
+    """Move a message to a different mail folder (e.g. route to a department
+    subfolder after classification).
+
+    Graph's move action returns the message under a NEW id in the
+    destination folder - the original messageId stops resolving once the
+    move completes. Callers must switch to movedMessageId for any further
+    operation on this message (categories, extended properties, etc.).
+    destinationId accepts either a real folder id or a Graph well-known
+    folder name (e.g. "deleteditems", "archive").
+    """
+    try:
+        data = request.json or {}
+        mailbox = data.get("mailboxAddress")
+        destination_id = data.get("destinationId")
+
+        if not mailbox or not destination_id:
+            return jsonify({"error": "mailboxAddress, destinationId required"}), 400
+
+        moved = graph_json(graph_client.post(
+            f"/users/{mailbox}/messages/{message_id}/move",
+            json={"destinationId": destination_id}
+        ))
+
+        return jsonify({
+            "movedMessageId": moved.get("id"),
+            "destinationId": destination_id
+        }), 200
+    except GraphError as e:
+        logging.error(f"Error moving message (Graph error {e.status_code}): {e}")
+        return jsonify({"error": str(e)}), e.status_code
+    except Exception as e:
+        logging.error(f"Error moving message: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/mailbox/messages/delta", methods=["GET"])
+def get_messages_delta():
+    """Delta query for change tracking on the Inbox (new/changed/deleted
+    messages since a checkpoint), for incremental sync use cases.
+
+    This is a NEW, separate capability from /api/mailbox/messages/poll above
+    - poll uses a plain receivedDateTime > since filter (simple, but misses
+    edits/deletes and can duplicate/skip around clock skew), while this uses
+    Graph's real delta token protocol. Do not replace poll with this; both
+    are kept.
+
+    First call: omit deltaLink to start a fresh delta over the Inbox. Graph
+    returns @odata.nextLink while paging through the initial result set, and
+    a final @odata.deltaLink once caught up - callers should persist
+    whichever link comes back and pass it as deltaLink on the next call to
+    resume from that checkpoint. Both links are full, absolute Graph URLs,
+    which msgraph-core's GraphClient (built on requests.Session) passes
+    through unchanged instead of re-prefixing with the base Graph URL.
+    """
+    try:
+        mailbox = request.args.get("mailboxAddress")
+        delta_link = request.args.get("deltaLink")
+
+        if not mailbox:
+            return jsonify({"error": "mailboxAddress parameter required"}), 400
+
+        request_url = delta_link or (
+            f"/users/{mailbox}/mailFolders/inbox/messages/delta"
+            f"?$select=id,subject,from,receivedDateTime,bodyPreview"
+        )
+
+        response = graph_client.get(request_url)
+        return jsonify(graph_json(response)), 200
+    except GraphError as e:
+        logging.error(f"Error querying messages delta (Graph error {e.status_code}): {e}")
+        return jsonify({"error": str(e)}), e.status_code
+    except Exception as e:
+        logging.error(f"Error querying messages delta: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/mailbox/messages/<message_id>/attachments", methods=["GET"])
+def get_attachments(message_id):
+    """List a message's attachments (metadata only - id, name, contentType,
+    size; no contentBytes). Use get_attachment below to fetch a single
+    attachment's content."""
+    try:
+        mailbox = request.args.get("mailboxAddress")
+        if not mailbox:
+            return jsonify({"error": "mailboxAddress parameter required"}), 400
+
+        response = graph_client.get(
+            f"/users/{mailbox}/messages/{message_id}/attachments"
+            f"?$select=id,name,contentType,size"
+        )
+        return jsonify(graph_json(response)), 200
+    except GraphError as e:
+        logging.error(f"Error fetching attachments (Graph error {e.status_code}): {e}")
+        return jsonify({"error": str(e)}), e.status_code
+    except Exception as e:
+        logging.error(f"Error fetching attachments: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/mailbox/messages/<message_id>/attachments/<attachment_id>", methods=["GET"])
+def get_attachment(message_id, attachment_id):
+    """Fetch a single attachment, including its base64 contentBytes for file
+    attachments (contentBytes is absent for other attachment types, e.g.
+    itemAttachment/referenceAttachment)."""
+    try:
+        mailbox = request.args.get("mailboxAddress")
+        if not mailbox:
+            return jsonify({"error": "mailboxAddress parameter required"}), 400
+
+        response = graph_client.get(
+            f"/users/{mailbox}/messages/{message_id}/attachments/{attachment_id}"
+        )
+        return jsonify(graph_json(response)), 200
+    except GraphError as e:
+        logging.error(f"Error fetching attachment (Graph error {e.status_code}): {e}")
+        return jsonify({"error": str(e)}), e.status_code
+    except Exception as e:
+        logging.error(f"Error fetching attachment: {e}")
+        return jsonify({"error": str(e)}), 500
+
+def _extended_property_id(property_guid, property_name):
+    """Builds the Graph singleValueExtendedProperties id string, e.g.
+    'String {12345678-1234-1234-1234-123456789012} Name RoutingDepartment'.
+    Always uses the String property type - sufficient for the routing/
+    classification metadata values this API is meant for."""
+    return f"String {{{property_guid}}} Name {property_name}"
+
+@app.route("/api/mailbox/messages/<message_id>/extended-properties", methods=["GET"])
+def get_extended_property(message_id):
+    """Reads a single Graph MAPI extended property stashed on a message (e.g.
+    internal routing/classification metadata written by set_extended_property
+    below), via $expand=singleValueExtendedProperties($filter=...).
+
+    propertyGuid/propertyName together identify the property - Graph has no
+    concept of a bare property name, every extended property is namespaced by
+    a GUID the caller chooses (any stable GUID works; pick one per logical
+    property and reuse it for both reads and writes).
+    """
+    try:
+        mailbox = request.args.get("mailboxAddress")
+        property_guid = request.args.get("propertyGuid")
+        property_name = request.args.get("propertyName")
+
+        if not all([mailbox, property_guid, property_name]):
+            return jsonify({"error": "mailboxAddress, propertyGuid, propertyName required"}), 400
+
+        property_id = _extended_property_id(property_guid, property_name)
+        response = graph_client.get(
+            f"/users/{mailbox}/messages/{message_id}"
+            f"?$expand=singleValueExtendedProperties($filter=id eq '{property_id}')"
+        )
+        message = graph_json(response)
+        properties = message.get("singleValueExtendedProperties") or []
+        value = properties[0].get("value") if properties else None
+
+        return jsonify({
+            "messageId": message_id,
+            "propertyId": property_id,
+            "value": value
+        }), 200
+    except GraphError as e:
+        logging.error(f"Error reading extended property (Graph error {e.status_code}): {e}")
+        return jsonify({"error": str(e)}), e.status_code
+    except Exception as e:
+        logging.error(f"Error reading extended property: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/mailbox/messages/<message_id>/extended-properties", methods=["PATCH"])
+def set_extended_property(message_id):
+    """Writes a single Graph MAPI extended property on a message - see
+    get_extended_property above for the propertyGuid/propertyName pairing.
+    Graph creates the property if it doesn't exist yet, or overwrites its
+    value if it does."""
+    try:
+        data = request.json or {}
+        mailbox = data.get("mailboxAddress")
+        property_guid = data.get("propertyGuid")
+        property_name = data.get("propertyName")
+        value = data.get("value")
+
+        if not all([mailbox, property_guid, property_name]) or value is None:
+            return jsonify({"error": "mailboxAddress, propertyGuid, propertyName, value required"}), 400
+
+        property_id = _extended_property_id(property_guid, property_name)
+        graph_json(graph_client.patch(
+            f"/users/{mailbox}/messages/{message_id}",
+            json={"singleValueExtendedProperties": [{"id": property_id, "value": str(value)}]}
+        ))
+
+        return jsonify({
+            "messageId": message_id,
+            "propertyId": property_id,
+            "value": value
+        }), 200
+    except GraphError as e:
+        logging.error(f"Error setting extended property (Graph error {e.status_code}): {e}")
+        return jsonify({"error": str(e)}), e.status_code
+    except Exception as e:
+        logging.error(f"Error setting extended property: {e}")
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
