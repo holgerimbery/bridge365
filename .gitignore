@@ -7,6 +7,10 @@
 .DS_Store
 Thumbs.db
 
+# Onboarding wizard progress state (naming postfix, completed steps) -
+# machine/run-specific, safe to delete to force a clean re-run
+.onboarding-state.json
+
 # Generated custom connector properties (rendered from apiProperties.template.json
 # with real tenant/client IDs by custom-connector/scripts/deploy-connector.ps1)
 custom-connector/apiProperties.json
