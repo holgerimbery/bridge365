@@ -164,7 +164,22 @@ For questions or issues:
 
 ## License
 
-Licensed under the project LICENSE file.
+[![License: BSUL-1.0](https://img.shields.io/badge/License-BSUL--1.0-blue)](LICENSE)
+
+Bridge365 is source-available software licensed under the
+Bridge365 Sustainable Use License 1.0.
+
+You may use, study, modify, extend, and deploy Bridge365,
+including for internal commercial production use.
+Consulting, implementation, integration, customization,
+training, support, and dedicated customer deployments are permitted.
+
+You may not sell Bridge365 or a modified version as a software
+product, rebrand it for resale, or offer it as a competing shared,
+multi-tenant, SaaS, or managed service without prior written permission.
+
+Bridge365 is source-available, not OSI-approved open-source software.
+See the [LICENSE](LICENSE) file for the legally controlling terms.
 
 ## Copyright
 

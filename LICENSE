@@ -1,21 +1,469 @@
-MIT License
+Bridge365 Sustainable Use License 1.0 (SPDX short identifier: BSUL-1.0)
 
 Copyright (c) 2026 Holger Imbery
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+1. Acceptance
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+By exercising any rights granted under this License, you accept and agree to comply with all terms and conditions of this License.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+If you do not agree to these terms, you may not use, copy, modify, distribute, deploy, or otherwise exercise rights in the Software.
+
+2. Definitions
+
+For purposes of this License, the following definitions apply.
+
+2.1 “Software”
+
+“Software” means the Bridge365 source code, object code, configuration files, scripts, documentation, templates, schemas, prompts, workflows, and other materials explicitly distributed by the Licensor under this License.
+
+The Software does not include third-party components that are separately identified as being subject to other license terms.
+
+2.2 “Licensor”
+
+“Licensor” means the individual or legal entity that owns the copyright in the Software and makes the Software available under this License.
+
+2.3 “Licensee” and “You”
+
+“Licensee” and “You” mean the individual or legal entity exercising rights under this License.
+
+If you exercise rights on behalf of a legal entity, “You” includes that legal entity.
+
+2.4 “Affiliate”
+
+“Affiliate” means a legal entity that directly or indirectly controls, is controlled by, or is under common control with the Licensee.
+
+For this purpose, “control” means ownership of more than 50 percent of the voting interests of the relevant legal entity or the legal power to direct its management.
+
+2.5 “Derivative Work”
+
+“Derivative Work” means any modification, enhancement, adaptation, translation, extension, fork, port, or other work based on or incorporating a substantial portion of the Software.
+
+A separate program that merely communicates with the Software through documented interfaces, APIs, protocols, connectors, command-line interfaces, or extension mechanisms is not a Derivative Work solely because of that communication.
+
+2.6 “Internal Business Use”
+
+“Internal Business Use” means use of the Software by the Licensee or its Affiliates in support of their own operations, employees, customers, products, or business processes.
+
+Internal Business Use may include production deployment and the processing of data or communications belonging to the Licensee, its Affiliates, or their customers, provided that customers are not offered access to the Software as a prohibited Hosted Service.
+
+2.7 “Customer-Specific Deployment”
+
+“Customer-Specific Deployment” means a separate instance of the Software that:
+
+is configured or operated for one identified customer;
+is logically separated from installations used by other customers;
+is used primarily for that customer’s own business processes;
+is not marketed or licensed as a standalone Bridge365 product; and
+does not provide multiple unrelated customers with access to a shared Bridge365 service.
+
+A Customer-Specific Deployment may be hosted in the customer’s environment or operated by a service provider on the customer’s behalf.
+
+2.8 “Hosted Service”
+
+“Hosted Service” means a service through which a third party is given direct or indirect access to a substantial set of the Software’s features or functionality, whether through a user interface, API, application, agent, embedded component, or other technical mechanism.
+
+2.9 “Competing Service”
+
+“Competing Service” means a Hosted Service, SaaS offering, platform, managed service, or commercially distributed product where:
+
+the Software or a Derivative Work provides a substantial portion of the service’s functionality; and
+access to that functionality is a primary or substantial part of the value offered to customers.
+
+A Customer-Specific Deployment provided as part of professional services is not a Competing Service if it satisfies Section 2.7 and the customer is not primarily purchasing access to Bridge365 itself.
+
+2.10 “Sell” or “Sale”
+
+“Sell” or “Sale” means receiving payment or other compensation primarily in exchange for:
+
+access to the Software;
+distribution of the Software;
+a license or sublicense to the Software;
+access to a Derivative Work;
+distribution of a Derivative Work; or
+a license or sublicense to a Derivative Work.
+
+Payment for professional services does not constitute a Sale of the Software if the primary value of the transaction is consulting, implementation, customization, integration, training, maintenance, support, or operation services rather than access to or redistribution of the Software itself.
+
+2.11 “Contribution”
+
+“Contribution” means any original work of authorship, modification, correction, documentation, or other material intentionally submitted to the Licensor for inclusion in the Software.
+
+A Contribution does not include material clearly marked by the contributor as “Not a Contribution” or similar wording.
+
+2.12 “Contributor”
+
+“Contributor” means an individual or legal entity that submits a Contribution to the Licensor.
+
+3. Copyright License Grant
+
+Subject to the terms and conditions of this License, the Licensor grants You a non-exclusive, worldwide, royalty-free, non-transferable, and non-sublicensable license to:
+
+use and execute the Software;
+copy the Software;
+study the Software;
+modify the Software;
+create Derivative Works;
+deploy the Software in development, testing, staging, demonstration, and production environments;
+use the Software for Internal Business Use;
+use the Software for personal, educational, research, nonprofit, and community purposes;
+make the Software available to employees, contractors, and Affiliates acting on Your behalf; and
+create and operate Customer-Specific Deployments as permitted by this License.
+
+You may authorize employees and contractors to exercise these rights solely on Your behalf, provided that You remain responsible for their compliance with this License.
+
+Except as expressly permitted by this License, You may not transfer or sublicense Your rights under this License.
+
+4. Permitted Uses
+4.1 Personal Use
+
+Individuals may use, study, modify, extend, and operate the Software for personal purposes.
+
+4.2 Educational, Research, and Nonprofit Use
+
+Educational institutions, research organizations, nonprofit organizations, and community groups may use, study, modify, extend, and deploy the Software for their own activities.
+
+This permission does not authorize the Sale of the Software or operation of a Competing Service.
+
+4.3 Internal Business Use
+
+Organizations may:
+
+use the Software in commercial production environments;
+adapt the Software to their business requirements;
+deploy the Software on-premises;
+deploy the Software in public, private, or hybrid cloud environments;
+integrate the Software into internal systems and business processes;
+use the Software to support products and services offered by the organization;
+process information belonging to the organization or its customers;
+permit employees and contractors to use the Software on the organization’s behalf; and
+permit Affiliates to use the Software for Internal Business Use.
+
+Commercial activity conducted with the assistance of the Software is permitted. This includes using Bridge365 to classify, route, process, analyze, or respond to business communications.
+
+4.4 Customer Projects
+
+Consultancies, system integrators, independent professionals, and other service providers may:
+
+assess customer requirements relating to the Software;
+install the Software for customers;
+configure the Software for customers;
+customize the Software for customers;
+develop customer-specific integrations and extensions;
+migrate customer data and configurations;
+provide training, maintenance, and support;
+operate a Customer-Specific Deployment on behalf of a customer; and
+charge for these professional services.
+
+A service provider may provide the same professional services to multiple customers. However, each hosted Customer-Specific Deployment must satisfy Section 2.7.
+
+4.5 Integrations and Independent Products
+
+You may create and commercially distribute integrations, connectors, plug-ins, applications, agents, tools, and independent products that interact with the Software, provided that:
+
+they do not include or distribute a substantial portion of the Software contrary to this License;
+they are not presented as an authorized or official Bridge365 product without written permission;
+they do not circumvent the restrictions of this License; and
+they do not constitute a Competing Service.
+5. Explicitly Permitted Commercial Services
+
+For clarity, You may charge for:
+
+consulting;
+architecture and design services;
+implementation;
+installation and configuration;
+system integration;
+custom development;
+customer-specific extensions;
+data migration;
+training and workshops;
+maintenance;
+technical support;
+security and compliance assessments;
+monitoring and operational support; and
+operation of a Customer-Specific Deployment.
+
+These activities are permitted when the primary value being sold is the professional service and not access to, redistribution of, or licensing of the Software itself.
+
+Merely describing a professional service as “managed” does not automatically make it prohibited. The actual nature of the service determines whether it is an allowed Customer-Specific Deployment or a prohibited Competing Service.
+
+6. Restrictions
+
+Unless You have received prior written permission from the Licensor, You may not perform any of the activities described in this section.
+
+6.1 Sale of the Software
+
+You may not:
+
+Sell the Software;
+charge a license fee for the Software;
+charge a distribution fee for the Software;
+sublicense the Software for compensation;
+bundle the Software into a commercial offering whose primary or substantial value is the Software itself; or
+make access to the Software the principal item being purchased.
+
+Reasonable charges for physical media, bandwidth, or pass-through infrastructure costs must not be used to circumvent this restriction.
+
+6.2 Sale of Derivative Works
+
+You may not:
+
+Sell a Derivative Work;
+charge a license fee for a Derivative Work;
+sublicense a Derivative Work for compensation;
+Sell a fork of the Software;
+repackage and Sell the Software or a Derivative Work under another name; or
+make superficial modifications for the purpose of avoiding this License.
+6.3 Competing Hosted and Managed Services
+
+You may not:
+
+offer the Software or a Derivative Work as a Competing Service;
+provide a shared or multi-tenant Hosted Service based substantially on the Software;
+provide customers with paid access to a substantial set of the Software’s features or functionality;
+offer a white-label Hosted Service based substantially on the Software; or
+enable another person or entity to conduct any of these activities.
+
+Operation of a Customer-Specific Deployment is permitted when it complies with Sections 2.7, 4.4, and 5.
+
+6.4 White-Label Distribution
+
+You may not rebrand the Software or a Derivative Work and distribute, license, or market it as Your own standalone software product.
+
+This restriction does not prevent a service provider from applying customer-specific visual branding to a permitted Customer-Specific Deployment, provided that:
+
+Bridge365 copyright and license notices remain intact;
+the deployment is not represented as software owned by the service provider or customer;
+the Bridge365 name is not used in a misleading manner; and
+the deployment is not Sold as a standalone software product.
+6.5 Circumvention
+
+You may not structure a transaction, service, technical architecture, corporate arrangement, or distribution method primarily for the purpose of avoiding the restrictions in this License.
+
+6.6 Removal of Notices
+
+You may not alter, remove, hide, or obscure:
+
+copyright notices;
+license notices;
+attribution notices;
+notices identifying modifications;
+authorship information; or
+other legal notices included with the Software.
+6.7 Unlawful Use
+
+You may not use the Software in violation of applicable law.
+
+This License does not authorize access to systems, mailboxes, information, personal data, or other resources without the legally required authorization.
+
+7. Distribution and Notices
+
+You may distribute unmodified or modified copies of the Software without charge only if:
+
+the distribution is not a Sale;
+every recipient receives a complete copy of this License;
+all copyright, attribution, and license notices are retained;
+modified copies contain a prominent notice stating that the Software has been modified;
+the notice identifies the date of the modification;
+You do not imply endorsement by or affiliation with the Licensor; and
+the distribution does not form part of a Competing Service.
+
+You may not impose terms on recipients that contradict this License or purport to grant them rights that You do not possess.
+
+8. Contributions
+8.1 Ownership of Contributions
+
+Each Contributor retains ownership of the copyright in their Contribution.
+
+Submitting a Contribution does not transfer copyright ownership to the Licensor unless a separate written agreement expressly provides otherwise.
+
+8.2 Contributor Copyright License
+
+By submitting a Contribution, the Contributor grants the Licensor and recipients of the Software a perpetual, worldwide, non-exclusive, irrevocable, royalty-free license to:
+
+use the Contribution;
+reproduce the Contribution;
+modify the Contribution;
+prepare Derivative Works of the Contribution;
+publicly display and publicly perform the Contribution;
+distribute the Contribution;
+include the Contribution in the Software;
+license the Contribution as part of the Software under this License; and
+sublicense the Contribution as part of the Software under other license terms.
+
+The right to sublicense under other license terms allows the Licensor to offer commercial licenses or future license versions for the combined Bridge365 project. It does not transfer ownership of the Contributor’s copyright.
+
+8.3 Contributor Patent License
+
+Each Contributor grants the Licensor and recipients of the Software a perpetual, worldwide, non-exclusive, irrevocable, royalty-free patent license under patent claims owned or controlled by the Contributor that are necessarily infringed by:
+
+the Contributor’s Contribution alone; or
+the combination of the Contribution with the Software to which the Contribution was submitted.
+
+This patent license permits recipients to make, have made, use, offer for sale, sell, import, and otherwise transfer the Contribution as part of the Software, subject to the restrictions and conditions of this License.
+
+The patent license does not extend to claims infringed solely because of:
+
+modifications made by another party after submission of the Contribution;
+combinations with other software or technology that were not part of the Software to which the Contribution was submitted; or
+uses outside the scope of this License.
+8.4 Patent Litigation
+
+If a Contributor or Licensee initiates a patent infringement claim alleging that the Software or a Contribution infringes a patent, any patent licenses granted to that Contributor or Licensee under this License terminate as of the date the claim is filed.
+
+For purposes of this section, a defensive counterclaim made in response to patent litigation does not constitute initiation of a patent infringement claim.
+
+8.5 Contributor Representations
+
+By submitting a Contribution, the Contributor represents that:
+
+the Contributor is legally entitled to submit the Contribution;
+the Contributor has sufficient rights to grant the licenses in this section; and
+to the Contributor’s knowledge, the Contribution does not intentionally include material that the Contributor is not authorized to submit.
+
+If the Contribution is submitted on behalf of an employer or another legal entity, the Contributor represents that they are authorized to submit it on that entity’s behalf.
+
+9. Licensor Patent Grant
+
+Subject to this License, the Licensor grants You a worldwide, non-exclusive, royalty-free patent license under patent claims that the Licensor owns or controls and that are necessarily infringed by the unmodified Software as supplied by the Licensor.
+
+This license permits You to make, have made, use, offer for sale, sell, import, and otherwise transfer the Software only to the extent permitted by this License.
+
+This patent grant does not cover patent claims infringed solely because of:
+
+Your modifications or additions;
+combinations with other software, hardware, or technology not supplied as part of the Software; or
+activities prohibited by this License.
+
+If You initiate a written patent infringement claim alleging that the Software infringes or contributes to the infringement of a patent, the patent rights granted to You under this section terminate immediately.
+
+A patent grant with defined scope and patent-litigation termination is consistent with the structure used in the Elastic License 2.0, although this Bridge365 draft has its own independently stated terms.
+
+10. Trademarks
+
+This License does not grant permission to use the Licensor’s trademarks, service marks, logos, product names, branding, or trade dress, except for reasonable factual references required to identify the Software.
+
+Without prior written permission, You may not:
+
+imply that a Derivative Work is an official Bridge365 release;
+market a product or service in a manner likely to cause confusion with Bridge365;
+use “Bridge365” as the primary name of a Derivative Work;
+use the Bridge365 logo to market Your product or service; or
+claim sponsorship, certification, authorization, or endorsement by the Licensor.
+
+Permitted factual references include statements such as:
+
+“Compatible with Bridge365”
+“Integration for Bridge365”
+“Based on Bridge365, used under the Bridge365 Sustainable Use License”
+“Consulting and implementation services for Bridge365”
+
+All use of the Licensor’s trademarks remains subject to applicable trademark law.
+
+11. Third-Party Components
+
+The Software may contain or depend upon third-party components governed by separate license terms.
+
+Those components remain subject to their respective licenses. This License does not reduce, expand, replace, or override rights or obligations under a third-party license.
+
+Where required, third-party notices should be provided in a separate notice file or accompanying documentation.
+
+12. Compliance
+
+You are responsible for ensuring that Your use of the Software complies with this License and applicable law.
+
+The Licensor may request reasonably sufficient information to assess compliance if the Licensor has a good-faith basis to believe that You are materially violating this License.
+
+Any compliance request must be proportionate to the suspected violation and must not require disclosure of unrelated confidential information, customer data, personal data, credentials, security-sensitive information, or legally privileged material.
+
+13. Termination and Reinstatement
+
+If You materially violate this License, the rights granted to You under this License terminate automatically.
+
+If the Licensor provides written notice of the violation and You fully cure the violation within 30 calendar days after receiving that notice, Your rights under this License are reinstated retroactively.
+
+If:
+
+You do not cure the violation within that period;
+the violation cannot reasonably be cured; or
+You commit another material violation after reinstatement,
+
+the Licensor may terminate the rights granted to You permanently by written notice.
+
+Termination does not affect:
+
+rights and remedies accrued before termination;
+obligations intended to survive termination;
+third-party licenses validly granted before termination, provided that the relevant third party remains compliant with this License; or
+the Licensor’s ownership of the Software.
+
+Sections concerning restrictions, attribution, trademarks, patents, warranty disclaimers, limitation of liability, governing law, and interpretation survive termination to the extent legally applicable.
+
+The 30-day cure concept reflects a structure also present in the Elastic License 2.0.
+
+14. No Other Rights
+
+No rights are granted except those expressly stated in this License.
+
+The publication of source code does not waive the Licensor’s copyright, patent, trademark, trade-secret, contractual, or other legal rights.
+
+15. Disclaimer of Warranty
+
+To the maximum extent permitted by applicable law, the Software is provided “as is” and “as available,” without warranties or conditions of any kind.
+
+The Licensor disclaims all express, implied, and statutory warranties, including warranties or conditions of:
+
+merchantability;
+fitness for a particular purpose;
+title;
+non-infringement;
+accuracy;
+reliability;
+security;
+availability; and
+error-free operation.
+
+The Licensor does not warrant that the Software will meet Your requirements, operate without interruption, or be free from defects, vulnerabilities, or harmful components.
+
+Nothing in this section excludes a warranty or liability that cannot legally be excluded under applicable law.
+
+16. Limitation of Liability
+
+To the maximum extent permitted by applicable law, the Licensor and Contributors shall not be liable for indirect, incidental, special, consequential, or punitive damages, or for loss of profits, revenue, business opportunities, goodwill, data, or business interruption arising from or relating to the Software or this License.
+
+Nothing in this License excludes or limits liability to the extent that such exclusion or limitation is prohibited by applicable law, including liability that may not be excluded for intent, fraud, gross negligence, injury to life, body, or health, or under mandatory product-liability law.
+
+17. Governing Law and Jurisdiction
+
+This License is governed by the laws of the Federal Republic of Germany, excluding its conflict-of-law rules and excluding the United Nations Convention on Contracts for the International Sale of Goods.
+
+To the extent that an exclusive jurisdiction agreement is legally permitted, the courts located in Berlin, Germany shall have exclusive jurisdiction over disputes arising from or relating to this License.
+
+If an exclusive jurisdiction provision is not legally enforceable against a particular Licensee, jurisdiction shall be determined under applicable law.
+
+18. Severability
+
+If any provision of this License is held to be invalid, illegal, or unenforceable, that provision shall be interpreted or limited to the minimum extent necessary to make it enforceable while preserving its intended purpose as far as legally possible.
+
+If such interpretation is not possible, the provision shall be severed. The remaining provisions remain in effect.
+
+19. No Waiver
+
+Failure or delay by the Licensor in enforcing a provision of this License does not waive the right to enforce that provision or any other provision later.
+
+A waiver is effective only if made in writing by the Licensor.
+
+20. Entire License and Separate Agreements
+
+This License states the terms under which the Software is made generally available.
+
+The Licensor may enter into a separate written commercial license or other agreement that grants additional rights, including rights to:
+
+resell the Software;
+distribute commercial Derivative Works;
+provide a Competing Service;
+offer multi-tenant hosting;
+provide white-label versions; or
+use Bridge365 trademarks.
+
+A separate agreement applies only to the parties and subject matter identified in that agreement.
