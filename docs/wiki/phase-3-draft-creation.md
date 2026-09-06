@@ -47,6 +47,30 @@ logic under two operationIds with no behavioral difference.
 
 ---
 
+## Classification Routing Workflow
+
+The core action this phase enables after Phase 2 classifies a message: apply
+the classification result to the message itself and file it out of the
+Inbox, so the mailbox reflects the routing decision without waiting on any
+draft or manual review.
+
+1. **Set the classification** - call `UpdateMessageCategories` on the
+   message with the department/category name(s) returned by Phase 2's
+   `ClassifyMessage` Prompt tool (e.g. `["Finance"]`), so the classification
+   is visible directly on the message in Outlook.
+2. **Move it out of the Inbox** - call `MoveMessage` with `destinationId`
+   set to that department's dedicated folder id (looked up via
+   `GetMailFolders`), so the classified message no longer sits in the shared
+   Inbox alongside unclassified messages.
+
+Do the categorization *before* the move: `MoveMessage` returns a new
+`movedMessageId` for the relocated message, and using the (now stale)
+original `messageId` for a categories call afterward will fail. See
+Sections 1 and 2 below for the full request/response details of each step,
+and Section 7 for the same workflow validated end-to-end.
+
+---
+
 ## 1. Categories: `UpdateMessageCategories`
 
 Sets (replaces, not merges) a message's Outlook categories - e.g. tag it with
@@ -339,3 +363,5 @@ move -> verify via delta -> read attachments -> set extended property**.
 **Copyright & License**
 
 (c) 2026 Holger Imbery (contact@holgerimbery.blog)
+
+Licensed under the Bridge365 Sustainable Use License 1.0 (BSUL-1.0). See the [LICENSE file](https://github.com/holgerimbery/bridge365/blob/main/LICENSE).
