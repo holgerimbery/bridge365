@@ -86,9 +86,8 @@ Write-Host "✓ Resource group created: $ResourceGroup" -ForegroundColor Green
 # so a first attempt can fail with "insufficient regional vCPU quota" even
 # though everything else (resource group, permissions) is fine. Rather than
 # aborting the whole onboarding run on that single external quota limit,
-# offer to retry interactively with a different region and/or SKU - most
-# subscriptions have quota for at least one of eastus/westus2/westeurope, or
-# for the F1 (free) SKU, which draws from a separate quota pool than B1+.
+# offer to retry interactively with a different region - most subscriptions
+# have quota for at least one of eastus/westus2/westeurope.
 $PlanLocation = $Location
 $PlanSku = "B1"
 $PlanCreated = $false
@@ -110,16 +109,14 @@ for ($Attempt = 1; $Attempt -le $MaxAttempts; $Attempt++) {
     Write-Host "  Common cause: insufficient regional vCPU quota for this SKU/region in the current subscription." -ForegroundColor Yellow
     Write-Host "  Option A - request a quota increase: https://aka.ms/ProdportalCRP/#blade/Microsoft_Azure_Capacity/UsageAndQuota.ReactView (Compute-VM (cores-vCPUs) subscription limit increases)" -ForegroundColor Gray
     Write-Host "  Option B - switch Azure subscription (menu: re-run onboarding.ps1 and pick a different subscription index) if another one has spare quota." -ForegroundColor Gray
-    Write-Host "  Option C - retry now with a different region and/or SKU (e.g. F1 draws from a separate free-tier quota)." -ForegroundColor Gray
+    Write-Host "  Option C - retry now with a different region." -ForegroundColor Gray
 
     if ($Attempt -eq $MaxAttempts) { break }
-    $RetryChoice = Read-Host "Retry with a different region/SKU now? (y/n) [n]"
+    $RetryChoice = Read-Host "Retry with a different region now? (y/n) [n]"
     if ($RetryChoice -ne 'y') { break }
 
     $NewLocation = Read-Host "Azure region to try [$PlanLocation]"
     if ($NewLocation) { $PlanLocation = $NewLocation }
-    $NewSku = Read-Host "App Service plan SKU to try [$PlanSku] (e.g. B1, F1, S1)"
-    if ($NewSku) { $PlanSku = $NewSku }
 }
 
 if (-not $PlanCreated) {
