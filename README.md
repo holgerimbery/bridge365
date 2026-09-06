@@ -164,6 +164,8 @@ For questions or issues:
 
 ## License
 
+[![License: BSUL-1.0](https://img.shields.io/badge/License-BSUL--1.0-blue)](LICENSE)
+
 Bridge365 is source-available software licensed under the
 Bridge365 Sustainable Use License 1.0.
 
