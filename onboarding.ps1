@@ -26,6 +26,32 @@ $RepoRoot = $PSScriptRoot
 $EnvFile = Join-Path $RepoRoot ".env"
 $StateFile = Join-Path $RepoRoot ".onboarding-state.json"
 
+# Canonical set of every key the wizard (and the scripts it wraps) can read
+# or write, in the same order as .env.example, with the onboarding-specific
+# naming keys appended at the end. This is the single source of truth used
+# to detect an existing .env's completeness - keep it in sync with
+# .env.example whenever a step gains a new setting.
+$script:KnownEnvKeys = @(
+    "AZURE_SUBSCRIPTION_ID",
+    "RESOURCE_GROUP",
+    "LOCATION",
+    "APP_SERVICE_NAME",
+    "TENANT_ID",
+    "CLIENT_ID",
+    "CLIENT_SECRET",
+    "SECURITY_GROUP_NAME",
+    "ALLOWED_EMAIL_ADDRESSES",
+    "POWER_PLATFORM_ENVIRONMENT_ID",
+    "CUSTOM_CONNECTOR_ID",
+    "DATAVERSE_ENVIRONMENT_URL",
+    "DATAVERSE_PUBLISHER_PREFIX",
+    "BACKEND_URL",
+    "MAILBOX_ADDRESS",
+    "APP_BASE_NAME",
+    "APP_REGISTRATION_NAME",
+    "KEY_VAULT_NAME"
+)
+
 # ---------------------------------------------------------------------------
 # .env helpers - same format/semantics as every script under */scripts, so
 # either can be run standalone and both stay in sync.
@@ -60,6 +86,49 @@ function Get-EnvValue {
     param([string]$Key, [string]$Default = "")
     if ($script:EnvVars.Contains($Key) -and $script:EnvVars[$Key]) { return $script:EnvVars[$Key] }
     return $Default
+}
+
+# Loads an existing .env (reusing every value already in it - nothing is
+# ever overwritten here) or, if none exists, treats this as a brand-new
+# install and creates an empty one. Either way, ensures every key in
+# $script:KnownEnvKeys is present in the file (appending any that are
+# missing, left blank) so the file is always a complete, self-documenting
+# template and later steps only need to fill in the blanks - they never
+# have to guess whether a setting exists.
+function Initialize-EnvFile {
+    if (-not (Test-Path $EnvFile)) {
+        Write-Heading ".env"
+        Write-Warn2 "No existing .env found - starting a brand-new installation."
+        $script:EnvVars = [ordered]@{}
+        foreach ($key in $script:KnownEnvKeys) { $script:EnvVars[$key] = "" }
+        Save-DotEnv -Vars $script:EnvVars -Path $EnvFile
+        Write-Ok "Created a new .env with $($script:KnownEnvKeys.Count) known keys."
+        return
+    }
+
+    Write-Heading ".env"
+    Write-Ok "Existing .env found at $EnvFile - reusing its values."
+    $script:EnvVars = Read-DotEnv $EnvFile
+
+    $missing = @()
+    foreach ($key in $script:KnownEnvKeys) {
+        if (-not $script:EnvVars.Contains($key)) {
+            $script:EnvVars[$key] = ""
+            $missing += $key
+        }
+    }
+
+    if ($missing.Count -gt 0) {
+        Save-DotEnv -Vars $script:EnvVars -Path $EnvFile
+        Write-Warn2 "Appended $($missing.Count) missing key(s) to .env (left blank - the wizard will fill them in as it runs): $($missing -join ', ')"
+    } else {
+        Write-Ok "All $($script:KnownEnvKeys.Count) expected keys are already present in .env."
+    }
+
+    $unknown = @($script:EnvVars.Keys | Where-Object { $script:KnownEnvKeys -notcontains $_ })
+    if ($unknown.Count -gt 0) {
+        Write-Warn2 "Note: .env also has $($unknown.Count) extra key(s) not managed by this wizard (left untouched): $($unknown -join ', ')"
+    }
 }
 
 # ---------------------------------------------------------------------------
@@ -465,7 +534,6 @@ function Show-UpdateMenu {
 # Main menu
 # ---------------------------------------------------------------------------
 
-$script:EnvVars = Read-DotEnv $EnvFile
 $script:State = Read-State
 
 Write-Host ""
@@ -473,6 +541,7 @@ Write-Host "#############################################################" -Fore
 Write-Host "#   Bridge365 Onboarding Wizard                            #" -ForegroundColor Magenta
 Write-Host "#############################################################" -ForegroundColor Magenta
 
+Initialize-EnvFile
 Test-Prerequisites | Out-Null
 Get-AzureContext | Out-Null
 Initialize-Naming
