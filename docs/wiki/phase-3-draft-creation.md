@@ -77,6 +77,37 @@ subfolder after classification.
 **Graph mapping:** `POST /users/{mailbox}/messages/{id}/move` with body
 `{"destinationId": "<folderId or wellKnownName>"}`
 
+### Finding a `destinationId`: `GetMailFolders`
+
+`destinationId` accepts two kinds of value:
+
+- A **Graph well-known folder name** - `inbox`, `archive`, `deleteditems`,
+  `drafts`, `sentitems`, `junkemail`, `outbox` - use these directly, no
+  lookup needed.
+- A **real folder id** - required for anything else (e.g. a custom
+  department subfolder), looked up with `GetMailFolders`.
+
+**Backend:** `GET /api/mailbox/folders`
+**Graph mapping:** `GET /users/{mailbox}/mailFolders` (top-level folders) or
+`GET /users/{mailbox}/mailFolders/{parentFolderId}/childFolders` (one level
+of children) - Graph does not return nested folders in a single call, so
+reaching a subfolder several levels deep means walking down one
+`parentFolderId` at a time.
+
+```powershell
+# Top-level folders (Inbox, Archive, Sent Items, any custom top-level folders...)
+$Folders = Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/folders?mailboxAddress=$MailboxAddress" -Method Get
+$Folders.value | Select-Object id, displayName, childFolderCount
+
+# A department subfolder nested under Inbox - find Inbox's id above, then:
+$InboxId = ($Folders.value | Where-Object { $_.displayName -eq "Inbox" }).id
+$Children = Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/folders?mailboxAddress=$MailboxAddress&parentFolderId=$InboxId" -Method Get
+$Children.value | Select-Object id, displayName
+```
+
+**Expected output:** `{ "value": [ { "id": "...", "displayName": "Finance", "parentFolderId": "...", "childFolderCount": 0 }, ... ] }` -
+use the matching folder's `id` as `MoveMessage`'s `destinationId`.
+
 > **Gotcha:** Graph assigns the moved message a **new id** in the destination
 > folder. The original `messageId` stops resolving once the move completes -
 > use `movedMessageId` from the response for any further operation
@@ -190,7 +221,7 @@ Invoke-RestMethod -Uri "$BackendUrl/api/mailbox/messages/$MessageId/extended-pro
 
 ## 6. Copilot Studio Custom Connector Setup
 
-Add the seven new operations to the connector the same way as Phase 1 (see
+Add the eight new operations to the connector the same way as Phase 1 (see
 [`docs/wiki/phase-1-mailbox-setup.md`, Step 5.3](phase-1-mailbox-setup.md#step-53-add-api-operations)):
 regenerate `custom-connector/openapi.yaml` from the updated
 `openapi.template.yaml` (`.\custom-connector\scripts\generate-openapi.ps1`),
@@ -201,37 +232,42 @@ Test each operation in the connector's **Test** tab (same authenticated
 connection as Phase 1 - see
 [Step 5.4](phase-1-mailbox-setup.md#step-54-configure-authentication)):
 
-#### 1. UpdateMessageCategories
+#### 1. GetMailFolders
+- mailboxAddress: `shared@company.com`
+- parentFolderId: (leave empty to list top-level folders)
+- **Expected:** array of `{ id, displayName, parentFolderId, childFolderCount }` - copy the target department folder's `id` for `MoveMessage` below
+
+#### 2. UpdateMessageCategories
 - messageId: `<inboxMessageId>` (from a real Inbox message - see Phase 1 Step 5.5.1)
 - body: mailboxAddress `shared@company.com`, categories `["Finance", "Urgent"]`
 - **Expected:** `{ "messageId": "...", "categories": ["Finance", "Urgent"] }`
 
-#### 2. MoveMessage
+#### 3. MoveMessage
 - messageId: `<inboxMessageId>`
-- body: mailboxAddress `shared@company.com`, destinationId `archive`
+- body: mailboxAddress `shared@company.com`, destinationId `archive` (or a folder `id` from `GetMailFolders` above)
 - **Expected:** `{ "movedMessageId": "...", "destinationId": "archive" }` - copy `movedMessageId` for later steps
 
-#### 3. GetMessagesDelta
+#### 4. GetMessagesDelta
 - mailboxAddress: `shared@company.com`
 - deltaLink: (leave empty on first call)
 - **Expected:** `{ "value": [...], "@odata.deltaLink" or "@odata.nextLink": "..." }`
 
-#### 4. GetAttachments
+#### 5. GetAttachments
 - messageId: `<movedMessageId>` (or any message with attachments)
 - mailboxAddress: `shared@company.com`
 - **Expected:** array of attachment metadata objects
 
-#### 5. GetAttachment
+#### 6. GetAttachment
 - messageId: `<movedMessageId>`, attachmentId: `<id from GetAttachments>`
 - mailboxAddress: `shared@company.com`
 - **Expected:** the attachment object including `contentBytes`
 
-#### 6. SetExtendedProperty
+#### 7. SetExtendedProperty
 - messageId: `<movedMessageId>`
 - body: mailboxAddress `shared@company.com`, propertyGuid `12345678-1234-1234-1234-123456789012`, propertyName `RoutingDepartment`, value `Finance`
 - **Expected:** `{ "messageId": "...", "propertyId": "...", "value": "Finance" }`
 
-#### 7. GetExtendedProperty
+#### 8. GetExtendedProperty
 - messageId: `<movedMessageId>`
 - mailboxAddress: `shared@company.com`, propertyGuid `12345678-1234-1234-1234-123456789012`, propertyName `RoutingDepartment`
 - **Expected:** `{ "messageId": "...", "propertyId": "...", "value": "Finance" }`
@@ -241,20 +277,24 @@ connection as Phase 1 - see
 ## 7. Integration Test: End-to-End
 
 Demonstrates the full routing chain in a Copilot Studio topic (or the
-PowerShell snippets above, run in order): **categorize -> move -> verify via
-delta -> read attachments -> set extended property**.
+PowerShell snippets above, run in order): **find folder -> categorize ->
+move -> verify via delta -> read attachments -> set extended property**.
 
-1. **Categorize:** Call `UpdateMessageCategories` on a real Inbox message
+1. **Find the destination folder:** Call `GetMailFolders` (no
+   `parentFolderId`) and find the department subfolder's `id` - skip this
+   step if routing to a well-known folder like `archive`.
+2. **Categorize:** Call `UpdateMessageCategories` on a real Inbox message
    with the department name(s) returned by Phase 2's `ClassifyMessage`
    Prompt tool.
-2. **Move:** Call `MoveMessage` to route the message into the matching
-   department subfolder; capture `movedMessageId`.
-3. **Verify via delta:** Call `GetMessagesDelta` (fresh, no `deltaLink`) and
+3. **Move:** Call `MoveMessage` to route the message into the matching
+   department subfolder (using the `id` from step 1, or a well-known name);
+   capture `movedMessageId`.
+4. **Verify via delta:** Call `GetMessagesDelta` (fresh, no `deltaLink`) and
    confirm the moved message shows up as a change; save the returned
    `@odata.deltaLink` for the next incremental check.
-4. **Read attachments:** Call `GetAttachments` with `movedMessageId`, then
+5. **Read attachments:** Call `GetAttachments` with `movedMessageId`, then
    `GetAttachment` for the first attachment id returned (if any).
-5. **Set extended property:** Call `SetExtendedProperty` with `movedMessageId`
+6. **Set extended property:** Call `SetExtendedProperty` with `movedMessageId`
    to stash the classification result directly on the message, then
    `GetExtendedProperty` to confirm it round-trips.
 
@@ -286,6 +326,7 @@ delta -> read attachments -> set extended property**.
 
 - [Microsoft Graph Mail API](https://learn.microsoft.com/graph/api/resources/message)
 - [Update message (categories)](https://learn.microsoft.com/graph/api/message-update)
+- [List mailFolders](https://learn.microsoft.com/graph/api/user-list-mailfolders)
 - [Move message](https://learn.microsoft.com/graph/api/message-move)
 - [Get delta (mail)](https://learn.microsoft.com/graph/api/message-delta)
 - [List attachments](https://learn.microsoft.com/graph/api/message-list-attachments)

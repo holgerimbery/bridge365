@@ -49,6 +49,7 @@ Status summary and full version-by-version history for the Bridge365 project. Se
 | Documentation: Phase 2 Status Label Correction (README) | ✅ Complete | v0.5.6 |
 | Phase 3: Draft Creation & Routing (Categories, Move, Delta, Attachments, Extended Properties) | ✅ Complete | v0.6.0 |
 | Documentation: Phase 2/3 Cross-Reference & Headline Consistency Fixes | ✅ Complete | v0.6.1 |
+| GetMailFolders: Mail Folder Discovery for MoveMessage | ✅ Complete | v0.6.2 |
 | Phase 4-7: Advanced Features | 📋 Planned | v0.7.0+ |
 
 ## Detailed Status
@@ -323,6 +324,17 @@ Status summary and full version-by-version history for the Bridge365 project. Se
 - 🐛 `docs/wiki/index.md`: phase link text didn't match each phase doc's own heading ("Classification via Table" vs "Classification via Dataverse Table"; "Draft Creation" vs "Draft Creation & Routing") - aligned both.
 - 🐛 `docs/wiki/phase-2-classification-table.md`: Section 9 "Next Steps" still pointed at the original, unbuilt "Draft Creation with routing-block generation" Phase 3 design - updated to link to the real `phase-3-draft-creation.md` and describe its actual scope.
 - 🔧 `docs/wiki/phase-3-draft-creation.md`: added a note distinguishing this phase's mailbox-level routing (Outlook categories/folder move/extended properties, machine-actionable) from Phase 2's `DraftEmailBody` HTML routing block (a human-reviewable summary inside the draft body) - the two are complementary, not overlapping, and were previously undocumented as related concepts.
+
+### Breaking Changes
+- None.
+
+---
+
+### v0.6.2: GetMailFolders - Mail Folder Discovery for MoveMessage
+- ➕ `backend-service/app.py`: new `GET /api/mailbox/folders` route (`get_mail_folders`) - lists mail folders in a mailbox (top-level, or a folder's children via `parentFolderId`) so callers can discover the real folder `id` to pass as `MoveMessage`'s `destinationId`, since Graph well-known names (`archive`, `deleteditems`, etc.) only cover a handful of built-in folders, not custom department subfolders.
+- ➕ `custom-connector/openapi.template.yaml`: new `GetMailFolders` connector operation matching the backend route. Fifteen actions total, up from fourteen.
+- ➕ `docs/wiki/phase-3-draft-creation.md`: new "Finding a `destinationId`: `GetMailFolders`" subsection under Move, with a PowerShell example walking from top-level folders down into a department subfolder; connector-setup test list and end-to-end Integration Test updated to look up the destination folder first.
+- 🔧 `custom-connector/README.md`: operation count/list updated to fifteen actions.
 
 ### Breaking Changes
 - None.

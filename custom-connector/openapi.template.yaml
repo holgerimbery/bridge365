@@ -222,6 +222,34 @@ paths:
         "200":
           description: "{ status, draftId }"
 
+  /api/mailbox/folders:
+    get:
+      summary: GetMailFolders
+      description: Lists mail folders in the shared mailbox, to discover the folderId to pass as MoveMessage's destinationId. Well-known folder names (e.g. "archive", "deleteditems") work in destinationId without calling this; use this to look up custom department subfolders instead. Omit parentFolderId to list top-level folders; pass a folder's id as parentFolderId to list its childFolders (Graph does not return nested folders in one call).
+      operationId: GetMailFolders
+      parameters:
+        - name: mailboxAddress
+          in: query
+          required: true
+          type: string
+          x-ms-summary: Mailbox Address
+          x-ms-visibility: important
+        - name: parentFolderId
+          in: query
+          required: false
+          type: string
+          x-ms-summary: Parent Folder Id
+          x-ms-visibility: advanced
+        - name: top
+          in: query
+          required: false
+          type: integer
+          default: 50
+          x-ms-summary: Top
+          x-ms-visibility: advanced
+      responses:
+        "200":
+          description: Array of mail folder objects (id, displayName, parentFolderId, childFolderCount)
   /api/mailbox/messages/{messageId}/categories:
     patch:
       summary: UpdateMessageCategories
@@ -252,7 +280,7 @@ paths:
   /api/mailbox/messages/{messageId}/move:
     post:
       summary: MoveMessage
-      description: Moves a message to a different mail folder (e.g. route to a department subfolder). Graph assigns the moved message a NEW id in the destination folder - use movedMessageId from the response for any further operation on this message.
+      description: Moves a message to a different mail folder (e.g. route to a department subfolder). destinationId accepts a Graph well-known folder name (e.g. "archive", "deleteditems") or a real folder id looked up via GetMailFolders. Graph assigns the moved message a NEW id in the destination folder - use movedMessageId from the response for any further operation on this message.
       operationId: MoveMessage
       parameters:
         - name: messageId

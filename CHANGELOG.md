@@ -10,6 +10,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ---
+## [0.6.2] - 2026-09-06
+
+### What's Added
+- `backend-service/app.py`: new `GET /api/mailbox/folders` route (`get_mail_folders`) - lists mail folders in a mailbox so callers can discover the folder `id` to pass as `MoveMessage`'s `destinationId`. Without `parentFolderId` it lists top-level folders (`GET /users/{mailbox}/mailFolders`); with `parentFolderId` it lists that folder's children (`GET /users/{mailbox}/mailFolders/{parentFolderId}/childFolders`), since Graph's `mailFolders` endpoint returns only one level at a time.
+- `custom-connector/openapi.template.yaml`: new `GetMailFolders` connector operation (`GET /api/mailbox/folders`) matching the new backend route, with `mailboxAddress` (required), `parentFolderId` (optional, advanced), and `top` (optional, advanced) parameters. Fifteen actions total.
+- `docs/wiki/phase-3-draft-creation.md`: new "Finding a `destinationId`: `GetMailFolders`" subsection under Move, explaining well-known folder names vs. real folder ids, with a PowerShell example listing top-level folders and then a department subfolder nested under Inbox. Connector-setup test list and the end-to-end Integration Test both updated to look up the destination folder first.
+- `custom-connector/README.md`: operation count/list updated to fifteen actions including `GetMailFolders`.
+
+### What's Fixed
+- `MoveMessage`'s `destinationId` had no documented way to obtain a real (non-well-known) folder id - `GetMailFolders` closes that gap.
+
+### Breaking Changes
+- None.
+
+---
 ## [0.6.1] - 2026-09-06
 
 ### What's Fixed

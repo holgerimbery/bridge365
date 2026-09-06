@@ -389,6 +389,48 @@ def update_message_categories(message_id):
         logging.error(f"Error updating message categories: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route("/api/mailbox/folders", methods=["GET"])
+def get_mail_folders():
+    """List mail folders in the shared mailbox, so callers can discover the
+    folderId to pass as MoveMessage's destinationId.
+
+    Well-known folder names (e.g. "archive", "deleteditems", "drafts",
+    "sentitems", "junkemail", "inbox") work directly in destinationId
+    without calling this at all. This endpoint exists for everything else -
+    custom department subfolders don't have a well-known name, so their
+    real Graph folder id has to be looked up first.
+
+    Without parentFolderId, lists top-level folders (Inbox, Archive, Sent
+    Items, any custom top-level folders, etc.). Graph's mailFolders
+    endpoint returns only one level at a time (it does not recurse), so to
+    reach a subfolder (e.g. a department folder nested under Inbox), pass
+    parentFolderId = the parent's id from a previous call to list its
+    childFolders, and repeat until you reach the target folder.
+    """
+    try:
+        mailbox = request.args.get("mailboxAddress")
+        parent_folder_id = request.args.get("parentFolderId")
+        top = request.args.get("top", 50, type=int)
+
+        if not mailbox:
+            return jsonify({"error": "mailboxAddress parameter required"}), 400
+
+        path = (
+            f"/users/{mailbox}/mailFolders/{parent_folder_id}/childFolders"
+            if parent_folder_id
+            else f"/users/{mailbox}/mailFolders"
+        )
+        response = graph_client.get(
+            f"{path}?$top={top}&$select=id,displayName,parentFolderId,childFolderCount"
+        )
+        return jsonify(graph_json(response)), 200
+    except GraphError as e:
+        logging.error(f"Error listing mail folders (Graph error {e.status_code}): {e}")
+        return jsonify({"error": str(e)}), e.status_code
+    except Exception as e:
+        logging.error(f"Error listing mail folders: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/api/mailbox/messages/<message_id>/move", methods=["POST"])
 def move_message(message_id):
     """Move a message to a different mail folder (e.g. route to a department
