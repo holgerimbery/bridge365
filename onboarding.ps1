@@ -362,21 +362,33 @@ function Get-AzureContext {
         $account = az account show -o json | ConvertFrom-Json
     }
 
-    Write-Ok "Using tenant $($account.tenantId), subscription $($account.name) ($($account.id))"
     Set-EnvValue "TENANT_ID" $account.tenantId
 
-    # Only offer to pick a different subscription when .env didn't already
-    # have one pinned - check the pre-existing value, not the one we are
-    # about to write, so this doesn't just silently no-op every run.
+    # If .env already has a pinned subscription, honor it instead of
+    # trusting az CLI's post-login default - a fresh 'az login' can land on
+    # a different default subscription within the same tenant (e.g. after a
+    # session expired), which previously caused this function to silently
+    # overwrite .env's pinned AZURE_SUBSCRIPTION_ID with the wrong one.
     $existingSubscriptionId = Get-EnvValue "AZURE_SUBSCRIPTION_ID"
     $accounts = az account list -o json | ConvertFrom-Json
-    if (-not $existingSubscriptionId -and $accounts.Count -gt 1) {
+    if ($existingSubscriptionId) {
+        $pinned = $accounts | Where-Object { $_.id -eq $existingSubscriptionId }
+        if ($pinned -and $account.id -ne $existingSubscriptionId) {
+            Write-Warn2 "Switching to previously configured subscription: $($pinned.name) ($($pinned.id))"
+            az account set --subscription $existingSubscriptionId -o none
+            $account = az account show -o json | ConvertFrom-Json
+        } elseif (-not $pinned) {
+            Write-Warn2 "Previously configured subscription ($existingSubscriptionId) is not available to this account - keeping current subscription $($account.name) ($($account.id))."
+        }
+    } elseif ($accounts.Count -gt 1) {
         Write-Host "Multiple subscriptions available:"
         for ($i = 0; $i -lt $accounts.Count; $i++) { Write-Host "  [$i] $($accounts[$i].name) ($($accounts[$i].id))" }
         $choice = Read-Prompt "Select subscription index" "0"
         $account = $accounts[[int]$choice]
         az account set --subscription $account.id -o none
     }
+
+    Write-Ok "Using tenant $($account.tenantId), subscription $($account.name) ($($account.id))"
     Set-EnvValue "AZURE_SUBSCRIPTION_ID" $account.id
     return $account
 }
