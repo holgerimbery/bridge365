@@ -58,8 +58,14 @@ if (-not $ApiDefinition) {
     # generated from the committed openapi.template.yaml - regenerate it here
     # so the deploy always reflects your current .env / -BackendHost value.
     $GenerateScript = Join-Path $RepoRoot "custom-connector\scripts\generate-openapi.ps1"
-    $generateArgs = @()
-    if ($BackendHost) { $generateArgs += @('-BackendHost', $BackendHost) }
+    # Must be a hashtable, not an array: splatting an array (@('-BackendHost',
+    # $BackendHost)) passes its elements as POSITIONAL arguments, not named
+    # ones - the literal string '-BackendHost' would bind to generate-openapi.ps1's
+    # first parameter ($BackendHost) and the real hostname would bind to its
+    # second parameter ($Template), causing a confusing "Template not found"
+    # error instead of ever touching the backend host.
+    $generateArgs = @{}
+    if ($BackendHost) { $generateArgs['BackendHost'] = $BackendHost }
     & $GenerateScript @generateArgs
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Failed to generate openapi.yaml. Provide -BackendHost, or set BACKEND_URL/APP_SERVICE_NAME in .env."

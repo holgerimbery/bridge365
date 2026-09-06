@@ -577,8 +577,12 @@ function Step-CustomConnector {
             -TenantId (Get-EnvValue "TENANT_ID") `
             -ClientId (Get-EnvValue "CLIENT_ID") `
             -ClientSecret (Get-EnvValue "CLIENT_SECRET") `
-            -ConnectorId $before `
-            -BackendHost (Get-EnvValue "APP_SERVICE_NAME")
+            -ConnectorId $before
+        # Intentionally not passing -BackendHost: deploy-connector.ps1's own
+        # generate-openapi.ps1 fallback reads BACKEND_URL/APP_SERVICE_NAME
+        # from .env and correctly appends ".azurewebsites.net". Passing just
+        # the bare APP_SERVICE_NAME here would override that and generate an
+        # openapi.yaml with an incomplete host (missing the domain suffix).
         if (-not $before) {
             Write-Warn2 "If a new connector ID was printed above, copy it into .env as CUSTOM_CONNECTOR_ID (or re-run this step and paste it when prompted)."
             $newId = Read-Prompt "Paste the new CUSTOM_CONNECTOR_ID here (or leave blank to set it later)"
