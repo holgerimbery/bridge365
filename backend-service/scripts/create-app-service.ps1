@@ -52,6 +52,46 @@ function Confirm-AzureContext {
     }
 }
 
+# App Service (and the compute/networking/storage behind it) needs these
+# resource providers registered on the subscription before any resource can
+# be created. A subscription that has never deployed a VM/Web App before -
+# common for a fresh or rarely-used Visual Studio/MSDN subscription - often
+# has them "NotRegistered", which surfaces as a confusing "0 quota"/"Total
+# VMs: 0" error from `az appservice plan create` instead of a clear
+# "provider not registered" message. Check and register upfront instead of
+# waiting to hit that wall.
+function Ensure-ResourceProvidersRegistered {
+    param([string[]]$Namespaces)
+
+    foreach ($ns in $Namespaces) {
+        $state = az provider show --namespace $ns --query registrationState -o tsv 2>$null
+        if ($state -eq "Registered") {
+            continue
+        }
+
+        Write-Host "  Registering resource provider '$ns' (current state: $state)..." -ForegroundColor Yellow
+        az provider register --namespace $ns -o none
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Failed to request registration for '$ns'. If resource creation below fails, register it manually: az provider register --namespace $ns"
+            continue
+        }
+
+        $maxWaitSeconds = 180
+        $waited = 0
+        while ($state -ne "Registered" -and $waited -lt $maxWaitSeconds) {
+            Start-Sleep -Seconds 10
+            $waited += 10
+            $state = az provider show --namespace $ns --query registrationState -o tsv 2>$null
+        }
+
+        if ($state -eq "Registered") {
+            Write-Host "  [OK] '$ns' registered" -ForegroundColor Green
+        } else {
+            Write-Warning "'$ns' is still '$state' after ${maxWaitSeconds}s. Registration can take longer for brand-new subscriptions - wait a few minutes and re-run this script, or check status with: az provider show --namespace $ns --query registrationState -o tsv"
+        }
+    }
+}
+
 $env_file = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) ".env"
 if (Test-Path $env_file) {
     $env_vars = Load-EnvFile $env_file
@@ -72,6 +112,9 @@ if (-not $ResourceGroup -or -not $AppServiceName) {
 Write-Host "Creating Azure App Service..." -ForegroundColor Yellow
 
 Confirm-AzureContext -ExpectedTenantId $TenantId -ExpectedSubscriptionId $SubscriptionId
+
+Write-Host "Checking required resource providers are registered..." -ForegroundColor Yellow
+Ensure-ResourceProvidersRegistered -Namespaces @("Microsoft.Compute", "Microsoft.Web", "Microsoft.Network", "Microsoft.Storage")
 
 # Create resource group
 az group create --name $ResourceGroup --location $Location
