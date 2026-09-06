@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bridge365 - Transforming Shared Mailboxes into AI-Powered Service Hubs</title>
+<meta name="description" content="Bridge365 automatically classifies and routes shared-mailbox email using Microsoft Copilot Studio, Azure, and machine learning." />
+<link rel="icon" href="assets/bridge365-logo.png" type="image/png" />
+<meta property="og:title" content="Bridge365 - AI-Powered Shared Mailbox Automation" />
+<meta property="og:description" content="Automatically classify, route, and audit shared-mailbox email with Copilot Studio + Azure." />
+<meta property="og:image" content="assets/bridge365-logo.png" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="nav" id="top">
+  <div class="nav-inner">
+    <a class="brand" href="#top">
+      <img src="assets/bridge365-logo.png" alt="Bridge365 logo" />
+      <span>bridge<em>365</em></span>
+    </a>
+    <nav class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#roadmap">Roadmap</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#docs">Docs</a>
+      <a class="btn btn-ghost" href="https://github.com/holgerimbery/bridge365" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">Menu</button>
+  </div>
+</header>
+
+<main>
+
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-inner">
+      <img class="hero-logo" src="assets/bridge365-logo.png" alt="Bridge365 logo" />
+      <h1>Transforming Shared Mailboxes into <span class="grad">AI-Powered Service Hubs</span></h1>
+      <p class="hero-sub">
+        Bridge365 classifies and routes shared-mailbox email automatically - combining Microsoft
+        Copilot Studio, an Azure-hosted backend, and rule- and ML-based classification into one
+        auditable pipeline.
+      </p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="https://github.com/holgerimbery/bridge365" target="_blank" rel="noopener">
+          View Repository
+        </a>
+        <a class="btn btn-secondary" href="https://github.com/holgerimbery/bridge365/wiki" target="_blank" rel="noopener">
+          Read the Wiki
+        </a>
+      </div>
+      <div class="hero-meta">
+        <span class="badge">v0.6.2</span>
+        <span class="badge badge-license">BSUL-1.0 - Source-available</span>
+        <span class="badge">Phases 1-3 Complete</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="strip">
+    <div class="strip-inner">
+      <div><strong>15</strong><span>Connector actions</span></div>
+      <div><strong>3</strong><span>Phases shipped</span></div>
+      <div><strong>4</strong><span>Phases planned</span></div>
+      <div><strong>1</strong><span>Onboarding wizard</span></div>
+    </div>
+  </section>
+
+  <section id="features" class="section">
+    <h2>What works today</h2>
+    <p class="section-sub">Phases 1-3 are complete and in production use.</p>
+
+    <div class="grid">
+      <article class="card">
+        <div class="card-icon">&#128268;</div>
+        <h3>Custom Connector</h3>
+        <p>Power Platform / Copilot Studio integration with 15 actions, including an
+          autonomous-agent polling trigger for new messages.</p>
+        <span class="tag tag-done">Available</span>
+      </article>
+
+      <article class="card">
+        <div class="card-icon">&#9729;&#65039;</div>
+        <h3>Azure Backend Service</h3>
+        <p>Python Flask app on Azure App Service with Microsoft Graph API integration for
+          reading, classifying, and drafting shared-mailbox messages.</p>
+        <span class="tag tag-done">Available</span>
+      </article>
+
+      <article class="card">
+        <div class="card-icon">&#129504;</div>
+        <h3>Classification Engine</h3>
+        <p>Dataverse-backed rule table drives message routing today, with a defined path to
+          AI-powered classification.</p>
+        <span class="tag tag-done">Available</span>
+      </article>
+
+      <article class="card">
+        <div class="card-icon">&#9993;&#65039;</div>
+        <h3>Draft Creation and Routing</h3>
+        <p>Reply drafting, category tagging, folder moves, delta queries, attachments, and
+          extended properties - full Phase 3 routing pipeline.</p>
+        <span class="tag tag-done">Available</span>
+      </article>
+
+      <article class="card">
+        <div class="card-icon">&#128220;</div>
+        <h3>Audit Trail</h3>
+        <p>Every classification and routing decision is logged to Dataverse for compliance
+          and traceability.</p>
+        <span class="tag tag-done">Available</span>
+      </article>
+
+      <article class="card">
+        <div class="card-icon">&#128274;</div>
+        <h3>Defense-in-Depth Security</h3>
+        <p>Entra ID + Easy Auth OAuth2, email allowlist authorization, Key Vault secrets, and
+          optional network restriction - three independent layers.</p>
+        <span class="tag tag-done">Available</span>
+      </article>
+
+      <article class="card">
+        <div class="card-icon">&#129497;</div>
+        <h3>Guided Onboarding</h3>
+        <p><code>onboarding.ps1</code> auto-discovers your Azure/Power Platform context and
+          walks through app registration, deployment, hardening, and Dataverse setup from one
+          menu.</p>
+        <span class="tag tag-done">Available</span>
+      </article>
+
+      <article class="card">
+        <div class="card-icon">&#128193;</div>
+        <h3>Mail Folder Discovery</h3>
+        <p><code>GetMailFolders</code> lets flows resolve destination folder IDs for
+          <code>MoveMessage</code>, including nested department subfolders.</p>
+        <span class="tag tag-done">Available</span>
+      </article>
+    </div>
+  </section>
+
+  <section id="roadmap" class="section section-alt">
+    <h2>What's planned</h2>
+    <p class="section-sub">The roadmap for Phases 4-7 and general availability.</p>
+
+    <div class="grid">
+      <article class="card card-planned">
+        <div class="card-icon">&#128257;</div>
+        <h3>Phase 4 - Override and Approvals</h3>
+        <p>Manual classification override, a state-machine workflow, and configurable
+          approval matrices.</p>
+        <span class="tag tag-planned">Planned - v0.7.0</span>
+      </article>
+
+      <article class="card card-planned">
+        <div class="card-icon">&#129513;</div>
+        <h3>Phase 5 - MCP Server Integration</h3>
+        <p>A Model Context Protocol server exposing Bridge365 tools to GitHub Copilot CLI,
+          with schema-validated tool documentation.</p>
+        <span class="tag tag-planned">Planned - v0.8.0</span>
+      </article>
+
+      <article class="card card-planned">
+        <div class="card-icon">&#129302;</div>
+        <h3>Phase 6 - BART Classifier</h3>
+        <p>Fine-tuned BART model deployed on Azure Machine Learning, with
+          confidence-based fallback to rule-based routing.</p>
+        <span class="tag tag-planned">Planned - v0.9.0</span>
+      </article>
+
+      <article class="card card-planned">
+        <div class="card-icon">&#128737;&#65039;</div>
+        <h3>Phase 7 - Production Hardening</h3>
+        <p>Monitoring and observability, compliance logging, deeper security hardening,
+          and disaster recovery / backup.</p>
+        <span class="tag tag-planned">Planned - v0.9.x</span>
+      </article>
+
+      <article class="card card-planned">
+        <div class="card-icon">&#128640;</div>
+        <h3>v1.0 - General Availability</h3>
+        <p>Production-ready release with full documentation, training material, and a
+          defined support and maintenance model.</p>
+        <span class="tag tag-planned">Planned - v1.0.0</span>
+      </article>
+    </div>
+  </section>
+
+  <section id="architecture" class="section">
+    <h2>How it fits together</h2>
+    <p class="section-sub">Copilot Studio triggers the connector, which talks to an Azure backend that
+      bridges Microsoft Graph and Dataverse.</p>
+    <div class="arch">
+      <div class="arch-col">
+        <h4>Copilot Studio Cloud</h4>
+        <div class="arch-box">Custom Connector</div>
+        <div class="arch-box arch-sub">Autonomous Agent Trigger<br /><small>NewMessageReceived (polling)</small></div>
+      </div>
+      <div class="arch-arrow">&#8594;</div>
+      <div class="arch-col">
+        <h4>Azure Backend</h4>
+        <div class="arch-box arch-highlight">Service Endpoint<br /><small>Python Flask App</small></div>
+        <div class="arch-box arch-sub">Microsoft Graph<br /><small>Shared Mailbox</small></div>
+        <div class="arch-box arch-sub">Dataverse<br /><small>Classifications and Audit</small></div>
+      </div>
+    </div>
+    <p class="arch-note">
+      Authentication is handled entirely by Microsoft Entra ID and Azure App Service's built-in
+      Easy Auth (OAuth2 delegated flow) - no custom token-validation code. Authorization is a
+      lightweight email allowlist check, with an optional network-level restriction as a third layer.
+    </p>
+  </section>
+
+  <section id="docs" class="section section-alt docs-section">
+    <h2>Explore the project</h2>
+    <div class="links-grid">
+      <a class="link-card" href="https://github.com/holgerimbery/bridge365" target="_blank" rel="noopener">
+        <h3>Repository</h3>
+        <p>Source code, backend service, custom connector, and Dataverse schemas.</p>
+      </a>
+      <a class="link-card" href="https://github.com/holgerimbery/bridge365/wiki" target="_blank" rel="noopener">
+        <h3>Wiki</h3>
+        <p>Phase-by-phase setup guides, security hardening checklist, and testing procedures.</p>
+      </a>
+      <a class="link-card" href="https://github.com/holgerimbery/bridge365/blob/main/docs/status.md" target="_blank" rel="noopener">
+        <h3>Status and Roadmap</h3>
+        <p>Full version history and detailed phase-by-phase status.</p>
+      </a>
+      <a class="link-card" href="https://github.com/holgerimbery/bridge365/blob/main/CHANGELOG.md" target="_blank" rel="noopener">
+        <h3>Changelog</h3>
+        <p>Every release, what shipped, and what changed.</p>
+      </a>
+      <a class="link-card" href="https://github.com/holgerimbery/bridge365/blob/main/LICENSE" target="_blank" rel="noopener">
+        <h3>License</h3>
+        <p>Bridge365 Sustainable Use License 1.0 - source-available, free for internal use.</p>
+      </a>
+      <a class="link-card" href="https://github.com/holgerimbery/bridge365#quick-start" target="_blank" rel="noopener">
+        <h3>Quick Start</h3>
+        <p>Run <code>onboarding.ps1</code> for a guided, menu-driven setup.</p>
+      </a>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <img src="assets/bridge365-logo.png" alt="Bridge365 logo" />
+    <p>&copy; 2026 Holger Imbery - Bridge365 is source-available software under the
+      <a href="https://github.com/holgerimbery/bridge365/blob/main/LICENSE" target="_blank" rel="noopener">BSUL-1.0 license</a>.</p>
+    <div class="footer-links">
+      <a href="https://github.com/holgerimbery/bridge365" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/holgerimbery/bridge365/wiki" target="_blank" rel="noopener">Wiki</a>
+      <a href="mailto:contact@holgerimbery.blog">Contact</a>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
