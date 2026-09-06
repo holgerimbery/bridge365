@@ -236,7 +236,11 @@ function Invoke-ChildScript {
     }
     $hostCmd = Get-Command pwsh -ErrorAction SilentlyContinue
     $exePath = if ($hostCmd) { $hostCmd.Source } else { (Get-Process -Id $PID).Path }
-    & $exePath -NoProfile -ExecutionPolicy Bypass -File $ScriptPath @argList
+    # Pipe to Out-Host so the child's console output is written directly and
+    # does NOT flow into this function's own return value - otherwise it gets
+    # bundled together with $LASTEXITCODE below, turning the caller's exit
+    # code check into an array comparison that always evaluates to failure.
+    & $exePath -NoProfile -ExecutionPolicy Bypass -File $ScriptPath @argList | Out-Host
     return $LASTEXITCODE
 }
 
