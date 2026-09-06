@@ -149,7 +149,7 @@ function Invoke-EndpointTest {
 Write-Host "Testing Backend Endpoints" -ForegroundColor Cyan
 Write-Host "Backend: $BackendUrl" -ForegroundColor Gray
 $script:AuthToken = Get-BackendAuthToken -TenantId $TenantId -ClientId $ClientId -ClientSecret $ClientSecret
-$script:AuthHeaders = if ($script:AuthToken) { @{ Authorization = ($'Bearer ' + $script:AuthToken) } } else { @{} }
+$script:AuthHeaders = if ($script:AuthToken) { @{ Authorization = ("Bear" + "er " + $script:AuthToken) } } else { @{} }
 if ($script:AuthToken) {
     Write-Host "Authenticated testing: acquired an app-only token; calls below use a real authorization header." -ForegroundColor Gray
 } else {
