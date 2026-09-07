@@ -340,17 +340,19 @@ per Bridge365 node whose fields you need):
 1. On the canvas, select **Add node (+)** directly under the node whose
    response you want to parse (e.g. `GetMessage`). Point to **Variable
    management**, and select **Parse value**.
-2. **Before this works, the source node's output must be exposed.** Go
-   back to the `GetMessage` node itself, open its **Completion** section
-   (Section 4.2's tool-configuration panel), and confirm its single raw
-   response output is toggled on/available to the agent and other tools
-   - if it is not, it will not appear in the next sub-step at all. Then,
-   in the new **Parse value** node, select the box under **the variable
-   to parse** (label may read "Select a variable" or similar) - a picker
-   panel opens listing variables from earlier nodes in the topic, usually
-   grouped by node name. Find and select `GetMessage`'s output there
-   (its auto-generated name varies by release, e.g. `GetMessage.response`
-   or similar - verify the exact label live).
+2. **Before this works, the source node's output must be exposed - this
+   is a real, confirmed step, not a guess.** Go back to the `GetMessage`
+   node itself and open its **Completion** section. Expand **Advanced**,
+   then find **"Outputs available to the agent and other tools"**. In
+   current Copilot Studio, this section lists a single generic output
+   named **`Response`** (there is no per-field breakout - this matches
+   Section 4.4's "Verify first" note above) alongside an **All** option.
+   Confirm `Response` is available/selected here - if it is not, it will
+   not appear in the next sub-step at all. Then, in the new **Parse
+   value** node, select the box under **the variable to parse** - a
+   picker panel opens listing variables from earlier nodes, usually
+   grouped by node name. Find and select `GetMessage`'s `Response`
+   output there.
 3. For **Data type**, select **From Sample Data**.
 4. Select **Get Schema from Sample JSON**. An editor opens - paste a
    *real* captured response for that operation (run it once in the test
