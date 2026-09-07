@@ -153,18 +153,48 @@ description in this guide did not match any current screen and has been
 corrected here. Do not import or reconfigure the connector itself; that
 is given (Section 0) - you are only adding it as a callable tool.
 
+**Naming note:** this guide calls the imported connector "**Bridge365**"
+throughout for readability. **Verify first:** `custom-connector/README.md`
+currently instructs you to name it `SharedMailboxConnector` when you
+create it, and the connector's own OpenAPI `info.title` is `bridge365`
+(`custom-connector/openapi.template.yaml`). If you deployed it following
+that README as-is, the connector you'll actually see in the picker below
+is named `SharedMailboxConnector`, not "Bridge365" - either rename it in
+the Power Apps custom connector portal to match this guide, or mentally
+substitute `SharedMailboxConnector` wherever this guide says "Bridge365
+connector."
+
 1. Select **Agents** and open the Bridge365 agent.
 2. Go to the agent's **Tools** page and select **Add a tool**.
-3. Select **Connector**, then search for the imported connector (e.g.
-   `SharedMailboxConnector`) and select the specific operations you need
-   (`GetMessage`, `ClassifyMessage`, `UpdateMessageCategories`,
-   `CreateDraft`, `GetMailFolders`, `MoveMessage`, etc. - see Section 0).
-   If a connection does not already exist, select **Create new
-   connection**, then **Add and configure** for each tool.
-4. Repeat with **Add a tool** > **Connector** > search **Microsoft
-   Dataverse**, and add the specific actions you need (e.g. **List
-   rows**, **Add a new row**, **Update a row**) as separate tools,
-   pointed at your Dataverse environment/connection.
+3. Select **Connector**, then search for the imported Bridge365 connector
+   and select the specific operations you need (`GetMessage`,
+   `ClassifyMessage`, `UpdateMessageCategories`, `CreateDraft`,
+   `GetMailFolders`, `MoveMessage`, etc. - see Section 0). If a
+   connection does not already exist, select **Create new connection**,
+   then **Add and configure** for each tool.
+4. Add the Dataverse tables as tools using the **classic Dataverse
+   connector actions**, not the Dataverse MCP Server - repeat step 2-3
+   with **Add a tool** > **Connector** > search **Microsoft Dataverse**,
+   and add the specific, per-table actions you need (**List rows**,
+   **Add a new row**, **Update a row**) against `classificationrule` /
+   `classificationaudit` (and any table from Section 6) as separate
+   tools.
+
+   **Why not the Dataverse MCP Server:** Copilot Studio also offers a
+   **Dataverse MCP Server** tool (Model Context Protocol, preview - see
+   ["Connect to Dataverse with model context protocol in Microsoft
+   Copilot Studio"](https://learn.microsoft.com/power-apps/maker/data-platform/data-platform-mcp-copilot-studio)).
+   It exposes generic, schema-agnostic tools (`read_query`, `search`,
+   `create_record`, `update_record`, `list_tables`, `describe_table`,
+   etc.) meant for an agent to reason over Dataverse conversationally at
+   runtime - well suited to open-ended, generative exploration, not to
+   this Topic's need for exact, typed, table-specific actions (e.g.
+   filter `classificationrule` on `isactive eq true` and a fixed column
+   list) wired deterministically into a fixed node sequence. The classic
+   per-table connector actions are the better fit for standard
+   orchestration; reconsider the MCP Server only if you later add a
+   conversational Topic that lets a human ask free-form questions over
+   Dataverse data.
 5. These become available to call as nodes from any Topic. You can also
    add a connector/Dataverse tool directly while editing a Topic, via
    **Add node (+)** > **Add a tool** > **Connector**, instead of adding
