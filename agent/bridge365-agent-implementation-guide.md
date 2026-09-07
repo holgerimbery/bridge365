@@ -54,7 +54,7 @@ right than this guide's summary of them.
 | Source | What to check |
 |---|---|
 | `custom-connector/openapi.template.yaml` | Exact operation IDs and parameter names (`GetMessage`, `ClassifyMessage`, `CreateDraft`, `UpdateDraft`, `SendMessage`, `SendDraftMessage`, `GetMailFolders`, `UpdateMessageCategories`, `MoveMessage`, `GetMessagesDelta`, `GetAttachments`, `GetAttachment`, `GetExtendedProperty`, `SetExtendedProperty`, `NewMessageReceived`, `GetMessages`) |
-| `custom-connector/README.md`, Step 5 | How the autonomous agent trigger is actually wired (`NewMessageReceived` polling trigger, its prerequisites, its checkpoint behavior) |
+| `custom-connector/README.md`, Step 5 | Background only - documents Bridge365's own optional `NewMessageReceived` polling trigger. This guide instead uses the **standard Office 365 Outlook connector's** shared-mailbox trigger (Section 4.3), so this row is not required reading, but the "call actions directly" pattern it describes for trigger instructions still applies. |
 | `backend-service/app.py` | What each connector operation actually does server-side, if a parameter's exact effect is unclear |
 | `dataverse/schemas/*.schema.json` | Current Dataverse tables and their real column names |
 
@@ -71,7 +71,7 @@ this guide - flag it and stop.
 | Capability | Status |
 |---|---|
 | Connector actions (get/create draft/move/categorize/folders/attachments/extended properties) | Given (Section 0) |
-| `NewMessageReceived` polling trigger | Given (Section 0) |
+| Autonomous kickoff trigger | Use the standard **Office 365 Outlook** connector's shared-mailbox trigger (Section 4.3) - not Bridge365's own trigger. Everything after kickoff still calls Bridge365 operations (Section 0). |
 | Classification Rule table (`classificationrule`) | Exists today, reused as-is |
 | Classification Audit table (`classificationaudit`) | Exists today, reused as-is (see Section 6 for a suggested extension) |
 | `ClassifyMessage` Prompt tool, `DraftEmailBody` Prompt tool | Documented in `docs/wiki/phase-2-classification-table.md`; build them in Copilot Studio if not already built |
@@ -99,7 +99,7 @@ this guide - flag it and stop.
 
 ```mermaid
 flowchart TD
-    A[Email arrives in shared mailbox] --> B["NewMessageReceived polling trigger (agent Overview then Triggers)"]
+    A[Email arrives in shared mailbox] --> B["Office 365 Outlook: When a new email arrives in a shared mailbox (V2) (agent Overview then Triggers)"]
     B --> C[Agent instructions invoke Topic: Process Shared Mailbox Email]
     C --> D["Dataverse lookup: already processed? (Needs table work, Section 6)"]
     D -->|Yes| Z[End: report duplicate]
@@ -202,43 +202,42 @@ connector."
 
 ### 4.3 Configure the autonomous trigger
 
-**Option A - the Bridge365 connector's own trigger (preferred if visible).**
-Follow `custom-connector/README.md`, Step 5, exactly for how it is wired -
-its trigger is the polling operation `NewMessageReceived`, not a native
-mail-arrival trigger. That section requires **Generative Orchestration**
-enabled on the agent and **solution-aware cloud flow sharing** enabled on
-the environment; confirm both before continuing.
+**Use the standard connector, not Bridge365's own trigger.** This guide
+uses the prebuilt **Office 365 Outlook** connector's event trigger for
+kickoff, not Bridge365's own `NewMessageReceived` polling operation
+(documented as an alternative in `custom-connector/README.md`, Step 5).
+The standard connector trigger is available in every environment without
+importing anything and does not depend on the Bridge365 connector being
+shared into the agent's solution. This does not change anything about
+the fixed `backend-service/` / `custom-connector/` given inputs
+(Section 0): the Outlook trigger only *starts* the Topic; every
+subsequent step still calls Bridge365's own operations (`GetMessage`,
+`ClassifyMessage`, `UpdateMessageCategories`, `CreateDraft`,
+`MoveMessage`, ...) exactly as documented elsewhere in this guide.
 
-**If `NewMessageReceived` does not show up under Overview > Triggers >
-Add trigger**, common causes are: Generative Orchestration or
-solution-aware cloud flow sharing not actually enabled yet, the Bridge365
-connector not added to/shared through the same solution as the agent, a
-DLP policy blocking event triggers for custom connectors in this
-environment, or a licensing/tenant restriction on custom-connector event
-triggers. Check those before assuming the trigger is unavailable.
+**Verify first:** event triggers of any kind (Bridge365's or Outlook's)
+require **Generative Orchestration** turned on for the agent - see
+["Add an event trigger"](https://learn.microsoft.com/microsoft-copilot-studio/authoring-trigger-event)
+and the
+[event trigger overview](https://learn.microsoft.com/microsoft-copilot-studio/authoring-triggers-about).
+Confirm this is enabled before continuing; if it is not available in
+your environment, event-based kickoff is not possible at all regardless
+of which connector you pick; a manual/trigger-phrase Topic (Section 4.4)
+is the fallback.
 
-**Option B - the standard Office 365 Outlook shared-mailbox trigger (use
-this if Option A genuinely is not available).** The prebuilt **Office 365
-Outlook** connector exposes **When a new email arrives in a shared
-mailbox (V2)**, a standard/premium connector trigger that every
-environment has without importing anything - it is far more likely to be
-selectable in the trigger picker than a custom connector's own trigger.
-This does not change anything about the fixed `backend-service/` /
-`custom-connector/` given inputs (Section 0): you use this trigger only
-to *start* the Topic; every subsequent step still calls Bridge365's own
-operations (`GetMessage`, `ClassifyMessage`, `UpdateMessageCategories`,
-`CreateDraft`, `MoveMessage`, ...) exactly as documented elsewhere in
-this guide.
-
-1. Under Overview > Triggers > **Add trigger**, search **Office 365
-   Outlook** instead of the Bridge365 connector, and select **When a new
-   email arrives in a shared mailbox (V2)**.
-2. Configure: the shared mailbox address, **Folder** = `Inbox` (or your
+1. On the agent's **Overview** page, go to **Triggers** and select
+   **Add trigger**.
+2. Search for **Office 365 Outlook** and select **When a new email
+   arrives in a shared mailbox (V2)**.
+3. Provide authentication for the shared mailbox if prompted. Event
+   triggers authenticate using the agent maker's (author's) credentials
+   only - confirm that account has access to the shared mailbox.
+4. Configure: the shared mailbox address, **Folder** = `Inbox` (or your
    monitored folder), and any available filters to exclude mail the
    process itself generates (e.g. exclude `Drafts`/`Sent Items`/your
    processed-folder tree if the trigger's options expose folder
    exclusion; otherwise enforce this inside the Topic instead).
-3. **Verify first:** confirm the exact output field names in the live
+5. **Verify first:** confirm the exact output field names in the live
    trigger picker before wiring the Topic - commonly `Id`, `From`,
    `Subject`, `Body`, `ReceivedDateTime`, `ConversationId`, but treat
    this as a starting point, not a guarantee, since Microsoft can add or
@@ -248,39 +247,34 @@ this guide.
    authoritative message through Bridge365's `GetMessage` rather than
    trusting this trigger's own `Body`/`Subject` as the source of truth,
    per this guide's design principles (Section 2).
-4. This trigger polls on a recurrence, like `NewMessageReceived` - it is
-   not an instant push notification. Confirm the polling interval meets
-   your latency expectations.
+6. This trigger polls on a recurrence - it is not an instant push
+   notification. Confirm the polling interval meets your latency
+   expectations.
+7. Define the trigger payload and the "When this trigger fires"
+   instructions (Step 6 of
+   ["Add an event trigger"](https://learn.microsoft.com/microsoft-copilot-studio/authoring-trigger-event)).
+   Reference the Topic built below by name, e.g.:
+
+   ```text
+   A new email arrived in the shared mailbox. Run the "Process Shared Mailbox
+   Email" topic with this message's id and mailbox address. Do not answer the
+   sender directly.
+   ```
 
 **Verify first - there is no guaranteed trigger-to-topic parameter
-mapping, for either option above.** As documented in
-`custom-connector/README.md`, Step 5, the Bridge365 trigger's own worked
-example has the "When this trigger fires" instructions tell the
-generative orchestrator to call actions
-directly (`ClassifyMessage`, `CreateDraft`, `SendDraftMessage`) - it does
-not name a Topic at all. If you want the trigger to run a specific Topic
-instead (Section 4.4), that depends on the orchestrator choosing to call
-that Topic as a tool and correctly filling its declared inputs from
-conversation context - this is inference-based, not a deterministic
-pass-through, per Microsoft's own docs on
+mapping.** Per Microsoft's own docs on
 ["Manage topic inputs and outputs"](https://learn.microsoft.com/microsoft-copilot-studio/advanced-managing-topic-inputs-outputs)
 and the
-[event trigger overview](https://learn.microsoft.com/microsoft-copilot-studio/event-trigger-overview).
-Test this explicitly (Section 8) before relying on it; if the orchestrator
-does not reliably invoke the Topic with the right values, write the "When
-this trigger fires" instructions to call the connector actions and Prompt
-tools directly instead, following the same order as Section 4.4's node
-list.
-
-In the trigger's "When this trigger fires" instructions, reference the
-Topic built below by name, e.g.:
-
-```text
-A new email arrived in the shared mailbox. Run the "Process Shared Mailbox
-Email" topic with this message's id and mailbox address. Do not answer the
-sender directly.
-```
-
+[event trigger overview](https://learn.microsoft.com/microsoft-copilot-studio/authoring-triggers-about),
+whether the trigger reliably invokes a specific Topic with its declared
+inputs filled correctly depends on the agent's generative orchestrator
+interpreting the "When this trigger fires" instructions and the trigger
+payload - it is inference-based, not a deterministic pass-through, for
+any connector's event trigger, not just Bridge365's. Test this explicitly
+(Section 8) before relying on it; if the orchestrator does not reliably
+invoke the Topic with the right values, write the "When this trigger
+fires" instructions to call the connector actions and Prompt tools
+directly instead, following the same order as Section 4.4's node list.
 ### 4.4 Create the Topic: "Process Shared Mailbox Email"
 
 Create a new Topic. Give it a small set of trigger phrases for manual
@@ -306,7 +300,7 @@ Once declared, reference them in the topic as `Topic.MailboxAddress` /
 payload proves unreliable in testing, fall back to extracting the values
 yourself with a **Parse Value** node against `Activity.Value` (the event
 payload variable - see the
-[event trigger overview](https://learn.microsoft.com/microsoft-copilot-studio/event-trigger-overview)),
+[event trigger overview](https://learn.microsoft.com/microsoft-copilot-studio/authoring-triggers-about)),
 or drop the separate-Topic design and have the trigger's instructions
 call the actions directly per the note in Section 4.3.
 
