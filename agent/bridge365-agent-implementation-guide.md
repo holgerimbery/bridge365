@@ -321,15 +321,23 @@ Build the Topic nodes in this order:
    processing-status source (Section 6), filtered by `mailboxaddress` +
    `sourcemessageid`. If a row/flag shows status `Completed`, end the
    Topic and report "already processed".
-2. **`GetMessage`** - call with mailbox address and message id. Adding a
-   connector action node auto-generates one output variable per response
-   field, the same way a Question node does - no separate "Set variable
-   value" node is needed just to capture them. Rename each output
-   variable for clarity right in the node (e.g. `MessageSubject`,
-   `MessageBody`, `SenderAddress`, `SourceMessageId`), then reference
-   those names directly in later nodes. Keep `SourceMessageId` distinct
-   from any later "moved message id" - moving a message returns a new
-   id.
+2. **`GetMessage`** - call with mailbox address and message id. **Where
+   to find the output fields:** select the node on the canvas to open
+   its tool configuration panel (Details / Inputs / **Completion**).
+   Under **Completion**, there is a control to choose which output
+   variables this tool makes available to the agent and later nodes -
+   verify the exact label live (it has been rephrased across Copilot
+   Studio releases). Expose subject, body, sender name/address, and the
+   message `id`. Once exposed, insert them into later nodes using the
+   variable picker (the **{x}** icon) rather than expecting them to
+   appear automatically the way a Question node's answer does. Rename
+   them for clarity if the panel allows it (e.g. `MessageSubject`,
+   `MessageBody`, `SenderAddress`, `SourceMessageId`). Keep
+   `SourceMessageId` distinct from any later "moved message id" - moving
+   a message returns a new id. This same Completion-panel step applies to
+   every connector/tool node used later in this Topic (`GetMailFolders`,
+   `MoveMessage`, Dataverse actions, etc.) - expose the fields you need
+   from each one before trying to reference them downstream.
 3. **Dataverse "List rows"** on `classificationrule`, filter
    `isactive eq true`, select `classname`, `classexamples`, `classtarget`,
    `classtargetemail`, `priority`, `modellabel`.
