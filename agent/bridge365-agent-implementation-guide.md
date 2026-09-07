@@ -321,10 +321,15 @@ Build the Topic nodes in this order:
    processing-status source (Section 6), filtered by `mailboxaddress` +
    `sourcemessageid`. If a row/flag shows status `Completed`, end the
    Topic and report "already processed".
-2. **`GetMessage`** - call with mailbox address and message id. Store the
-   returned subject, body, sender name/address, and the message `id` in
-   Topic variables. Keep this `id` distinct from any later "moved
-   message id" - moving a message returns a new id.
+2. **`GetMessage`** - call with mailbox address and message id. Adding a
+   connector action node auto-generates one output variable per response
+   field, the same way a Question node does - no separate "Set variable
+   value" node is needed just to capture them. Rename each output
+   variable for clarity right in the node (e.g. `MessageSubject`,
+   `MessageBody`, `SenderAddress`, `SourceMessageId`), then reference
+   those names directly in later nodes. Keep `SourceMessageId` distinct
+   from any later "moved message id" - moving a message returns a new
+   id.
 3. **Dataverse "List rows"** on `classificationrule`, filter
    `isactive eq true`, select `classname`, `classexamples`, `classtarget`,
    `classtargetemail`, `priority`, `modellabel`.
