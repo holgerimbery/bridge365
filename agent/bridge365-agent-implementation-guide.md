@@ -237,16 +237,22 @@ is the fallback.
    process itself generates (e.g. exclude `Drafts`/`Sent Items`/your
    processed-folder tree if the trigger's options expose folder
    exclusion; otherwise enforce this inside the Topic instead).
-5. **Verify first:** confirm the exact output field names in the live
-   trigger picker before wiring the Topic - commonly `Id`, `From`,
-   `Subject`, `Body`, `ReceivedDateTime`, `ConversationId`, but treat
-   this as a starting point, not a guarantee, since Microsoft can add or
-   rename fields between connector versions. Use the trigger's `Id` as
-   `MessageId` and your configured address as `MailboxAddress` when
-   invoking `GetMessage` in Section 4.4, step 2 - still fetch the
-   authoritative message through Bridge365's `GetMessage` rather than
-   trusting this trigger's own `Body`/`Subject` as the source of truth,
-   per this guide's design principles (Section 2).
+5. **Verify first - where to actually see the output fields:** the
+   Copilot Studio trigger picker does not show them directly. Go to
+   **Overview > Triggers**, select the **(...)** menu on this trigger,
+   choose **Edit in Power Automate**, open the trigger node, and expand
+   **Parameters** - the fields are nested one level down, inside a
+   single `message` object (not flat top-level fields), commonly
+   `message/id`, `message/from`, `message/subject`, `message/body`,
+   `message/receivedDateTime`, `message/conversationId`. Treat this as a
+   starting point, not a guarantee, since Microsoft can add or rename
+   fields between connector versions - always re-check it live rather
+   than trusting this list. Use `message/id` as `MessageId` and your
+   configured address as `MailboxAddress` when invoking `GetMessage` in
+   Section 4.4, step 2 - still fetch the authoritative message through
+   Bridge365's `GetMessage` rather than trusting this trigger's own
+   `message/body`/`message/subject` as the source of truth, per this
+   guide's design principles (Section 2).
 6. This trigger polls on a recurrence - it is not an instant push
    notification. Confirm the polling interval meets your latency
    expectations.
