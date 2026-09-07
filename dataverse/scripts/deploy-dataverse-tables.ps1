@@ -115,6 +115,44 @@ Write-Host "Token acquired." -ForegroundColor Green
 
 $ApiBase = "$DataverseUrl/api/data/v9.2"
 
+# --- Preflight: confirm the app registration is an Application User --------
+# A valid Azure AD token alone isn't enough - Dataverse also requires the
+# calling app to exist as an Application User in this specific environment
+# with a security role granting Customization rights. Without it, EVERY
+# call below fails with 401/403, surfacing as a confusing cascade of
+# "table already exists" false negatives or opaque REST errors. WhoAmI is
+# the standard lightweight Dataverse Web API call used to verify this
+# up front and fail fast with actionable guidance instead.
+Write-Host "Verifying Dataverse Application User..." -ForegroundColor Yellow
+try {
+    $whoAmI = Invoke-RestMethod -Method Get -Headers $Headers -Uri "$ApiBase/WhoAmI"
+    Write-Host "Application User verified (UserId: $($whoAmI.UserId))." -ForegroundColor Green
+} catch {
+    $statusCode = $null
+    if ($_.Exception.Response) { $statusCode = [int]$_.Exception.Response.StatusCode }
+    Write-Host ""
+    Write-Host "=======================================================================" -ForegroundColor Yellow
+    Write-Host " ACTION REQUIRED: App registration is not set up as a Dataverse Application User" -ForegroundColor Yellow
+    Write-Host "=======================================================================" -ForegroundColor Yellow
+    Write-Host "The Dataverse Web API preflight check (WhoAmI) failed$(if ($statusCode) { " (HTTP $statusCode)" })." -ForegroundColor Yellow
+    Write-Host "This almost always means the app registration (Client ID: $ClientId) has" -ForegroundColor Yellow
+    Write-Host "not been added as an Application User in THIS Dataverse environment, so it" -ForegroundColor Yellow
+    Write-Host "has no permissions to read/write anything - regardless of holding a valid" -ForegroundColor Yellow
+    Write-Host "Azure AD access token." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  Fix (one-time, per Dataverse environment):" -ForegroundColor Cyan
+    Write-Host "    1. https://admin.powerplatform.com -> Environments -> select this environment" -ForegroundColor Gray
+    Write-Host "    2. Settings -> Users + permissions -> Application users" -ForegroundColor Gray
+    Write-Host "    3. + New app user -> Add an app -> search/select your app registration" -ForegroundColor Gray
+    Write-Host "       (Client ID: $ClientId)" -ForegroundColor Gray
+    Write-Host "    4. Business unit: (default) -> Security roles: add 'System Customizer'" -ForegroundColor Gray
+    Write-Host "       (or 'System Administrator')" -ForegroundColor Gray
+    Write-Host "    5. Save, then re-run this script (or onboarding.ps1 menu option 8)." -ForegroundColor Gray
+    Write-Host "=======================================================================" -ForegroundColor Yellow
+    Write-Host ""
+    exit 1
+}
+
 function Get-Label {
     param([string]$Text)
     return @{
