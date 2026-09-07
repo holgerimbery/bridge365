@@ -394,9 +394,19 @@ function Get-AzureContext {
 }
 
 function Get-PowerPlatformEnvironment {
-    if (Get-EnvValue "POWER_PLATFORM_ENVIRONMENT_ID") { return }
+    # Both the environment ID and the Dataverse URL are required downstream
+    # (custom connector generation needs the ID; Dataverse table deployment
+    # needs the URL) - only short-circuit once both are already known,
+    # otherwise a prior partial run (e.g. auto-list failed and only the ID
+    # was captured) would keep silently skipping the URL prompt forever.
+    if ((Get-EnvValue "POWER_PLATFORM_ENVIRONMENT_ID") -and (Get-EnvValue "DATAVERSE_ENVIRONMENT_URL")) { return }
     if (-not (Get-Command pac -ErrorAction SilentlyContinue)) {
-        Set-EnvValue "POWER_PLATFORM_ENVIRONMENT_ID" (Read-Prompt "Power Platform environment ID (GUID)" -Required)
+        if (-not (Get-EnvValue "POWER_PLATFORM_ENVIRONMENT_ID")) {
+            Set-EnvValue "POWER_PLATFORM_ENVIRONMENT_ID" (Read-Prompt "Power Platform environment ID (GUID)" -Required)
+        }
+        if (-not (Get-EnvValue "DATAVERSE_ENVIRONMENT_URL")) {
+            Set-EnvValue "DATAVERSE_ENVIRONMENT_URL" (Read-Prompt "Dataverse environment URL (e.g. https://yourorg.crm.dynamics.com)" -Required)
+        }
         return
     }
     Write-Heading "Discovering Power Platform environments"
@@ -405,7 +415,12 @@ function Get-PowerPlatformEnvironment {
         $envs = $envJson | ConvertFrom-Json
     } catch { $envs = $null }
     if (-not $envs -or $envs.Count -eq 0) {
-        Set-EnvValue "POWER_PLATFORM_ENVIRONMENT_ID" (Read-Prompt "Power Platform environment ID (GUID) - could not auto-list" -Required)
+        if (-not (Get-EnvValue "POWER_PLATFORM_ENVIRONMENT_ID")) {
+            Set-EnvValue "POWER_PLATFORM_ENVIRONMENT_ID" (Read-Prompt "Power Platform environment ID (GUID) - could not auto-list" -Required)
+        }
+        if (-not (Get-EnvValue "DATAVERSE_ENVIRONMENT_URL")) {
+            Set-EnvValue "DATAVERSE_ENVIRONMENT_URL" (Read-Prompt "Dataverse environment URL (e.g. https://yourorg.crm.dynamics.com) - could not auto-list" -Required)
+        }
         return
     }
     for ($i = 0; $i -lt $envs.Count; $i++) {
@@ -414,7 +429,11 @@ function Get-PowerPlatformEnvironment {
     $choice = [int](Read-Prompt "Select Power Platform environment index" "0")
     $selected = $envs[$choice]
     Set-EnvValue "POWER_PLATFORM_ENVIRONMENT_ID" $selected.EnvironmentId
-    if ($selected.EnvironmentUrl) { Set-EnvValue "DATAVERSE_ENVIRONMENT_URL" $selected.EnvironmentUrl }
+    if ($selected.EnvironmentUrl) {
+        Set-EnvValue "DATAVERSE_ENVIRONMENT_URL" $selected.EnvironmentUrl
+    } elseif (-not (Get-EnvValue "DATAVERSE_ENVIRONMENT_URL")) {
+        Set-EnvValue "DATAVERSE_ENVIRONMENT_URL" (Read-Prompt "Dataverse environment URL (e.g. https://yourorg.crm.dynamics.com) - not returned by pac env list" -Required)
+    }
 }
 
 # ---------------------------------------------------------------------------
@@ -592,6 +611,7 @@ function Step-CustomConnector {
 }
 
 function Step-Dataverse {
+    Get-PowerPlatformEnvironment
     Invoke-Step "Deploy Dataverse Classification Tables" {
         & (Join-Path $RepoRoot "dataverse\scripts\deploy-dataverse-tables.ps1") `
             -DataverseUrl (Get-EnvValue "DATAVERSE_ENVIRONMENT_URL") `
