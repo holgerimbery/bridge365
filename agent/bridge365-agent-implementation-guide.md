@@ -202,18 +202,61 @@ connector."
 
 ### 4.3 Configure the autonomous trigger
 
-Follow `custom-connector/README.md`, Step 5, exactly for how the trigger
-is wired - do not substitute a generic "When an email arrives" trigger,
-since this connector's trigger is the polling operation
-`NewMessageReceived`, not a native mail-arrival trigger. That section
-requires **Generative Orchestration** enabled on the agent and
-**solution-aware cloud flow sharing** enabled on the environment;
-confirm both before continuing.
+**Option A - the Bridge365 connector's own trigger (preferred if visible).**
+Follow `custom-connector/README.md`, Step 5, exactly for how it is wired -
+its trigger is the polling operation `NewMessageReceived`, not a native
+mail-arrival trigger. That section requires **Generative Orchestration**
+enabled on the agent and **solution-aware cloud flow sharing** enabled on
+the environment; confirm both before continuing.
+
+**If `NewMessageReceived` does not show up under Overview > Triggers >
+Add trigger**, common causes are: Generative Orchestration or
+solution-aware cloud flow sharing not actually enabled yet, the Bridge365
+connector not added to/shared through the same solution as the agent, a
+DLP policy blocking event triggers for custom connectors in this
+environment, or a licensing/tenant restriction on custom-connector event
+triggers. Check those before assuming the trigger is unavailable.
+
+**Option B - the standard Office 365 Outlook shared-mailbox trigger (use
+this if Option A genuinely is not available).** The prebuilt **Office 365
+Outlook** connector exposes **When a new email arrives in a shared
+mailbox (V2)**, a standard/premium connector trigger that every
+environment has without importing anything - it is far more likely to be
+selectable in the trigger picker than a custom connector's own trigger.
+This does not change anything about the fixed `backend-service/` /
+`custom-connector/` given inputs (Section 0): you use this trigger only
+to *start* the Topic; every subsequent step still calls Bridge365's own
+operations (`GetMessage`, `ClassifyMessage`, `UpdateMessageCategories`,
+`CreateDraft`, `MoveMessage`, ...) exactly as documented elsewhere in
+this guide.
+
+1. Under Overview > Triggers > **Add trigger**, search **Office 365
+   Outlook** instead of the Bridge365 connector, and select **When a new
+   email arrives in a shared mailbox (V2)**.
+2. Configure: the shared mailbox address, **Folder** = `Inbox` (or your
+   monitored folder), and any available filters to exclude mail the
+   process itself generates (e.g. exclude `Drafts`/`Sent Items`/your
+   processed-folder tree if the trigger's options expose folder
+   exclusion; otherwise enforce this inside the Topic instead).
+3. **Verify first:** confirm the exact output field names in the live
+   trigger picker before wiring the Topic - commonly `Id`, `From`,
+   `Subject`, `Body`, `ReceivedDateTime`, `ConversationId`, but treat
+   this as a starting point, not a guarantee, since Microsoft can add or
+   rename fields between connector versions. Use the trigger's `Id` as
+   `MessageId` and your configured address as `MailboxAddress` when
+   invoking `GetMessage` in Section 4.4, step 2 - still fetch the
+   authoritative message through Bridge365's `GetMessage` rather than
+   trusting this trigger's own `Body`/`Subject` as the source of truth,
+   per this guide's design principles (Section 2).
+4. This trigger polls on a recurrence, like `NewMessageReceived` - it is
+   not an instant push notification. Confirm the polling interval meets
+   your latency expectations.
 
 **Verify first - there is no guaranteed trigger-to-topic parameter
-mapping.** As documented in `custom-connector/README.md`, Step 5, this
-autonomous trigger's own worked example has the "When this trigger
-fires" instructions tell the generative orchestrator to call actions
+mapping, for either option above.** As documented in
+`custom-connector/README.md`, Step 5, the Bridge365 trigger's own worked
+example has the "When this trigger fires" instructions tell the
+generative orchestrator to call actions
 directly (`ClassifyMessage`, `CreateDraft`, `SendDraftMessage`) - it does
 not name a Topic at all. If you want the trigger to run a specific Topic
 instead (Section 4.4), that depends on the orchestrator choosing to call
