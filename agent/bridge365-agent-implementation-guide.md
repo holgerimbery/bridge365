@@ -165,6 +165,25 @@ requires **Generative Orchestration** enabled on the agent and
 **solution-aware cloud flow sharing** enabled on the environment;
 confirm both before continuing.
 
+**Verify first - there is no guaranteed trigger-to-topic parameter
+mapping.** As documented in `custom-connector/README.md`, Step 5, this
+autonomous trigger's own worked example has the "When this trigger
+fires" instructions tell the generative orchestrator to call actions
+directly (`ClassifyMessage`, `CreateDraft`, `SendDraftMessage`) - it does
+not name a Topic at all. If you want the trigger to run a specific Topic
+instead (Section 4.4), that depends on the orchestrator choosing to call
+that Topic as a tool and correctly filling its declared inputs from
+conversation context - this is inference-based, not a deterministic
+pass-through, per Microsoft's own docs on
+["Manage topic inputs and outputs"](https://learn.microsoft.com/microsoft-copilot-studio/advanced-managing-topic-inputs-outputs)
+and the
+[event trigger overview](https://learn.microsoft.com/microsoft-copilot-studio/event-trigger-overview).
+Test this explicitly (Section 8) before relying on it; if the orchestrator
+does not reliably invoke the Topic with the right values, write the "When
+this trigger fires" instructions to call the connector actions and Prompt
+tools directly instead, following the same order as Section 4.4's node
+list.
+
 In the trigger's "When this trigger fires" instructions, reference the
 Topic built below by name, e.g.:
 
@@ -176,17 +195,32 @@ sender directly.
 
 ### 4.4 Create the Topic: "Process Shared Mailbox Email"
 
-Create a new Topic. Since it is invoked by the autonomous trigger's
-instructions (not by a user-typed trigger phrase), give it a small set
-of trigger phrases anyway for manual testing, e.g.
-`process mailbox message`, `classify this email`.
+Create a new Topic. Give it a small set of trigger phrases for manual
+testing, e.g. `process mailbox message`, `classify this email` - a
+plain trigger-phrase Topic does not receive the connector trigger's
+payload automatically, so manual testing means typing/pasting the
+message id and mailbox address yourself when prompted.
 
-**Topic input variables:**
+**Topic inputs:** declare these under the Topic's **Details** panel,
+**Inputs** tab (this is a real, documented feature - see
+["Manage topic inputs and outputs"](https://learn.microsoft.com/microsoft-copilot-studio/advanced-managing-topic-inputs-outputs) -
+not something to assume works a particular way without checking the live
+UI, since the exact panel labels have changed across Copilot Studio
+releases):
 
-| Variable | Type | Source |
+| Input | Type | Fill behavior |
 |---|---|---|
-| `Topic.MailboxAddress` | Text | Supplied by the trigger/agent |
-| `Topic.MessageId` | Text | Supplied by the trigger/agent |
+| `MailboxAddress` | Text | From conversation context if generative orchestration fills it reliably (verify), otherwise prompt/fixed value |
+| `MessageId` | Text | Same as above |
+
+Once declared, reference them in the topic as `Topic.MailboxAddress` /
+`Topic.MessageId`. If automatic fill from the autonomous trigger's
+payload proves unreliable in testing, fall back to extracting the values
+yourself with a **Parse Value** node against `Activity.Value` (the event
+payload variable - see the
+[event trigger overview](https://learn.microsoft.com/microsoft-copilot-studio/event-trigger-overview)),
+or drop the separate-Topic design and have the trigger's instructions
+call the actions directly per the note in Section 4.3.
 
 **Verify first:** re-check `custom-connector/openapi.template.yaml` for
 the exact input parameter names of `GetMessage`,
