@@ -331,18 +331,38 @@ exposes a single untyped response (typically a JSON string) under
 assume named fields appear; check live before relying on any field name
 below.
 
-**How to get named fields out of any Bridge365 connector node:**
+**How to get named fields out of any Bridge365 connector node** (this is
+Microsoft's own documented
+["Parse value" workflow](https://learn.microsoft.com/microsoft-copilot-studio/authoring-variables#parse-values),
+walked through here for `GetMessage` as a worked example - repeat once
+per Bridge365 node whose fields you need):
 
-1. After the node, add **Add node (+) > Variable management > Parse
-   value**.
-2. Select that node's raw response variable as the value to parse.
-3. For data type, select **From Sample Data > Get Schema from Sample
-   JSON**, and paste a *real* captured response for that operation - run
-   it once in the test pane and copy the actual output, rather than
-   guessing the shape from the OpenAPI description text (the description
-   is documentation, not a contract, and `backend-service/app.py` is the
-   real source of truth for the shape). For reference, reading
-   `backend-service/app.py` directly shows these actual shapes today:
+1. On the canvas, select **Add node (+)** directly under the node whose
+   response you want to parse (e.g. `GetMessage`). Point to **Variable
+   management**, and select **Parse value**.
+2. In the new **Parse value** node, select **the variable to parse** -
+   pick that node's raw response output (the single untyped
+   string/object variable, since Section 4.4's "Verify first" above
+   explains why it is not already broken into named fields).
+3. For **Data type**, select **From Sample Data**.
+4. Select **Get Schema from Sample JSON**. An editor opens - paste a
+   *real* captured response for that operation (run it once in the test
+   pane first and copy the actual JSON output; do not guess the shape
+   from the OpenAPI description text, which is documentation, not a
+   contract), then select **Confirm**. Copilot Studio infers a Record
+   schema from that sample.
+5. Choose **the variable to hold the parsed value** - usually select
+   **Create new** to make a fresh variable (e.g. `ParsedGetMessage`). It
+   is now typed as **Record**, and its fields are available via dot
+   notation with IntelliSense in later nodes (e.g.
+   `ParsedGetMessage.subject`, `ParsedGetMessage.from.emailAddress.address`).
+   If you want a flatter, separately-named variable instead of dotted
+   paths (e.g. `MessageSubject` instead of `ParsedGetMessage.subject`),
+   add a **Set variable value** node afterward and set the new variable
+   to the parsed Record's field.
+
+For reference, reading `backend-service/app.py` directly shows these
+actual response shapes today, to use as your sample JSON per operation:
    - `GetMessage` returns the **raw Microsoft Graph message object**
      unfiltered - notably `id`, `subject`, `bodyPreview`, `body.content`,
      `body.contentType`, `from.emailAddress.address`,
@@ -355,12 +375,6 @@ below.
    - `MoveMessage` returns `{ movedMessageId, destinationId }`.
    Re-verify this against the live `app.py` before trusting it, since
    this file can change independently of this guide.
-4. Confirm the resulting Record's fields in the Parse value node, then
-   reference them with dot notation (e.g. `ParsedGetMessage.subject`,
-   `ParsedGetMessage.from.emailAddress.address`) in later nodes, or with
-   a Power Fx formula such as `Text(ParsedGetMessage.body.content)` in a
-   **Set variable value** node if you want a clean, separately-named
-   variable.
 
 Do not modify `custom-connector/openapi.template.yaml` to add response
 schemas as a shortcut around this (Section 0's fixed-inputs rule) - that
