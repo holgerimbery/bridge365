@@ -340,10 +340,17 @@ per Bridge365 node whose fields you need):
 1. On the canvas, select **Add node (+)** directly under the node whose
    response you want to parse (e.g. `GetMessage`). Point to **Variable
    management**, and select **Parse value**.
-2. In the new **Parse value** node, select **the variable to parse** -
-   pick that node's raw response output (the single untyped
-   string/object variable, since Section 4.4's "Verify first" above
-   explains why it is not already broken into named fields).
+2. **Before this works, the source node's output must be exposed.** Go
+   back to the `GetMessage` node itself, open its **Completion** section
+   (Section 4.2's tool-configuration panel), and confirm its single raw
+   response output is toggled on/available to the agent and other tools
+   - if it is not, it will not appear in the next sub-step at all. Then,
+   in the new **Parse value** node, select the box under **the variable
+   to parse** (label may read "Select a variable" or similar) - a picker
+   panel opens listing variables from earlier nodes in the topic, usually
+   grouped by node name. Find and select `GetMessage`'s output there
+   (its auto-generated name varies by release, e.g. `GetMessage.response`
+   or similar - verify the exact label live).
 3. For **Data type**, select **From Sample Data**.
 4. Select **Get Schema from Sample JSON**. An editor opens - paste a
    *real* captured response for that operation (run it once in the test
