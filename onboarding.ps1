@@ -393,20 +393,69 @@ function Get-AzureContext {
     return $account
 }
 
+# Returns $true if $Value (optionally with a URL scheme/trailing slash) is
+# just a bare GUID rather than a real hostname - used to catch a Dataverse
+# URL field that was accidentally set to the environment ID.
+function Test-IsGuidLike {
+    param([string]$Value)
+    if (-not $Value) { return $false }
+    $bare = $Value -replace '^https?://', '' -replace '/$', ''
+    $parsedGuid = [guid]::Empty
+    return [guid]::TryParse($bare, [ref]$parsedGuid)
+}
+
+# Looks up the real Dataverse instance URL for an environment ID via the
+# Power Platform BAP admin API, using the already-authenticated az CLI
+# session (no extra sign-in needed). Returns $null on any failure so callers
+# can fall back to prompting the user manually.
+function Resolve-DataverseInstanceUrl {
+    param([string]$EnvironmentId)
+    if (-not $EnvironmentId -or -not (Get-Command az -ErrorAction SilentlyContinue)) { return $null }
+    try {
+        $uri = "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/scopes/admin/environments/$EnvironmentId" + "?api-version=2020-10-01"
+        $json = az rest --method get --resource "https://service.powerapps.com/" --uri $uri -o json 2>$null
+        if (-not $json) { return $null }
+        $envDetails = $json | ConvertFrom-Json
+        $url = $envDetails.properties.linkedEnvironmentMetadata.instanceUrl
+        if ($url) { return $url.TrimEnd('/') }
+    } catch { }
+    return $null
+}
+
 function Get-PowerPlatformEnvironment {
+    # A previous run may have saved the raw environment ID as the Dataverse
+    # URL (e.g. before this auto-resolution existed, or from a manual typo) -
+    # detect and clear that so it gets re-resolved instead of being reused.
+    $existingUrl = Get-EnvValue "DATAVERSE_ENVIRONMENT_URL"
+    if ($existingUrl -and (Test-IsGuidLike $existingUrl)) {
+        Write-Warn2 "DATAVERSE_ENVIRONMENT_URL in .env ('$existingUrl') looks like a raw environment ID, not a Dataverse URL - re-resolving."
+        Set-EnvValue "DATAVERSE_ENVIRONMENT_URL" ""
+    }
+
     # Both the environment ID and the Dataverse URL are required downstream
     # (custom connector generation needs the ID; Dataverse table deployment
     # needs the URL) - only short-circuit once both are already known,
     # otherwise a prior partial run (e.g. auto-list failed and only the ID
     # was captured) would keep silently skipping the URL prompt forever.
     if ((Get-EnvValue "POWER_PLATFORM_ENVIRONMENT_ID") -and (Get-EnvValue "DATAVERSE_ENVIRONMENT_URL")) { return }
+
+    function Resolve-Or-Prompt-Url {
+        param([string]$PromptSuffix)
+        $envId = Get-EnvValue "POWER_PLATFORM_ENVIRONMENT_ID"
+        $resolved = Resolve-DataverseInstanceUrl $envId
+        if ($resolved) {
+            Set-EnvValue "DATAVERSE_ENVIRONMENT_URL" $resolved
+            Write-Ok "Resolved Dataverse URL via Power Platform API: $resolved"
+        } else {
+            Set-EnvValue "DATAVERSE_ENVIRONMENT_URL" (Read-Prompt "Dataverse environment URL (e.g. https://yourorg.crm.dynamics.com)$PromptSuffix" -Required)
+        }
+    }
+
     if (-not (Get-Command pac -ErrorAction SilentlyContinue)) {
         if (-not (Get-EnvValue "POWER_PLATFORM_ENVIRONMENT_ID")) {
             Set-EnvValue "POWER_PLATFORM_ENVIRONMENT_ID" (Read-Prompt "Power Platform environment ID (GUID)" -Required)
         }
-        if (-not (Get-EnvValue "DATAVERSE_ENVIRONMENT_URL")) {
-            Set-EnvValue "DATAVERSE_ENVIRONMENT_URL" (Read-Prompt "Dataverse environment URL (e.g. https://yourorg.crm.dynamics.com)" -Required)
-        }
+        if (-not (Get-EnvValue "DATAVERSE_ENVIRONMENT_URL")) { Resolve-Or-Prompt-Url "" }
         return
     }
     Write-Heading "Discovering Power Platform environments"
@@ -418,9 +467,7 @@ function Get-PowerPlatformEnvironment {
         if (-not (Get-EnvValue "POWER_PLATFORM_ENVIRONMENT_ID")) {
             Set-EnvValue "POWER_PLATFORM_ENVIRONMENT_ID" (Read-Prompt "Power Platform environment ID (GUID) - could not auto-list" -Required)
         }
-        if (-not (Get-EnvValue "DATAVERSE_ENVIRONMENT_URL")) {
-            Set-EnvValue "DATAVERSE_ENVIRONMENT_URL" (Read-Prompt "Dataverse environment URL (e.g. https://yourorg.crm.dynamics.com) - could not auto-list" -Required)
-        }
+        if (-not (Get-EnvValue "DATAVERSE_ENVIRONMENT_URL")) { Resolve-Or-Prompt-Url " - could not auto-list" }
         return
     }
     for ($i = 0; $i -lt $envs.Count; $i++) {
@@ -432,7 +479,7 @@ function Get-PowerPlatformEnvironment {
     if ($selected.EnvironmentUrl) {
         Set-EnvValue "DATAVERSE_ENVIRONMENT_URL" $selected.EnvironmentUrl
     } elseif (-not (Get-EnvValue "DATAVERSE_ENVIRONMENT_URL")) {
-        Set-EnvValue "DATAVERSE_ENVIRONMENT_URL" (Read-Prompt "Dataverse environment URL (e.g. https://yourorg.crm.dynamics.com) - not returned by pac env list" -Required)
+        Resolve-Or-Prompt-Url " - not returned by pac env list"
     }
 }
 
