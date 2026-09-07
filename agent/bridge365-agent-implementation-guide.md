@@ -359,7 +359,32 @@ per Bridge365 node whose fields you need):
    pane first and copy the actual JSON output; do not guess the shape
    from the OpenAPI description text, which is documentation, not a
    contract), then select **Confirm**. Copilot Studio infers a Record
-   schema from that sample.
+   schema from that sample. If you have not captured a real response yet,
+   a minimal starting sample for `GetMessage` (matching the raw Graph
+   message shape from `backend-service/app.py` - only include fields you
+   plan to actually use) is:
+
+   ```json
+   {
+     "id": "AAMkAGI2AAA=",
+     "subject": "Invoice question",
+     "bodyPreview": "Hi, I have a question about invoice 12345...",
+     "body": {
+       "contentType": "html",
+       "content": "<html><body>Hi, I have a question about invoice 12345...</body></html>"
+     },
+     "from": {
+       "emailAddress": {
+         "name": "Jane Doe",
+         "address": "jane.doe@example.com"
+       }
+     },
+     "receivedDateTime": "2026-09-07T09:15:00Z"
+   }
+   ```
+
+   Replace this with a real captured response as soon as you can - the
+   live message may include fields this sample omits.
 5. Choose **the variable to hold the parsed value** - usually select
    **Create new** to make a fresh variable (e.g. `ParsedGetMessage`). It
    is now typed as **Record**, and its fields are available via dot
