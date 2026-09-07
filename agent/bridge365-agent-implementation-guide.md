@@ -55,7 +55,7 @@ right than this guide's summary of them.
 |---|---|
 | `custom-connector/openapi.template.yaml` | Exact operation IDs and parameter names (`GetMessage`, `ClassifyMessage`, `CreateDraft`, `UpdateDraft`, `SendMessage`, `SendDraftMessage`, `GetMailFolders`, `UpdateMessageCategories`, `MoveMessage`, `GetMessagesDelta`, `GetAttachments`, `GetAttachment`, `GetExtendedProperty`, `SetExtendedProperty`, `NewMessageReceived`, `GetMessages`) |
 | `custom-connector/README.md`, Step 5 | Background only - documents Bridge365's own optional `NewMessageReceived` polling trigger. This guide instead uses the **standard Office 365 Outlook connector's** shared-mailbox trigger (Section 4.3), so this row is not required reading, but the "call actions directly" pattern it describes for trigger instructions still applies. |
-| `backend-service/app.py` | What each connector operation actually does server-side, if a parameter's exact effect is unclear |
+| `backend-service/app.py` | What each connector operation actually does server-side and its **real response shape** - none of the connector's responses declare an OpenAPI schema (Section 4.4), so this file is the only reliable source for field names |
 | `dataverse/schemas/*.schema.json` | Current Dataverse tables and their real column names |
 
 Do not modify `backend-service/` or `custom-connector/` to make this
@@ -315,38 +315,85 @@ the exact input parameter names of `GetMessage`,
 `UpdateMessageCategories`, `CreateDraft`, `GetMailFolders`, and
 `MoveMessage` before wiring the Topic.
 
+**Verify first - every Bridge365 operation returns an untyped response,
+confirmed by reading the connector's own spec.** Checked directly in
+`custom-connector/openapi.template.yaml`: none of its operations
+(`GetMessage`, `ClassifyMessage`, `CreateDraft`, `UpdateDraft`,
+`SendMessage`, `SendDraftMessage`, `GetMailFolders`,
+`UpdateMessageCategories`, `MoveMessage`, `GetMessagesDelta`,
+`GetAttachments`, `GetAttachment`, `GetExtendedProperty`,
+`SetExtendedProperty`) declare a response `schema` - only a plain-text
+`description` (e.g. `"{ draftId, subject, draftUrl }"` for `CreateDraft`).
+Because Copilot Studio can only split a tool's response into named output
+fields when the response has a typed schema, every one of these nodes
+exposes a single untyped response (typically a JSON string) under
+**Completion**, not individual fields like `subject`/`body`/`id` - do not
+assume named fields appear; check live before relying on any field name
+below.
+
+**How to get named fields out of any Bridge365 connector node:**
+
+1. After the node, add **Add node (+) > Variable management > Parse
+   value**.
+2. Select that node's raw response variable as the value to parse.
+3. For data type, select **From Sample Data > Get Schema from Sample
+   JSON**, and paste a *real* captured response for that operation - run
+   it once in the test pane and copy the actual output, rather than
+   guessing the shape from the OpenAPI description text (the description
+   is documentation, not a contract, and `backend-service/app.py` is the
+   real source of truth for the shape). For reference, reading
+   `backend-service/app.py` directly shows these actual shapes today:
+   - `GetMessage` returns the **raw Microsoft Graph message object**
+     unfiltered - notably `id`, `subject`, `bodyPreview`, `body.content`,
+     `body.contentType`, `from.emailAddress.address`,
+     `from.emailAddress.name`, `receivedDateTime`.
+   - `UpdateMessageCategories` returns `{ messageId, categories: [...] }`.
+   - `CreateDraft`/`UpdateDraft` return `{ draftId, subject, draftUrl }`.
+   - `GetMailFolders` returns the **raw Graph OData page**, so the folder
+     array is nested under `.value` (each item has `id`, `displayName`,
+     `parentFolderId`, `childFolderCount`) - not a bare array.
+   - `MoveMessage` returns `{ movedMessageId, destinationId }`.
+   Re-verify this against the live `app.py` before trusting it, since
+   this file can change independently of this guide.
+4. Confirm the resulting Record's fields in the Parse value node, then
+   reference them with dot notation (e.g. `ParsedGetMessage.subject`,
+   `ParsedGetMessage.from.emailAddress.address`) in later nodes, or with
+   a Power Fx formula such as `Text(ParsedGetMessage.body.content)` in a
+   **Set variable value** node if you want a clean, separately-named
+   variable.
+
+Do not modify `custom-connector/openapi.template.yaml` to add response
+schemas as a shortcut around this (Section 0's fixed-inputs rule) - that
+is a scope decision for the project maintainer, not something to
+silently patch in while following this guide.
+
 Build the Topic nodes in this order:
 
 1. **Idempotency check.** Add a Dataverse "List rows" action against your
    processing-status source (Section 6), filtered by `mailboxaddress` +
    `sourcemessageid`. If a row/flag shows status `Completed`, end the
    Topic and report "already processed".
-2. **`GetMessage`** - call with mailbox address and message id. **Where
-   to find the output fields:** select the node on the canvas to open
-   its tool configuration panel (Details / Inputs / **Completion**).
-   Under **Completion**, there is a control to choose which output
-   variables this tool makes available to the agent and later nodes -
-   verify the exact label live (it has been rephrased across Copilot
-   Studio releases). Expose subject, body, sender name/address, and the
-   message `id`. Once exposed, insert them into later nodes using the
-   variable picker (the **{x}** icon) rather than expecting them to
-   appear automatically the way a Question node's answer does. Rename
-   them for clarity if the panel allows it (e.g. `MessageSubject`,
-   `MessageBody`, `SenderAddress`, `SourceMessageId`). Keep
-   `SourceMessageId` distinct from any later "moved message id" - moving
-   a message returns a new id. This same Completion-panel step applies to
-   every connector/tool node used later in this Topic (`GetMailFolders`,
-   `MoveMessage`, Dataverse actions, etc.) - expose the fields you need
-   from each one before trying to reference them downstream.
+2. **`GetMessage`** - call with mailbox address and message id. Add a
+   **Parse value** node right after it (per the pattern above) and pull
+   out `subject`, `body.content`, `from.emailAddress.address`,
+   `from.emailAddress.name`, and `id`. Rename the parsed values for
+   clarity (e.g. `MessageSubject`, `MessageBody`, `SenderAddress`,
+   `SenderName`, `SourceMessageId`). Keep `SourceMessageId` distinct from
+   any later "moved message id" - moving a message returns a new id.
 3. **Dataverse "List rows"** on `classificationrule`, filter
    `isactive eq true`, select `classname`, `classexamples`, `classtarget`,
-   `classtargetemail`, `priority`, `modellabel`.
+   `classtargetemail`, `priority`, `modellabel`. (Dataverse list actions
+   are natively typed by the table schema, so this one does return
+   proper per-column fields - the untyped-response issue above is
+   specific to the Bridge365 connector.)
 4. **Shape the rules as JSON** with a Compose/Set-variable action,
    matching the `ClassificationRules` input shape in
    `docs/wiki/phase-2-classification-table.md`, Section 4.1.
 5. **Call the `ClassifyMessage` Prompt tool** (build per Section 4.1 of
-   that doc if not already built). Store `classifications`,
-   `needsHumanRoutingDecision`, `confidence`.
+   that doc if not already built). Prompt tools declare their own typed
+   Outputs tab, so `classifications`, `needsHumanRoutingDecision`, and
+   `confidence` come back as named fields directly - no Parse value node
+   needed here.
 6. **Condition: `classifications` is empty.**
    - If empty: apply a fallback category (a fixed string, or a
      Dataverse-configured "Unclassified" rule if you choose to add one)
@@ -355,31 +402,41 @@ Build the Topic nodes in this order:
    - If not empty: continue normally.
 7. **Build the categories array** - distinct `className` values from
    `classifications`.
-8. **`UpdateMessageCategories`** - call with mailbox address, the
-   `GetMessage` result's `id`, and the categories array. This operation
+8. **`UpdateMessageCategories`** - call with mailbox address,
+   `SourceMessageId`, and the categories array. This operation
    **replaces** categories rather than merging - if the message could
-   already carry categories worth keeping, fetch and merge first.
+   already carry categories worth keeping, fetch and merge first. Its
+   response (`{ messageId, categories }`) is only useful to confirm the
+   write; parse it only if you want to double-check the applied
+   categories.
 9. **Call the `DraftEmailBody` Prompt tool** (Section 4.2 of the same
    doc), passing sender, mailbox address, subject, body, and
    `classifications`.
 10. **`CreateDraft`** - call with the resulting HTML body
-    (`contentType: "html"`), replying to the original message id.
+    (`contentType: "html"`), replying to `SourceMessageId`. Parse the
+    response (`{ draftId, subject, draftUrl }`) and keep `draftId` - you
+    need it in step 14.
 11. **Resolve the destination folder** - sort `classifications` by
     `priority` descending (tie-break: `confidence`/`score` descending)
     and take the winning entry's target as the folder name (Section 5).
-12. **`GetMailFolders`** to resolve the destination folder id. Prefer
-    pre-provisioned folders over dynamic creation to avoid race
-    conditions and naming drift.
-13. **`MoveMessage`** - call with the original message id and resolved
-    folder id. Store the returned moved-message id separately.
+12. **`GetMailFolders`** to resolve the destination folder id. Parse the
+    response and remember the array is under `.value`, not top-level -
+    filter `.value` for the entry whose `displayName` matches your target
+    folder name, then take its `id`. Prefer pre-provisioned folders over
+    dynamic creation to avoid race conditions and naming drift.
+13. **`MoveMessage`** - call with `SourceMessageId` and the resolved
+    folder id. Parse the response (`{ movedMessageId, destinationId }`)
+    and keep `movedMessageId` separately - you need it in step 15.
 14. **Dataverse "Create row"** on `classificationaudit` - write
-    `messageid` (the original `GetMessage` id), `classificationresult`
-    (full JSON from `ClassifyMessage`), `provider`, `confidence`,
-    `needshumanreview`, and `classificationruleid` if a single dominant
-    rule applies. If you extend this table per Section 6, also write the
-    new columns here in the same call.
+    `messageid` (`SourceMessageId`), `classificationresult` (full JSON
+    from the `ClassifyMessage` Prompt tool's `classifications` output),
+    `provider`, `confidence`, `needshumanreview`, and
+    `classificationruleid` if a single dominant rule applies. If you
+    extend this table per Section 6, also write the new columns here in
+    the same call.
 15. **Upsert the processing-status record** (Section 6) with status
-    `Completed`, draft id, moved-message id, destination folder.
+    `Completed`, `draftId` (step 10), `movedMessageId` (step 13), and the
+    destination folder.
 16. **End the Topic**, returning a short summary (status, categories
     applied, destination folder, draft id) as the agent's result.
 
