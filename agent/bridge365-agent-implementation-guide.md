@@ -142,18 +142,33 @@ Copilot Studio environment before creating a duplicate.
    draft for a human to review and send.
    ```
 
-### 4.2 Confirm the connector and Dataverse connections
+### 4.2 Add the connector and Dataverse tools to the agent
 
-**Verify first:** confirm the Bridge365 custom connector is already
-imported into this environment and that a Dataverse connection exists,
-before wiring topics that depend on them - do not import or reconfigure
-the connector itself; that is given (Section 0).
+**Verify first:** the navigation below matches Microsoft's current
+"Use Power Platform connectors as tools in Copilot Studio agents" guide
+(agents built on the standard harness) - re-check that page before
+following these steps, since Copilot Studio's own labels/menus change
+between releases and the previous "Settings > Connectors/Actions"
+description in this guide did not match any current screen and has been
+corrected here. Do not import or reconfigure the connector itself; that
+is given (Section 0) - you are only adding it as a callable tool.
 
-1. In the agent, go to **Settings then Connectors / Actions** and
-   confirm the imported connector (e.g. `SharedMailboxConnector`) is
-   available.
-2. Confirm the built-in **Dataverse** connector is available for
-   "List rows" / "Create/update row" actions used below.
+1. Select **Agents** and open the Bridge365 agent.
+2. Go to the agent's **Tools** page and select **Add a tool**.
+3. Select **Connector**, then search for the imported connector (e.g.
+   `SharedMailboxConnector`) and select the specific operations you need
+   (`GetMessage`, `ClassifyMessage`, `UpdateMessageCategories`,
+   `CreateDraft`, `GetMailFolders`, `MoveMessage`, etc. - see Section 0).
+   If a connection does not already exist, select **Create new
+   connection**, then **Add and configure** for each tool.
+4. Repeat with **Add a tool** > **Connector** > search **Microsoft
+   Dataverse**, and add the specific actions you need (e.g. **List
+   rows**, **Add a new row**, **Update a row**) as separate tools,
+   pointed at your Dataverse environment/connection.
+5. These become available to call as nodes from any Topic. You can also
+   add a connector/Dataverse tool directly while editing a Topic, via
+   **Add node (+)** > **Add a tool** > **Connector**, instead of adding
+   it at the agent level first - both end up callable the same way.
 
 ### 4.3 Configure the autonomous trigger
 
