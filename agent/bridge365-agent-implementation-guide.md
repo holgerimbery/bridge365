@@ -708,6 +708,12 @@ and the wiki doc together so they stay consistent with each other.
 5. Give each input a sample value (the prompt builder prompts for this)
    - use the worked example input from Section 4.1 of the wiki doc so
    you can sanity-check the response immediately.
+   **Known UI quirk:** if you paste instructions text containing
+   several `{{...}}` placeholders at once, the builder may only render
+   one of them as a recognized input chip right away and flag the
+   others as errors/missing. A simple browser refresh (or reopening the
+   tool) re-parses the text and picks up all of them - this is a
+   rendering lag, not a real configuration problem.
 6. **Verify first:** how you constrain the output to the structured
    `classifications[]`/`needsHumanRoutingDecision`/`confidence` JSON
    shape (rather than free-form text) is a UI area this guide has not
