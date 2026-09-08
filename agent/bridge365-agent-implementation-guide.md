@@ -503,7 +503,7 @@ Build the Topic nodes in this order:
      add a **Set variable value** (or Compose) node and build the JSON
      string with `JSON()` over the returned rows collection, e.g. a
      Power Fx expression such as
-     `JSON(ForAll(ListRowsOutput, {className: classname, classExamples: classexamples, classTarget: classtarget, classTargetEmail: classtargetemail}))`
+     `JSON(ForAll(Topic.ListRowsOutput, {className: classname, classExamples: classexamples, classTarget: classtarget, classTargetEmail: classtargetemail}))` (remember the `Topic.`/`Global.` scope prefix on the variable name, per the note below)
      - adjust `ListRowsOutput` to whatever the List rows node's own
        output variable is actually named in your Topic (check its
        Completion/output settings, since Dataverse list actions may
@@ -512,7 +512,7 @@ Build the Topic nodes in this order:
    - **If step 3 returned all rows unfiltered** (no Filter rows
      available), first narrow to active rows, then build the same JSON
      string, e.g.
-     `JSON(ForAll(Filter(ListRowsOutput, bridge36_isactive = true), {className: bridge36_classname, classExamples: bridge36_classexamples, classTarget: bridge36_classtarget, classTargetEmail: bridge36_classtargetemail}))` (replace `bridge36_` with your real prefix)
+     `JSON(ForAll(Filter(Topic.ListRowsOutput, bridge36_isactive = true), {className: bridge36_classname, classExamples: bridge36_classexamples, classTarget: bridge36_classtarget, classTargetEmail: bridge36_classtargetemail}))` (replace `bridge36_` with your real prefix, and remember the `Topic.`/`Global.` scope prefix on the variable name)
      - `Filter()` runs entirely in Power Fx after the rows arrive, so it
        works regardless of whether the connector itself supports
        server-side filtering. This is the same "list everything, then
@@ -535,6 +535,15 @@ Build the Topic nodes in this order:
       Fx formula bar, then enter the `JSON(...)` expression from case 1
       or 2 above (with your real prefixed column names). `JSON()`
       converts the Table into the JSON string the Prompt tool expects.
+      **Every variable reference in a Power Fx formula needs its scope
+      prefix** - `Topic.` for a Topic-scoped variable, `Global.` for a
+      Global one. A bare name like `JSON(classificationset)` fails with
+      "Name isn't valid. '<name>' isn't recognized" even if the
+      variable exists - the fix is `JSON(Topic.classificationset)` (or
+      `Global.classificationset` if you made it a Global variable).
+      Check the variable's scope in **Variable management** (or the
+      panel where you created it) if you're not sure which prefix
+      applies.
    4. Confirm/save the node.
    Then, when you add the `ClassifyMessage` Prompt tool node in the next
    step, open its **Inputs** section and bind `ClassificationRules` to
