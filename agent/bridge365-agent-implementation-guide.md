@@ -518,10 +518,28 @@ Build the Topic nodes in this order:
        server-side filtering. This is the same "list everything, then
        shape/filter in Power Fx" pattern already used for
        `GetMailFolders` above.
-   Store the result in a new String variable (e.g.
-   `ClassificationRulesJson`) and pass that variable - not the raw
-   rows - as the `ClassificationRules` input to the Prompt tool in the
-   next step.
+   **Why you can't wire the List rows output straight into the Prompt
+   tool:** the List rows node's output is a **Table** (record
+   collection) type, while the Prompt tool's `ClassificationRules`
+   input is a **String**. Copilot Studio won't let you bind a Table
+   variable directly to a String input in the Inputs section - you must
+   convert it first:
+   1. Add a **Set variable value** node right after List rows (Add node
+      (+) -> Variable management -> Set variable value).
+      Alternatively a **Compose**-style Set variable also works if your
+      version labels it differently.
+   2. Choose **Create new** for the variable (e.g.
+      `ClassificationRulesJson`, type **String**).
+   3. For the value, don't type plain text - select the **fx** /
+      formula toggle next to the value field to switch into the Power
+      Fx formula bar, then enter the `JSON(...)` expression from case 1
+      or 2 above (with your real prefixed column names). `JSON()`
+      converts the Table into the JSON string the Prompt tool expects.
+   4. Confirm/save the node.
+   Then, when you add the `ClassifyMessage` Prompt tool node in the next
+   step, open its **Inputs** section and bind `ClassificationRules` to
+   this `ClassificationRulesJson` String variable via the variable
+   picker (not to the raw List rows output).
 5. **Call the `ClassifyMessage` Prompt tool** (build per Section 4.1 of
    that doc if not already built). Prompt tools declare their own typed
    Outputs tab, so `classifications`, `needsHumanRoutingDecision`, and
