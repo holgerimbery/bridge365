@@ -450,8 +450,11 @@ Build the Topic nodes in this order:
    `SenderName`, `SourceMessageId`). Keep `SourceMessageId` distinct from
    any later "moved message id" - moving a message returns a new id.
 3. **Dataverse "List rows"** on `classificationrule`. If your node
-   exposes **Filter rows**, set it to `isactive eq true` (verify
-   `isactive` is the real logical name for that column first); if it
+   exposes **Filter rows**, set it to `isactive eq true` - unquoted,
+   since a Yes/No column is `Edm.Boolean` in the Dataverse Web API, not
+   a string; quotes are only needed around Text/Choice-label values
+   like `'MailboxAddress'` in step 1 (verify `isactive` is the real
+   logical name for that column first); if it
    doesn't, list all rows and filter afterward with Power Fx per the
    shaping guidance below. Either way, in **Select columns** (if
    present) or by using dot-notation later, you only need `classname`,
