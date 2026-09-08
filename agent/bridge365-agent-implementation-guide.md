@@ -688,6 +688,40 @@ The Topic steps above assume the field names documented there
 different fields, that is a legitimate change - just update this guide
 and the wiki doc together so they stay consistent with each other.
 
+### 7.1 Create the `ClassifyMessage` Prompt tool
+
+1. Go to **Agents** -> your Bridge365 agent -> **Tools** -> **Add a
+   tool** -> **Add new Prompt** (or, from inside the Topic, **Add node
+   (+)** -> **Add a tool** -> **New prompt** - either path creates the
+   same kind of tool; the Tools-page path also makes it reusable across
+   Topics/agents).
+2. Rename it from the generated name to `ClassifyMessage` (select the
+   name at the top left of the prompt builder).
+3. Paste the **Instructions** text from
+   `docs/wiki/phase-2-classification-table.md`, Section 4.1, into the
+   prompt builder's instruction box.
+4. For each `{{...}}` placeholder the instructions reference
+   (`EmailSubject`, `EmailBody`, `ClassificationRules`), type `/` or
+   select **Add content** in the instruction box, then **Text**, to
+   insert it as an **Input**. This both declares the input and marks
+   where it's substituted into the prompt text.
+5. Give each input a sample value (the prompt builder prompts for this)
+   - use the worked example input from Section 4.1 of the wiki doc so
+   you can sanity-check the response immediately.
+6. **Verify first:** how you constrain the output to the structured
+   `classifications[]`/`needsHumanRoutingDecision`/`confidence` JSON
+   shape (rather than free-form text) is a UI area this guide has not
+   yet confirmed against a live tool-in-a-Topic instance - look for an
+   **Output** section/dropdown in the prompt builder (schema/JSON vs.
+   plain text) and set it to match the shape in the wiki doc; if you
+   only find a single generic text output, keep the JSON instruction in
+   the prompt text as-is and parse the result with a **Parse value**
+   node (Section 4.4's pattern) instead.
+7. Select **Test**, run it with the sample values, and confirm the
+   response matches the worked example in the wiki doc before **Save**.
+8. Repeat steps 2-7 for `DraftEmailBody` using Section 4.2 of the wiki
+   doc instead.
+
 **Verify first:** test both Prompt tools in isolation in their Test pane
 using the example input/output in that doc before wiring the Topic to
 them.
