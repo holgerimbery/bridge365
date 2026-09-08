@@ -180,6 +180,26 @@ connector."
    `classificationaudit` (and any table from Section 6) as separate
    tools.
 
+   **Verify first - column/table logical names are prefixed:** every
+   table and column name in this guide (`classificationrule`,
+   `isactive`, `mailboxaddress`, `sourcemessageid`, etc.) is written in
+   the bare form used by `dataverse/schemas/*.schema.json`. The deploy
+   script (`dataverse/scripts/deploy-dataverse-tables.ps1`) prepends
+   your Dataverse **publisher prefix** to every one of them at creation
+   time - default `b365`, but overridable via `-PublisherPrefix` /
+   `DATAVERSE_PUBLISHER_PREFIX`, and Dataverse itself may further adjust
+   it (publisher prefixes are short, e.g. an environment seen in
+   practice ended up with `bridge36_`, not `bridge365_`). So the real
+   table is something like `bridge36_classificationrule` and the real
+   column is `bridge36_isactive` - never the bare names. Before typing
+   any filter, select-columns list, or Power Fx expression against
+   Dataverse in this guide, look up your actual prefix in **Power Apps
+   maker portal -> Solutions -> your table -> Columns** (or run the
+   deploy script's list/verify mode) and substitute it in. Getting this
+   wrong surfaces as an HTTP 400 `ConnectorRequestFailure` -
+   "Could not find a property named '&lt;name&gt;' on type
+   'Microsoft.Dynamics.CRM.&lt;prefix&gt;\_&lt;table&gt;'".
+
    **Why not the Dataverse MCP Server:** Copilot Studio also offers a
    **Dataverse MCP Server** tool (Model Context Protocol, preview - see
    ["Connect to Dataverse with model context protocol in Microsoft
@@ -421,18 +441,20 @@ Build the Topic nodes in this order:
    processing-status source (Section 6). In the node's **Inputs**, set
    **Table name** to your table (e.g. Message Processing Status), then
    put your query in **Filter rows** using standard Dataverse OData
-   syntax - a single-quoted string built with dynamic content, e.g.:
+   syntax - a single-quoted string built with dynamic content, using
+   your **actual prefixed column names** (Section 4.2's "verify first"
+   callout), e.g. if your prefix is `bridge36_`:
    ```
-   mailboxaddress eq 'MailboxAddress' and sourcemessageid eq 'SourceMessageId'
+   bridge36_mailboxaddress eq 'MailboxAddress' and bridge36_sourcemessageid eq 'SourceMessageId'
    ```
    Do not type the variable names as literal text - use the node's
    dynamic-content/variable picker to insert `MailboxAddress` and
    `SourceMessageId` (from step 2's `Parse value`, or from the trigger
    for the mailbox address) so each is substituted with its actual
-   value at run time, not treated as the literal word. Column names
-   must match your table's real logical names (all-lowercase, no
-   spaces) - verify them in **Solutions -> your table -> Columns**
-   before typing this filter, per Section 2's "verify first" principle.
+   value at run time, not treated as the literal word. Do not copy the
+   bare column names shown elsewhere in this guide as-is - confirm your
+   real prefix in **Solutions -> your table -> Columns** before typing
+   this filter, per Section 2's "verify first" principle.
    **Verify first:** confirm your List rows node actually exposes a
    **Filter rows** input before relying on it - some Copilot Studio
    versions/tool configurations do not surface it. If it is missing,
@@ -449,27 +471,35 @@ Build the Topic nodes in this order:
    clarity (e.g. `MessageSubject`, `MessageBody`, `SenderAddress`,
    `SenderName`, `SourceMessageId`). Keep `SourceMessageId` distinct from
    any later "moved message id" - moving a message returns a new id.
-3. **Dataverse "List rows"** on `classificationrule`. If your node
-   exposes **Filter rows**, set it to `isactive eq true` - unquoted,
-   since a Yes/No column is `Edm.Boolean` in the Dataverse Web API, not
-   a string; quotes are only needed around Text/Choice-label values
-   like `'MailboxAddress'` in step 1 (verify `isactive` is the real
-   logical name for that column first); if it
-   doesn't, list all rows and filter afterward with Power Fx per the
-   shaping guidance below. Either way, in **Select columns** (if
-   present) or by using dot-notation later, you only need `classname`,
-   `classexamples`, `classtarget`, `classtargetemail`, `priority`,
-   `modellabel`. Dataverse list actions are natively typed by the table
-   schema, so this one does return proper per-column fields on each
-   row - the untyped-response issue described above is specific to the
-   Bridge365 connector, not to Dataverse.
+3. **Dataverse "List rows"** on `classificationrule` (really
+   `<yourprefix>_classificationrule` - Section 4.2). If your node
+   exposes **Filter rows**, set it to `<yourprefix>_isactive eq true` -
+   unquoted, since a Yes/No column is `Edm.Boolean` in the Dataverse
+   Web API, not a string; quotes are only needed around Text/Choice-
+   label values like `'MailboxAddress'` in step 1. Getting the column
+   name wrong here (e.g. typing the bare `isactive`) produces exactly
+   the "Could not find a property named ... " HTTP 400 called out in
+   Section 4.2 - confirm the real prefixed name in **Solutions -> your
+   table -> Columns** first. If Filter rows isn't available at all,
+   list all rows and filter afterward with Power Fx per the shaping
+   guidance below. Either way, in **Select columns** (if present) or by
+   using dot-notation later, you only need the prefixed equivalents of
+   `classname`, `classexamples`, `classtarget`, `classtargetemail`,
+   `priority`, `modellabel`. Dataverse list actions are natively typed
+   by the table schema, so this one does return proper per-column
+   fields on each row (using whatever prefixed name each column
+   actually has) - the untyped-response issue described above is
+   specific to the Bridge365 connector, not to Dataverse.
 4. **Shape the rules as the `ClassificationRules` JSON string** the
    `ClassifyMessage` Prompt tool expects (see
    `docs/wiki/phase-2-classification-table.md`, Section 4.1, for the
    exact target shape - an array of objects with `className`,
-   `classExamples`, `classTarget`, `classTargetEmail`). There are two
-   cases:
-   - **If step 3's Filter rows worked** and returned only active rules,
+   `classExamples`, `classTarget`, `classTargetEmail`). The Power Fx
+   examples below use bare field names (`classname`, `isactive`, ...)
+   for readability - replace every one with your real prefixed column
+   name (e.g. `bridge36_classname`) when you actually type them. There
+   are two cases:
+   - **If step 3's Filter rows worked** and returned only active rows,
      add a **Set variable value** (or Compose) node and build the JSON
      string with `JSON()` over the returned rows collection, e.g. a
      Power Fx expression such as
@@ -482,7 +512,7 @@ Build the Topic nodes in this order:
    - **If step 3 returned all rows unfiltered** (no Filter rows
      available), first narrow to active rows, then build the same JSON
      string, e.g.
-     `JSON(ForAll(Filter(ListRowsOutput, isactive = true), {className: classname, classExamples: classexamples, classTarget: classtarget, classTargetEmail: classtargetemail}))`
+     `JSON(ForAll(Filter(ListRowsOutput, bridge36_isactive = true), {className: bridge36_classname, classExamples: bridge36_classexamples, classTarget: bridge36_classtarget, classTargetEmail: bridge36_classtargetemail}))` (replace `bridge36_` with your real prefix)
      - `Filter()` runs entirely in Power Fx after the rows arrive, so it
        works regardless of whether the connector itself supports
        server-side filtering. This is the same "list everything, then
