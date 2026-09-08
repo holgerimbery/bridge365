@@ -418,9 +418,30 @@ silently patch in while following this guide.
 Build the Topic nodes in this order:
 
 1. **Idempotency check.** Add a Dataverse "List rows" action against your
-   processing-status source (Section 6), filtered by `mailboxaddress` +
-   `sourcemessageid`. If a row/flag shows status `Completed`, end the
-   Topic and report "already processed".
+   processing-status source (Section 6). In the node's **Inputs**, set
+   **Table name** to your table (e.g. Message Processing Status), then
+   put your query in **Filter rows** using standard Dataverse OData
+   syntax - a single-quoted string built with dynamic content, e.g.:
+   ```
+   mailboxaddress eq 'MailboxAddress' and sourcemessageid eq 'SourceMessageId'
+   ```
+   Do not type the variable names as literal text - use the node's
+   dynamic-content/variable picker to insert `MailboxAddress` and
+   `SourceMessageId` (from step 2's `Parse value`, or from the trigger
+   for the mailbox address) so each is substituted with its actual
+   value at run time, not treated as the literal word. Column names
+   must match your table's real logical names (all-lowercase, no
+   spaces) - verify them in **Solutions -> your table -> Columns**
+   before typing this filter, per Section 2's "verify first" principle.
+   **Verify first:** confirm your List rows node actually exposes a
+   **Filter rows** input before relying on it - some Copilot Studio
+   versions/tool configurations do not surface it. If it is missing,
+   list all rows unfiltered instead and shape/filter the result
+   afterward with a **Parse value** node plus a Power Fx `Filter()` or
+   `LookUp()` expression - the same pattern used for `GetMailFolders`
+   above, and spelled out concretely below step 3.
+   If a matching row is returned with `processingstatus` = `Completed`,
+   end the Topic and report "already processed".
 2. **`GetMessage`** - call with mailbox address and message id. Add a
    **Parse value** node right after it (per the pattern above) and pull
    out `subject`, `body.content`, `from.emailAddress.address`,
@@ -428,15 +449,46 @@ Build the Topic nodes in this order:
    clarity (e.g. `MessageSubject`, `MessageBody`, `SenderAddress`,
    `SenderName`, `SourceMessageId`). Keep `SourceMessageId` distinct from
    any later "moved message id" - moving a message returns a new id.
-3. **Dataverse "List rows"** on `classificationrule`, filter
-   `isactive eq true`, select `classname`, `classexamples`, `classtarget`,
-   `classtargetemail`, `priority`, `modellabel`. (Dataverse list actions
-   are natively typed by the table schema, so this one does return
-   proper per-column fields - the untyped-response issue above is
-   specific to the Bridge365 connector.)
-4. **Shape the rules as JSON** with a Compose/Set-variable action,
-   matching the `ClassificationRules` input shape in
-   `docs/wiki/phase-2-classification-table.md`, Section 4.1.
+3. **Dataverse "List rows"** on `classificationrule`. If your node
+   exposes **Filter rows**, set it to `isactive eq true` (verify
+   `isactive` is the real logical name for that column first); if it
+   doesn't, list all rows and filter afterward with Power Fx per the
+   shaping guidance below. Either way, in **Select columns** (if
+   present) or by using dot-notation later, you only need `classname`,
+   `classexamples`, `classtarget`, `classtargetemail`, `priority`,
+   `modellabel`. Dataverse list actions are natively typed by the table
+   schema, so this one does return proper per-column fields on each
+   row - the untyped-response issue described above is specific to the
+   Bridge365 connector, not to Dataverse.
+4. **Shape the rules as the `ClassificationRules` JSON string** the
+   `ClassifyMessage` Prompt tool expects (see
+   `docs/wiki/phase-2-classification-table.md`, Section 4.1, for the
+   exact target shape - an array of objects with `className`,
+   `classExamples`, `classTarget`, `classTargetEmail`). There are two
+   cases:
+   - **If step 3's Filter rows worked** and returned only active rules,
+     add a **Set variable value** (or Compose) node and build the JSON
+     string with `JSON()` over the returned rows collection, e.g. a
+     Power Fx expression such as
+     `JSON(ForAll(ListRowsOutput, {className: classname, classExamples: classexamples, classTarget: classtarget, classTargetEmail: classtargetemail}))`
+     - adjust `ListRowsOutput` to whatever the List rows node's own
+       output variable is actually named in your Topic (check its
+       Completion/output settings, since Dataverse list actions may
+       still need their output exposed the same way as other tool
+       nodes before you can reference it).
+   - **If step 3 returned all rows unfiltered** (no Filter rows
+     available), first narrow to active rows, then build the same JSON
+     string, e.g.
+     `JSON(ForAll(Filter(ListRowsOutput, isactive = true), {className: classname, classExamples: classexamples, classTarget: classtarget, classTargetEmail: classtargetemail}))`
+     - `Filter()` runs entirely in Power Fx after the rows arrive, so it
+       works regardless of whether the connector itself supports
+       server-side filtering. This is the same "list everything, then
+       shape/filter in Power Fx" pattern already used for
+       `GetMailFolders` above.
+   Store the result in a new String variable (e.g.
+   `ClassificationRulesJson`) and pass that variable - not the raw
+   rows - as the `ClassificationRules` input to the Prompt tool in the
+   next step.
 5. **Call the `ClassifyMessage` Prompt tool** (build per Section 4.1 of
    that doc if not already built). Prompt tools declare their own typed
    Outputs tab, so `classifications`, `needsHumanRoutingDecision`, and
