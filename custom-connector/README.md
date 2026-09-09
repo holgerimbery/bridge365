@@ -239,3 +239,47 @@ out `NewMessageReceived`). Check, in order:
    just this connector's trigger.
 4. Confirm the environment has **solution-aware cloud flow sharing** enabled
    and that no **DLP policy** blocks event triggers for this connector.
+5. If all of the above are correct - `capabilities` includes `"triggers"`,
+   `x-ms-trigger-metadata` is present and confirmed saved (reopen the Swagger
+   editor to check), Generative Orchestration and solution-aware cloud flow
+   sharing are both on - and a **known built-in connector's trigger** (for
+   example Recurrence, or Office 365 Outlook's *When a new email arrives*)
+   lists its operation correctly in the same **Add trigger** dialog while
+   `SharedMailboxConnector` still shows zero operations, that's evidence of a
+   **Copilot Studio platform limitation**: as of this writing, the native
+   Overview > Triggers > Add trigger picker appears to only surface trigger
+   operations from prebuilt/certified connectors, not custom connectors -
+   even though custom connectors work perfectly as Actions/Tools. Custom
+   connector triggers are documented and fully supported in **Power
+   Automate**; the gap seems specific to Copilot Studio's own trigger picker.
+   Use the Power Automate bridge below instead of waiting on this.
+
+### Recommended workaround: Power Automate bridge
+
+If `NewMessageReceived` won't appear in Copilot Studio's native trigger
+picker, get the same autonomous behavior by moving the polling trigger into
+Power Automate (which fully supports custom connector triggers) and having
+that flow hand off to your agent:
+
+1. In [Power Automate](https://make.powerautomate.com), create a new
+   **Automated cloud flow**.
+2. Search for **SharedMailboxConnector** as the trigger connector and select
+   **NewMessageReceived**. Set **mailboxAddress**; leave `since` untouched -
+   it's managed automatically between polls, same as in Copilot Studio.
+3. Add a **Run a Copilot Studio agent** action (in the built-in **Copilot
+   Studio** connector) and select your agent.
+4. Pass the trigger's output fields (`id`, `subject`, `receivedDateTime`,
+   etc.) as inputs to the agent - map them to a topic/agent input variable, or
+   compose them into a single instruction string, for example:
+   > "A new email arrived in the shared mailbox (id: `<id>`, subject:
+   > `<subject>`). Call ClassifyMessage on it, then call CreateDraft with a
+   > reply based on the returned classification. Call SendDraftMessage only
+   > after a human has approved the draft (or call SendMessage directly for a
+   > fully autonomous reply with no draft step)."
+5. Save the flow, send a test email to the shared mailbox, and confirm the
+   flow run triggers the agent with the expected payload.
+
+This flow-first pattern is functionally equivalent to a native Copilot Studio
+event trigger (same connector, same polling mechanics, same agent
+instructions) - it just runs the poll in Power Automate instead of Copilot
+Studio's own trigger runtime, sidestepping the picker limitation above.

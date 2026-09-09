@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ---
+## [0.6.4] - 2026-09-09
+
+### What's Added
+- `custom-connector/README.md`: new "Recommended workaround: Power Automate bridge" section - if `NewMessageReceived` doesn't appear in Copilot Studio's native Overview > Triggers > Add trigger picker after confirming the connector definition is correct, build the polling trigger in Power Automate instead (fully supports custom connector triggers) and call the agent via the built-in **Run a Copilot Studio agent** action.
+- `custom-connector/README.md` / `docs/wiki/phase-1-mailbox-setup.md`: documented a real-world finding that Copilot Studio's native trigger picker can list a known built-in connector's trigger (Recurrence, Office 365 Outlook) correctly while showing zero operations for a structurally-correct custom connector - a likely platform-level limitation on custom connector event triggers, not a connector-definition bug.
+
+### Breaking Changes
+- None.
+
+---
 ## [0.6.3] - 2026-09-09
 
 ### What's Fixed

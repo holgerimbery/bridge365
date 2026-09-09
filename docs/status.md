@@ -51,6 +51,7 @@ Status summary and full version-by-version history for the Bridge365 project. Se
 | Documentation: Phase 2/3 Cross-Reference & Headline Consistency Fixes | ✅ Complete | v0.6.1 |
 | GetMailFolders: Mail Folder Discovery for MoveMessage | ✅ Complete | v0.6.2 |
 | Bug Fix: Autonomous Trigger Not Visible in Copilot Studio | ✅ Complete | v0.6.3 |
+| Documentation: Power Automate Bridge Workaround for Trigger Picker Limitation | ✅ Complete | v0.6.4 |
 | Phase 4-7: Advanced Features | 📋 Planned | v0.7.0+ |
 
 ## Detailed Status
@@ -352,6 +353,15 @@ Status summary and full version-by-version history for the Bridge365 project. Se
 
 ---
 
+### v0.6.4: Documentation - Power Automate Bridge Workaround for Trigger Picker Limitation
+- 📖 `custom-connector/README.md`: added a "Recommended workaround: Power Automate bridge" section - real-world testing found Copilot Studio's native Overview > Triggers > Add trigger picker lists a known built-in connector's trigger (Recurrence, Office 365 Outlook) correctly, but shows zero operations for `SharedMailboxConnector` even after the `v0.6.3` fixes were confirmed applied - pointing at a platform-level limitation on custom connector event triggers rather than a connector-definition bug. The workaround builds the same `NewMessageReceived` polling trigger in Power Automate (which fully supports custom connector triggers) and hands off to the agent via the built-in **Run a Copilot Studio agent** action.
+- 📖 `docs/wiki/phase-1-mailbox-setup.md`: Step 5.6 cross-references the new workaround and known limitation.
+
+### Breaking Changes
+- None.
+
+---
+
 ## 📋 ROADMAP
 
 ### v0.7.0: Phase 4 - Override Workflow & Approvals
@@ -393,4 +403,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.6.3 | [View README](../README.md) | [View Changelog](../CHANGELOG.md)
+**Current Version:** v0.6.4 | [View README](../README.md) | [View Changelog](../CHANGELOG.md)
