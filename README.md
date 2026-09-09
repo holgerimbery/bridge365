@@ -13,6 +13,13 @@ This project provides:
 - **Classification Engine:** Rule-based and AI-powered message routing
 - **Audit Trail:** Dataverse-based logging and compliance tracking
 
+## Disclaimer
+
+> The **backend service and custom connector** referenced in this repository have been built, tested, and used in daily operations. We verified its functionality and overall stability in a production-like environment.
+Please note that the Copilot Studio agent described in this documentation is **still under active development**. As a result, the architecture, implementation details, and build instructions may change as the solution evolves.
+After we fully verify and validate the agent, we will publish and upload a sample Copilot Studio agent based on the **Standard Harness** to this repository as a reference implementation. Until then, consider the current documentation a work in progress; it may not reflect the final solution design.
+
+
 ## Quick Start
 
 ### Prerequisites
