@@ -2426,7 +2426,8 @@ create a fresh draft with CreateDraft and retry.
 
 The connector also exposes a `NewMessageReceived` polling trigger, so it can
 drive a Copilot Studio **autonomous agent** that reacts to new mail without a
-user conversation. Full setup steps are documented in
+user conversation. Full setup steps, troubleshooting, and the Power Automate
+bridge workaround are documented in
 [`custom-connector/README.md`](../../custom-connector/README.md#step-5-use-as-an-autonomous-agent-trigger).
 
 In short: the agent needs **Generative Orchestration** enabled and the
@@ -2438,6 +2439,16 @@ for what the agent should do with each new message (for example, call
 approval, or `SendMessage` directly for a fully autonomous reply). Note that
 event triggers authenticate with the **agent maker's credentials**, not
 per-end-user credentials.
+
+**Known limitation:** in practice, Copilot Studio's native Overview >
+Triggers > Add trigger picker may not surface `NewMessageReceived` (or any
+custom connector trigger) even when the connector definition is fully
+correct - a known built-in trigger (Recurrence, Office 365 Outlook, etc.)
+lists fine in the same dialog while custom connectors show zero operations.
+If you hit this, see the "Recommended workaround: Power Automate bridge"
+section in `custom-connector/README.md` - it builds the same polling trigger
+in Power Automate (which fully supports custom connector triggers) and calls
+your agent via the built-in **Run a Copilot Studio agent** action instead.
 
 ---
 
