@@ -50,6 +50,7 @@ Status summary and full version-by-version history for the Bridge365 project. Se
 | Phase 3: Draft Creation & Routing (Categories, Move, Delta, Attachments, Extended Properties) | ✅ Complete | v0.6.0 |
 | Documentation: Phase 2/3 Cross-Reference & Headline Consistency Fixes | ✅ Complete | v0.6.1 |
 | GetMailFolders: Mail Folder Discovery for MoveMessage | ✅ Complete | v0.6.2 |
+| Bug Fix: Autonomous Trigger Not Visible in Copilot Studio | ✅ Complete | v0.6.3 |
 | Phase 4-7: Advanced Features | 📋 Planned | v0.7.0+ |
 
 ## Detailed Status
@@ -341,6 +342,16 @@ Status summary and full version-by-version history for the Bridge365 project. Se
 
 ---
 
+### v0.6.3: Fix - Autonomous Trigger Not Visible in Copilot Studio
+- 🐛 `custom-connector/apiProperties.template.json`: connector-level `capabilities` was `[]` - Copilot Studio's trigger picker only offers connectors that declare `"triggers"` in `capabilities`, so the whole `SharedMailboxConnector` (not just `NewMessageReceived`) was invisible under Overview > Triggers > Add trigger even though every action worked normally. Set to `["actions", "triggers"]`.
+- 🐛 `custom-connector/openapi.template.yaml`: `NewMessageReceived` was missing `x-ms-trigger-metadata: { kind: query, mode: polling }`, the extension Power Platform uses to recognize a `x-ms-trigger: batch` operation specifically as a *polling* trigger rather than importing it as a plain action.
+- 🔧 Re-deploy required: re-run `deploy-connector.ps1` (or re-import the regenerated `openapi.yaml` plus the updated `apiProperties.json` via the portal) for the fix to take effect.
+
+### Breaking Changes
+- None.
+
+---
+
 ## 📋 ROADMAP
 
 ### v0.7.0: Phase 4 - Override Workflow & Approvals
@@ -382,4 +393,4 @@ Ideas captured for future consideration, not yet assigned to a version or phase.
 
 ---
 
-**Current Version:** v0.6.2 | [View README](../README.md) | [View Changelog](../CHANGELOG.md)
+**Current Version:** v0.6.3 | [View README](../README.md) | [View Changelog](../CHANGELOG.md)
