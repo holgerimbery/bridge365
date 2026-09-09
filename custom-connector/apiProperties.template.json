@@ -27,7 +27,7 @@
       }
     },
     "iconBrandColor": "#0078D4",
-    "capabilities": [],
+    "capabilities": ["actions", "triggers"],
     "policyTemplateInstances": []
   }
 }

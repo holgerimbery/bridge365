@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ---
+## [0.6.3] - 2026-09-09
+
+### What's Fixed
+- `custom-connector/apiProperties.template.json`: connector-level `capabilities` was an empty array, which never advertised the connector as a trigger source - Copilot Studio's "Add trigger" picker silently omits any connector whose `capabilities` doesn't include `"triggers"`, so `NewMessageReceived` never appeared even though every action worked. Set to `["actions", "triggers"]`.
+- `custom-connector/openapi.template.yaml`: the `NewMessageReceived` operation was missing `x-ms-trigger-metadata: { kind: query, mode: polling }`. Without it, Power Platform can import the operation as a plain action instead of recognizing it as a polling trigger, which also keeps it out of the agent Overview > Triggers list.
+
+### Breaking Changes
+- None. Re-run `deploy-connector.ps1` (or re-import the regenerated `openapi.yaml` and updated `apiProperties.json` in the portal) to pick up both fixes - existing connections and actions are unaffected.
+
+---
 ## [0.6.2] - 2026-09-06
 
 ### What's Added

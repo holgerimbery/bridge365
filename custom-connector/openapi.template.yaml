@@ -63,6 +63,14 @@ paths:
       operationId: NewMessageReceived
       x-ms-trigger: batch
       x-ms-trigger-hint: "Send an email to the shared mailbox to see it work."
+      # Required for Copilot Studio / Power Automate to recognize this as a
+      # polling trigger and surface it in the trigger picker - without it the
+      # operation is imported as a plain action and the trigger never shows
+      # up in the agent's Overview > Triggers > Add trigger list, even though
+      # the connector's other actions work fine.
+      x-ms-trigger-metadata:
+        kind: query
+        mode: polling
       parameters:
         - name: mailboxAddress
           in: query

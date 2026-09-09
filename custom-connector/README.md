@@ -216,3 +216,26 @@ Because polling triggers must return results **newest first**, the connector
 calls the backend's `/api/mailbox/messages/poll` endpoint, which applies
 `$orderby=receivedDateTime desc` and a `since` checkpoint filter - see
 `backend-service/app.py`.
+
+**Troubleshooting: connector deploys fine, all actions work, but no trigger
+shows up under Add trigger at all** - this means Copilot Studio isn't
+recognizing `SharedMailboxConnector` as a trigger source (not just filtering
+out `NewMessageReceived`). Check, in order:
+
+1. **`apiProperties.json`'s `capabilities` must include `"triggers"`**
+   (`["actions", "triggers"]`). If it's `[]` or only `["actions"]`, the
+   connector never appears in the trigger picker even though every action
+   works - this is the most common cause and is easy to miss because nothing
+   in the portal UI calls it out. Fixed from `v0.6.3` onward in
+   `apiProperties.template.json`; if you deployed an older connector version,
+   re-run `deploy-connector.ps1` (or update `apiProperties.json` directly and
+   re-import) to pick it up.
+2. **`NewMessageReceived` needs `x-ms-trigger-metadata: { kind: query, mode:
+   polling }`** alongside `x-ms-trigger: batch` in `openapi.yaml` - without
+   it, Power Platform can import the operation as a plain action instead of a
+   trigger. Also fixed from `v0.6.3` onward.
+3. Confirm **Generative Orchestration** is turned on for the agent - if it's
+   off, the entire **Triggers** section is hidden from the Overview page, not
+   just this connector's trigger.
+4. Confirm the environment has **solution-aware cloud flow sharing** enabled
+   and that no **DLP policy** blocks event triggers for this connector.
